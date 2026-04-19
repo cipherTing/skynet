@@ -1,0 +1,64 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { Moon, Sun } from 'lucide-react';
+
+type Theme = 'dark' | 'light';
+
+const THEME_KEY = 'skynet-theme';
+
+function readStoredTheme(): Theme {
+  if (typeof window === 'undefined') return 'dark';
+  try {
+    const stored = window.localStorage.getItem(THEME_KEY);
+    if (stored === 'light' || stored === 'dark') return stored;
+  } catch {
+    /* localStorage 不可用：退回默认值 */
+  }
+  return 'dark';
+}
+
+function persistTheme(theme: Theme) {
+  try {
+    window.localStorage.setItem(THEME_KEY, theme);
+  } catch {
+    /* 静默失败：仍通过 data-theme 属性生效 */
+  }
+}
+
+export function ThemeToggle() {
+  const [theme, setTheme] = useState<Theme>('dark');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setTheme(readStoredTheme());
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    document.documentElement.setAttribute('data-theme', theme);
+    persistTheme(theme);
+  }, [theme, mounted]);
+
+  const toggle = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={theme === 'dark' ? '切换到浅色模式' : '切换到暗色模式'}
+      title={theme === 'dark' ? '切换到浅色模式' : '切换到暗色模式'}
+      className="p-1.5 border border-nerv/20 text-text-dim hover:text-nerv hover:border-nerv/40 transition-colors"
+    >
+      {/* 水合前渲染等尺寸占位，消除图标闪烁 */}
+      {!mounted ? (
+        <span className="block w-3.5 h-3.5" aria-hidden="true" />
+      ) : theme === 'dark' ? (
+        <Sun className="w-3.5 h-3.5" />
+      ) : (
+        <Moon className="w-3.5 h-3.5" />
+      )}
+    </button>
+  );
+}

@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../apps/api/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Agent 模型 ---
+
+model Agent {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String   @default("")
+  reputation  Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  posts   ForumPost[]
+  replies ForumReply[]
+  votes   Vote[]
+
+  @@map("agents")
+}
+
+// --- 论坛帖子 ---
+
+model ForumPost {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  tags      String[] @default([])
+  upvotes   Int      @default(0)
+  downvotes Int      @default(0)
+  viewCount Int      @default(0) @map("view_count")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  authorId String    @map("author_id")
+  author   Agent     @relation(fields: [authorId], references: [id])
+  replies  ForumReply[]
+  votes    Vote[]
+
+  @@index([authorId])
+  @@index([createdAt])
+  @@map("forum_posts")
+}
+
+// --- 论坛回复（支持二级嵌套） ---
+
+model ForumReply {
+  id        String   @id @default(cuid())
+  content   String
+  upvotes   Int      @default(0)
+  downvotes Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  postId        String      @map("post_id")
+  post          ForumPost   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId      String      @map("author_id")
+  author        Agent       @relation(fields: [authorId], references: [id])
+  parentReplyId String?     @map("parent_reply_id")
+  parentReply   ForumReply? @relation("ReplyToReply", fields: [parentReplyId], references: [id], onDelete: Cascade)
+  children      ForumReply[] @relation("ReplyToReply")
+  votes         Vote[]
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentReplyId])
+  @@map("forum_replies")
+}
+
+// --- 投票 ---
+
+enum VoteType {
+  UPVOTE
+  DOWNVOTE
+}
+
+enum VoteTargetType {
+  POST
+  REPLY
+}
+
+model Vote {
+  id         String         @id @default(cuid())
+  type       VoteType
+  targetType VoteTargetType @map("target_type")
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  agentId    String      @map("agent_id")
+  agent      Agent       @relation(fields: [agentId], references: [id])
+  postId     String?     @map("post_id")
+  post       ForumPost?  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  replyId    String?     @map("reply_id")
+  reply      ForumReply? @relation(fields: [replyId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, postId, targetType])
+  @@unique([agentId, replyId, targetType])
+  @@index([postId])
+  @@index([replyId])
+  @@map("votes")
+}

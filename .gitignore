@@ -1,0 +1,57 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# build outputs
+dist/
+.next/
+out/
+build/
+.turbo/
+
+# env files
+.env
+.env.local
+.env.*.local
+
+# debug & logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prisma
+prisma/*.db
+**/generated/
+
+# Docker
+docker/data/
+
+# Playwright MCP (临时截图和诊断日志)
+.playwright-mcp/
+
+# Playwright test outputs (如果使用 Playwright 测试)
+test-results/
+blob-report/
+playwright-report/
+
+# 测试覆盖率
+coverage/
+.nyc_output/
+
+# misc
+*.tsbuildinfo
+next-env.d.ts

@@ -1,0 +1,384 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root,
+  :root[data-theme="dark"] {
+    /* ═══ 背景 · 虚空系（暗色）═══ */
+    --void:          #0F0E0C;
+    --void-warm:     #171513;
+    --void-panel:    #1D1B18;
+    --void-raised:   #252320;
+    --void-hover:    #2F2D29;
+
+    /* ═══ NERV 橙 · 主品牌 ═══ */
+    --nerv:          #FF9830;
+    --nerv-dim:      #CC7020;
+    --nerv-hot:      #FFBB55;
+    --nerv-muted:    #8B5500;
+
+    /* ═══ 数据绿 · 正常状态/数值 ═══ */
+    --data:          #50FF50;
+    --data-dim:      #30BB30;
+    --data-bright:   #88FF88;
+
+    /* ═══ 线框青 · 结构/链接 ═══ */
+    --wire:          #20F0FF;
+    --wire-dim:      #10A0B0;
+
+    /* ═══ 警报红 · 仅紧急状态 ═══ */
+    --alert:         #FF3030;
+    --alert-dim:     #CC2020;
+
+    /* ═══ 正文 · 非纯白 ═══ */
+    --text-primary:  #E8E5E0;
+    --text-secondary:#A8A59E;
+    --text-dim:      #807C75;
+
+    /* ═══ 边框 · 衍生 ═══ */
+    --border-strong: rgba(255, 152, 48, 0.45);
+    --border-base:   rgba(255, 152, 48, 0.25);
+    --border-faint:  rgba(255, 152, 48, 0.15);
+
+    /* ═══ 发光 · 暗色满饱和 ═══ */
+    --glow-alpha:    0.5;
+    --scanline-alpha:0.04;
+    --vignette-alpha:0.45;
+    --top-glow-alpha:0.05;
+
+    /* ═══ 栅格底色（背景用）═══ */
+    --grid-color:        rgba(255, 152, 48, 0.04);
+    --grid-color-faint:  rgba(255, 152, 48, 0.02);
+    --section-tint:      rgba(255, 152, 48, 0.00);
+
+    /* ═══ Tailwind 引用的完整阴影 ═══ */
+    --shadow-glow-green:  0 0 8px rgba(80, 255, 80, 0.40), 0 0 16px rgba(80, 255, 80, 0.15);
+    --shadow-glow-orange: 0 0 8px rgba(255, 152, 48, 0.40), 0 0 16px rgba(255, 152, 48, 0.15);
+    --shadow-glow-cyan:   0 0 8px rgba(32, 240, 255, 0.40), 0 0 16px rgba(32, 240, 255, 0.15);
+    --shadow-glow-red:    0 0 8px rgba(255, 48, 48, 0.40), 0 0 16px rgba(255, 48, 48, 0.20);
+    --shadow-led-green:   0 0 5px var(--data);
+    --shadow-led-orange:  0 0 5px var(--nerv);
+    --shadow-led-cyan:    0 0 5px var(--wire);
+    --shadow-led-red:     0 0 5px var(--alert);
+  }
+
+  /* ═══ 浅色主题 · 纸质数据终端 ═══ */
+  :root[data-theme="light"] {
+    /* 背景：暖米纸色（保持 panel/raised 亮度梯度）*/
+    --void:          #F4F1EA;
+    --void-warm:     #EDE9E0;
+    --void-panel:    #FBF9F4;
+    --void-raised:   #FFFFFF;
+    --void-hover:    #E8E3D6;
+
+    /* NERV 橙 · AA 达标（5.2+ vs 纸色）*/
+    --nerv:          #A04A00;
+    --nerv-dim:      #7A3800;
+    --nerv-hot:      #B85700;
+    --nerv-muted:    #D49860;
+
+    /* 数据绿 · AA 达标 */
+    --data:          #0A6E24;
+    --data-dim:      #064E18;
+    --data-bright:   #128A30;
+
+    /* 线框青 · AA 达标 */
+    --wire:          #005F85;
+    --wire-dim:      #004562;
+
+    /* 警报红 */
+    --alert:         #B81515;
+    --alert-dim:     #8A0E0E;
+
+    /* 正文 · 暖黑（dim 加深保 AA）*/
+    --text-primary:  #1A1816;
+    --text-secondary:#4A4741;
+    --text-dim:      #6C675F;
+
+    /* 边框 · 加强可见度 */
+    --border-strong: rgba(160, 74, 0, 0.45);
+    --border-base:   rgba(160, 74, 0, 0.26);
+    --border-faint:  rgba(160, 74, 0, 0.14);
+
+    /* 发光：浅色模式全面禁用 */
+    --glow-alpha:    0;
+    --scanline-alpha:0;
+    --vignette-alpha:0;
+    --top-glow-alpha:0;
+
+    /* 栅格：改为低饱和橙，适度可见 */
+    --grid-color:        rgba(160, 74, 0, 0.030);
+    --grid-color-faint:  rgba(160, 74, 0, 0.015);
+    /* section-header 渐变着色为淡橙染，解决白改问题 */
+    --section-tint:      rgba(160, 74, 0, 0.08);
+
+    /* 阴影：浅色下关闭所有发光 */
+    --shadow-glow-green:  none;
+    --shadow-glow-orange: none;
+    --shadow-glow-cyan:   none;
+    --shadow-glow-red:    none;
+    --shadow-led-green:   none;
+    --shadow-led-orange:  none;
+    --shadow-led-cyan:    none;
+    --shadow-led-red:     none;
+  }
+
+  body {
+    @apply bg-void text-text-primary font-sans antialiased;
+    font-size: 15px;
+    line-height: 1.75;
+    letter-spacing: 0.02em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s, color 0.2s;
+  }
+
+  /* 滚动条 */
+  ::-webkit-scrollbar {
+    @apply w-1.5;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--void-warm);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--nerv-dim);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--nerv);
+  }
+}
+
+@layer components {
+  /* ═══ EVA 面板 ═══ */
+  .eva-panel {
+    background: var(--void-panel);
+    border: 1px solid var(--border-base);
+    position: relative;
+    transition: border-color 0.15s;
+  }
+  .eva-panel:hover {
+    border-color: var(--border-strong);
+  }
+
+  /* ═══ 面板标题头 ═══ */
+  .eva-panel-header {
+    font-family: var(--font-sans), "Noto Sans SC", sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--nerv);
+    padding: 8px 16px;
+    background: var(--void-warm);
+    border-bottom: 1px solid var(--border-base);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* ═══ 角括号装饰 ═══ */
+  .eva-bracket::before,
+  .eva-bracket::after {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-color: var(--nerv);
+    border-style: solid;
+    pointer-events: none;
+    opacity: 0.55;
+  }
+  .eva-bracket::before {
+    top: -1px; left: -1px;
+    border-width: 2px 0 0 2px;
+  }
+  .eva-bracket::after {
+    bottom: -1px; right: -1px;
+    border-width: 0 2px 2px 0;
+  }
+
+  /* ═══ 扫描线 ═══ */
+  .scanlines {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 50;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, var(--scanline-alpha)) 2px,
+      rgba(0, 0, 0, var(--scanline-alpha)) 4px
+    );
+  }
+
+  /* ═══ 暗角 ═══ */
+  .eva-vignette {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 49;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,var(--vignette-alpha)) 100%);
+  }
+
+  /* ═══ 顶部微光 · 使用变量可被浅色模式禁用 ═══ */
+  .eva-top-glow {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1000px;
+    height: 300px;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(255, 152, 48, var(--top-glow-alpha)),
+      transparent 60%
+    );
+  }
+
+  /* ═══ 数据标签 ═══ */
+  .eva-label {
+    font-family: var(--font-mono), "JetBrains Mono", monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--nerv);
+  }
+
+  /* ═══ 数据值 ═══ */
+  .eva-value {
+    font-family: var(--font-mono), "JetBrains Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    color: var(--data);
+  }
+
+  /* ═══ 分隔线 ═══ */
+  .eva-divider {
+    height: 1px;
+    background: var(--nerv-dim);
+    opacity: 0.55;
+  }
+
+  /* ═══ LED 指示灯 ═══ */
+  .led {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .led-green {
+    background: var(--data);
+    box-shadow: var(--shadow-led-green);
+  }
+  .led-orange {
+    background: var(--nerv);
+    box-shadow: var(--shadow-led-orange);
+  }
+  .led-red {
+    background: var(--alert);
+    box-shadow: var(--shadow-led-red);
+  }
+
+  /* ═══ 分区标签 ═══ */
+  .section-header {
+    font-family: var(--font-sans), "Noto Sans SC", sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--nerv);
+    padding: 10px 16px 8px;
+    border-bottom: 1px solid var(--border-base);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(90deg, var(--section-tint) 0%, transparent 100%);
+  }
+}
+
+@layer utilities {
+  /* 发光文字 · 通过 --glow-alpha 在浅色模式下自动关闭 */
+  .text-glow-green {
+    text-shadow: 0 0 6px rgba(80, 255, 80, var(--glow-alpha));
+  }
+  .text-glow-orange {
+    text-shadow: 0 0 6px rgba(255, 152, 48, var(--glow-alpha));
+  }
+  .text-glow-cyan {
+    text-shadow: 0 0 6px rgba(32, 240, 255, var(--glow-alpha));
+  }
+  .text-glow-red {
+    text-shadow: 0 0 6px rgba(255, 48, 48, var(--glow-alpha));
+  }
+}
+
+/* ═══ Markdown prose — 中文适配 ═══ */
+.prose-eva {
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--text-primary);
+}
+.prose-eva p {
+  margin-bottom: 1em;
+}
+.prose-eva pre {
+  background: var(--void-warm);
+  border: 1px solid var(--border-faint);
+  padding: 16px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.prose-eva code {
+  color: var(--data);
+  background: var(--void-warm);
+  padding: 1px 5px;
+  font-size: 0.9em;
+  font-family: var(--font-mono), "JetBrains Mono", monospace;
+}
+.prose-eva pre code {
+  background: transparent;
+  padding: 0;
+  font-size: inherit;
+}
+.prose-eva a {
+  color: var(--wire);
+  text-decoration: none;
+  transition: text-shadow 0.15s;
+}
+.prose-eva a:hover {
+  text-shadow: 0 0 8px rgba(32, 240, 255, var(--glow-alpha));
+}
+.prose-eva blockquote {
+  border-left: 3px solid var(--nerv-dim);
+  color: var(--text-secondary);
+  padding-left: 16px;
+  margin: 1em 0;
+}
+.prose-eva h1, .prose-eva h2, .prose-eva h3, .prose-eva h4 {
+  color: var(--nerv);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+.prose-eva h1 { font-size: 1.4em; }
+.prose-eva h2 { font-size: 1.2em; }
+.prose-eva h3 { font-size: 1.1em; }
+.prose-eva strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+.prose-eva ul, .prose-eva ol {
+  color: var(--text-primary);
+  padding-left: 1.5em;
+  margin: 0.75em 0;
+}
+.prose-eva li {
+  margin: 0.25em 0;
+}
+.prose-eva li::marker {
+  color: var(--nerv-dim);
+}

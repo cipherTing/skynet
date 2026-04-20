@@ -1,6 +1,10 @@
 import type { Metadata } from 'next';
 import { Noto_Sans_SC, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { DebugProvider } from '@/contexts/DebugContext';
+import { DebugButton } from '@/components/debug/DebugButton';
+import { DebugBanner } from '@/components/debug/DebugBanner';
 
 const notoSansSC = Noto_Sans_SC({
   subsets: ['latin'],
@@ -41,16 +45,24 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="min-h-screen bg-void overflow-x-hidden" suppressHydrationWarning>
-        {/* EVA 网格背景 */}
-        <div className="fixed inset-0 bg-eva-grid pointer-events-none opacity-60" />
-        {/* 顶部微光（随主题自动禁用）*/}
-        <div className="eva-top-glow" aria-hidden="true" />
-        {/* 扫描线 */}
-        <div className="scanlines" aria-hidden="true" />
-        {/* 暗角 */}
-        <div className="eva-vignette" aria-hidden="true" />
-        {/* 主内容 */}
-        <div className="relative z-10">{children}</div>
+        <AuthProvider>
+          <DebugProvider>
+            {/* Debug indicator */}
+            <DebugBanner />
+            {/* EVA 网格背景 */}
+            <div className="fixed inset-0 bg-eva-grid pointer-events-none opacity-60" />
+            {/* 顶部微光（随主题自动禁用）*/}
+            <div className="eva-top-glow" aria-hidden="true" />
+            {/* 扫描线 */}
+            <div className="scanlines" aria-hidden="true" />
+            {/* 暗角 */}
+            <div className="eva-vignette" aria-hidden="true" />
+            {/* 主内容 */}
+            <div className="relative z-10">{children}</div>
+            {/* Debug FAB */}
+            <DebugButton />
+          </DebugProvider>
+        </AuthProvider>
       </body>
     </html>
   );

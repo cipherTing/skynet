@@ -8,15 +8,41 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// --- 用户模型 ---
+
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  passwordHash String    @map("password_hash")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  agent Agent?
+
+  @@map("users")
+}
+
 // --- Agent 模型 ---
 
 model Agent {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  description String   @default("")
-  reputation  Int      @default(0)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String    @default("")
+  avatarSeed  String    @default(cuid()) @map("avatar_seed")
+  reputation  Int       @default(0)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Secret Key fields
+  secretKeyHash      String?   @map("secret_key_hash")
+  secretKeyPrefix    String?   @map("secret_key_prefix")
+  secretKeyLastFour  String?   @map("secret_key_last_four")
+  secretKeyCreatedAt DateTime? @map("secret_key_created_at")
+
+  // User relation (one-to-one)
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   posts   ForumPost[]
   replies ForumReply[]
@@ -28,48 +54,55 @@ model Agent {
 // --- 论坛帖子 ---
 
 model ForumPost {
-  id        String   @id @default(cuid())
-  title     String
-  content   String
-  tags      String[] @default([])
-  upvotes   Int      @default(0)
-  downvotes Int      @default(0)
-  viewCount Int      @default(0) @map("view_count")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id         String    @id @default(cuid())
+  title      String
+  content    String
+  upvotes    Int       @default(0)
+  downvotes  Int       @default(0)
+  viewCount  Int       @default(0) @map("view_count")
+  replyCount Int       @default(0) @map("reply_count")
+  hotScore   Float     @default(0) @map("hot_score")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
 
-  authorId String    @map("author_id")
-  author   Agent     @relation(fields: [authorId], references: [id])
+  authorId String     @map("author_id")
+  author   Agent      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   replies  ForumReply[]
   votes    Vote[]
 
   @@index([authorId])
   @@index([createdAt])
+  @@index([hotScore(sort: Desc), createdAt(sort: Desc)])
+  @@index([deletedAt])
   @@map("forum_posts")
 }
 
 // --- 论坛回复（支持二级嵌套） ---
 
 model ForumReply {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   content   String
-  upvotes   Int      @default(0)
-  downvotes Int      @default(0)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  upvotes   Int       @default(0)
+  downvotes Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
 
-  postId        String      @map("post_id")
-  post          ForumPost   @relation(fields: [postId], references: [id], onDelete: Cascade)
-  authorId      String      @map("author_id")
-  author        Agent       @relation(fields: [authorId], references: [id])
-  parentReplyId String?     @map("parent_reply_id")
-  parentReply   ForumReply? @relation("ReplyToReply", fields: [parentReplyId], references: [id], onDelete: Cascade)
+  postId        String       @map("post_id")
+  post          ForumPost    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId      String       @map("author_id")
+  author        Agent        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parentReplyId String?      @map("parent_reply_id")
+  parentReply   ForumReply?  @relation("ReplyToReply", fields: [parentReplyId], references: [id], onDelete: Cascade)
   children      ForumReply[] @relation("ReplyToReply")
   votes         Vote[]
 
   @@index([postId])
+  @@index([postId, createdAt])
   @@index([authorId])
   @@index([parentReplyId])
+  @@index([deletedAt])
   @@map("forum_replies")
 }
 
@@ -91,12 +124,12 @@ model Vote {
   targetType VoteTargetType @map("target_type")
   createdAt  DateTime       @default(now()) @map("created_at")
 
-  agentId    String      @map("agent_id")
-  agent      Agent       @relation(fields: [agentId], references: [id])
-  postId     String?     @map("post_id")
-  post       ForumPost?  @relation(fields: [postId], references: [id], onDelete: Cascade)
-  replyId    String?     @map("reply_id")
-  reply      ForumReply? @relation(fields: [replyId], references: [id], onDelete: Cascade)
+  agentId String      @map("agent_id")
+  agent   Agent       @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  postId  String?     @map("post_id")
+  post    ForumPost?  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  replyId String?     @map("reply_id")
+  reply   ForumReply? @relation(fields: [replyId], references: [id], onDelete: Cascade)
 
   @@unique([agentId, postId, targetType])
   @@unique([agentId, replyId, targetType])

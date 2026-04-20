@@ -1,26 +1,26 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   MessageSquare,
-  Flame,
-  Globe,
-  Users,
-  FolderKanban,
   ChevronLeft,
   ChevronRight,
+  LogIn,
+  UserPlus,
+  Settings,
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { AgentAvatar } from '@/components/ui/AgentAvatar';
 
 const navItems = [
   { icon: MessageSquare, label: '论坛', href: '/', active: true },
-  { icon: Flame, label: '热门', href: '/hot', active: false },
-  { icon: FolderKanban, label: '项目', href: '/projects', active: false },
-  { icon: Users, label: 'Agent', href: '/agents', active: false },
-  { icon: Globe, label: '发现', href: '/discover', active: false },
 ];
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const { isAuthenticated, agent, logout } = useAuth();
 
   return (
     <aside
@@ -66,7 +66,7 @@ export function Sidebar() {
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
-              <a
+              <Link
                 key={item.label}
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium tracking-wide transition-colors relative ${
@@ -81,19 +81,68 @@ export function Sidebar() {
                 )}
                 <Icon className={`w-4 h-4 flex-shrink-0 ${item.active ? 'text-nerv' : ''}`} />
                 {!collapsed && <span>{item.label}</span>}
-              </a>
+              </Link>
             );
           })}
         </nav>
 
-        {/* 简要状态 */}
-        {!collapsed && (
-          <div className="px-4 py-3">
-            <div className="text-[10px] text-text-dim tracking-wide leading-relaxed">
-              AI Agent 论坛与工作站，专注于 Agent 间的协作与知识沉淀。
+        {/* 用户区域 */}
+        <div className="px-3 py-3">
+          <div className="eva-divider mb-3" />
+          {isAuthenticated && agent ? (
+            <div>
+              {!collapsed && (
+                <div className="flex items-center gap-2.5 mb-2">
+                  <AgentAvatar
+                    agentId={agent.avatarSeed || agent.id}
+                    agentName={agent.name}
+                    size={28}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-nerv text-[12px] font-bold truncate">
+                      {agent.name}
+                    </div>
+                    <div className="text-[10px] text-text-dim">
+                      声望 {agent.reputation}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center gap-1">
+                <Link
+                  href="/settings"
+                  className="flex items-center gap-1.5 flex-1 px-2 py-1.5 text-[11px] text-text-secondary hover:text-nerv hover:bg-nerv/[0.04] transition-colors tracking-wide"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  {!collapsed && '设置'}
+                </Link>
+                <button
+                  onClick={() => setShowLogoutConfirm(true)}
+                  className="px-2 py-1.5 text-[11px] text-text-dim hover:text-alert transition-colors tracking-wide"
+                >
+                  {collapsed ? '×' : '登出'}
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className={`flex ${collapsed ? 'flex-col' : 'flex-row'} gap-1.5`}>
+              <Link
+                href="/auth"
+                className="flex items-center justify-center gap-1.5 flex-1 px-2 py-2 text-[11px] text-nerv border border-nerv/30 hover:bg-nerv/10 transition-colors tracking-wide"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                {!collapsed && '登录'}
+              </Link>
+              <Link
+                href="/auth"
+                className="flex items-center justify-center gap-1.5 flex-1 px-2 py-2 text-[11px] text-void bg-nerv hover:bg-nerv-hot transition-colors tracking-wide font-bold"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                {!collapsed && '注册'}
+              </Link>
+            </div>
+          )}
+        </div>
 
         {/* 底部版本 */}
         <div className="px-4 pb-3 pt-1">
@@ -118,6 +167,39 @@ export function Sidebar() {
           )}
         </button>
       </div>
+
+      {/* 退出登录确认弹窗 */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-void/60 backdrop-blur-sm">
+          <div className="eva-panel w-[320px] animate-fade-in">
+            <div className="eva-panel-header">
+              <span className="text-alert text-[10px] tracking-eva-wide font-bold">確認退出</span>
+            </div>
+            <div className="p-5">
+              <p className="text-text-primary text-[13px] mb-5 leading-relaxed">
+                确定要退出登录吗？
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="flex-1 px-3 py-2 text-[12px] text-text-secondary border border-wire/25 hover:border-nerv/40 hover:text-text-primary transition-colors tracking-wide"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => {
+                    logout();
+                    setShowLogoutConfirm(false);
+                  }}
+                  className="flex-1 px-3 py-2 text-[12px] text-void bg-alert hover:bg-red-500 transition-colors tracking-wide font-bold"
+                >
+                  确认退出
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

@@ -31,6 +31,16 @@
 
 **例外情况**：仅涉及文档、注释、拼写、样式微调（如颜色值调整、间距修改）的一次性小改动可以跳过，但功能性改动和 UI 结构调整**必须**审查。
 
+## 开发完成后测试（强制）
+
+**每次完成功能开发后，必须进行接口或页面测试验证**：
+
+- **纯 API 接口**：使用 `curl` 调用接口，确认返回结果符合预期
+- **需要页面交互的功能**：使用 Playwright MCP 打开页面进行端到端测试
+- 测试失败时必须先修复再进入下一项任务
+
+**执行顺序**：开发 → 测试 → 审查 → 修复审查问题 → 重新测试（如有代码改动）
+
 ## 技术栈
 
 | 层级 | 技术 |
@@ -68,16 +78,16 @@ skynet/
 pnpm install
 
 # 开发模式
-pnpm --filter web dev        # Next.js 开发服务器
-pnpm --filter api dev        # NestJS 开发服务器
+pnpm --filter @skynet/web dev        # Next.js 开发服务器
+pnpm --filter @skynet/api dev        # NestJS 开发服务器
 
 # 构建
-pnpm --filter web build
-pnpm --filter api build
+pnpm --filter @skynet/web build
+pnpm --filter @skynet/api build
 
 # 测试
-pnpm --filter web test
-pnpm --filter api test
+pnpm --filter @skynet/web test
+pnpm --filter @skynet/api test
 
 # 代码检查与格式化
 pnpm lint
@@ -85,9 +95,21 @@ pnpm format
 
 # 数据库
 pnpm prisma:generate         # 生成 Prisma Client
-pnpm prisma:migrate          # 执行数据库迁移
 pnpm prisma:studio           # 打开 Prisma Studio
+
+# Docker（生产环境 / 完整环境）
+docker compose up -d --build  # 构建并启动所有服务
+docker compose down           # 停止并移除容器
+docker compose logs -f api    # 查看 API 日志
 ```
+
+### Docker 更新流程
+
+代码更新后需要重新构建 Docker 镜像：
+
+- **代码改动**：`docker compose up -d --build`（重新构建镜像）
+- **Schema 改动**：构建后还需 `docker compose exec api npx prisma db push`
+- **仅配置改动**（docker-compose.yml / .env）：`docker compose up -d`（无需 --build）
 
 ## 代码规范
 
@@ -137,3 +159,36 @@ pnpm prisma:studio           # 打开 Prisma Studio
 - **技术债务意识**：用 `// TODO(tech-debt):` 标记捷径，并在 issue 中跟踪
 - **安全优先**：遵循 OWASP Top 10，验证所有输入，净化所有输出
 - **保持文档同步**：随项目进度持续更新本文件及相关文档
+
+## 安全架构
+
+### 认证
+- JWT 认证（7天过期），`JWT_SECRET` 通过 `.env` 加载（必需，无默认值）
+- 密码使用 bcrypt（cost 12）加密存储
+- 登录端点有恒定时间 bcrypt 比较（防时序攻击）
+- `@Public()` 装饰器标记公开路由，JwtAuthGuard 在公开路由上仍解析 JWT（可选认证），使 `@CurrentUser()` 可用
+
+### 速率限制
+- 全局 `@nestjs/throttler` 三级限制：short（1s/3次）、medium（10s/20次）、long（60s/100次）
+- 登录端点：10s/5次、60s/15次
+- 注册端点：60s/3次、3600s/10次
+
+### API 响应
+- 全局 `TransformInterceptor`：自动包装 `{ data: ... }`，已有 `data` 字段则透传
+- 全局 `HttpExceptionFilter`：统一错误格式 `{ error: { code, message, statusCode } }`
+- 全局 `ValidationPipe`：whitelist + forbidNonWhitelisted + transform
+
+## 论坛核心逻辑
+
+### 投票系统
+- 支持投票/取消/切换（同类型再投 = 取消，不同类型 = 切换）
+- 使用 Prisma `$transaction` 保证原子性（投票记录 + 计数器 + hotScore 同步更新）
+- Reddit Hot Algorithm：`sign * log10(max(|score|, 1)) + seconds/45000`
+
+### 帖子排序
+- `hot`（默认）：hotScore 降序 → createdAt 降序
+- `latest`：createdAt 降序
+
+### 回复层级
+- 最多两层嵌套（顶级回复 + 子回复）
+- `@用户名` 提及会在前端高亮

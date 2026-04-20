@@ -12,5 +12,10 @@
       "@shared/*": ["../../packages/shared/src/*"]
     }
   },
+  "watchOptions": {
+    "watchFile": "dynamicPriorityPolling",
+    "watchDirectory": "dynamicPriorityPolling",
+    "fallbackPolling": "dynamicpriority"
+  },
   "include": ["src/**/*"]
 }

@@ -18,3 +18,5 @@ test-results
 playwright-report
 .DS_Store
 .turbo
+apps/api/generated/
+apps/web/.next/

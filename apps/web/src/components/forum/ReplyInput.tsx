@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Eye, Send, X } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { ApiError } from '@/lib/api';
 
 interface ReplyInputProps {
@@ -16,7 +17,7 @@ interface ReplyInputProps {
 export function ReplyInput({
   onSubmit,
   onCancel,
-  placeholder = '输入回复内容...',
+  placeholder = '输入通信内容...',
   compact = false,
 }: ReplyInputProps) {
   const [content, setContent] = useState('');
@@ -43,23 +44,27 @@ export function ReplyInput({
   }, [content, onSubmit]);
 
   return (
-    <div className="border border-nerv/20 bg-void-warm">
+    <div className="signal-bubble overflow-visible">
       {/* 错误提示 */}
       {error && (
-        <div className="px-3 py-1.5 border-b border-alert/30 bg-alert/10 text-alert text-[11px]">
-          ⚠ {error}
-        </div>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="px-4 py-2 border-b border-ochre/15 bg-ochre/10 text-ochre text-[11px]"
+        >
+          {error}
+        </motion.div>
       )}
 
       {/* 工具栏 */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-nerv/15">
-        <span className="text-[10px] text-nerv tracking-wide font-bold">
-          通信输入
+      <div className="flex items-center justify-between px-4 py-2 border-b border-copper/[0.08]">
+        <span className="text-xs text-copper-dim tracking-deck-normal uppercase font-bold">
+          信号输入
         </span>
         <button
           onClick={() => setShowPreview(!showPreview)}
-          className={`flex items-center gap-1 text-[10px] tracking-wide transition-colors ${
-            showPreview ? 'text-wire' : 'text-text-dim hover:text-wire'
+          className={`flex items-center gap-1 text-xs tracking-wide transition-colors ${
+            showPreview ? 'text-steel' : 'text-ink-muted hover:text-steel'
           }`}
         >
           <Eye className="w-3 h-3" />
@@ -69,8 +74,8 @@ export function ReplyInput({
 
       {/* 输入 / 预览 */}
       {showPreview ? (
-        <div className="min-h-[80px] px-3 py-2 bg-void">
-          <div className="prose-eva text-[13px]">
+        <div className="min-h-[80px] px-4 py-3">
+          <div className="prose-deck text-[13px]">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {content || '*暂无内容*'}
             </ReactMarkdown>
@@ -82,16 +87,16 @@ export function ReplyInput({
           onChange={(e) => setContent(e.target.value)}
           placeholder={placeholder}
           rows={compact ? 3 : 4}
-          className="w-full px-3 py-2 bg-void text-text-primary text-[13px] placeholder:text-text-dim/50 focus:outline-none resize-y font-mono"
+          className="w-full px-4 py-3 bg-transparent text-ink-primary text-[13px] placeholder:text-ink-muted/40 focus:outline-none resize-y font-mono"
         />
       )}
 
       {/* 操作按钮 */}
-      <div className="flex items-center justify-end gap-2 px-3 py-2 border-t border-nerv/15">
+      <div className="flex items-center justify-end gap-2 px-4 py-2 border-t border-copper/[0.08]">
         {onCancel && (
           <button
             onClick={onCancel}
-            className="flex items-center gap-1 px-3 py-1.5 text-[11px] text-text-secondary hover:text-text-primary transition-colors tracking-wide"
+            className="flex items-center gap-1 px-3 py-1.5 text-[11px] text-ink-muted hover:text-ink-secondary transition-colors tracking-wide"
           >
             <X className="w-3 h-3" />
             取消
@@ -100,7 +105,7 @@ export function ReplyInput({
         <button
           onClick={handleSubmit}
           disabled={submitting || !content.trim()}
-          className="flex items-center gap-1 px-3 py-1.5 text-[11px] text-void bg-nerv hover:bg-nerv-hot disabled:opacity-40 disabled:cursor-not-allowed transition-colors tracking-wide font-bold"
+          className="flex items-center gap-1 px-4 py-1.5 text-[11px] text-void bg-copper hover:bg-copper-dim disabled:opacity-40 disabled:cursor-not-allowed transition-all tracking-wide font-bold rounded-md"
         >
           <Send className="w-3 h-3" />
           {submitting ? '发送中...' : '发送'}

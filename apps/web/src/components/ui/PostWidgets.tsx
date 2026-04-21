@@ -1,12 +1,27 @@
 'use client';
 
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowUp, ArrowDown } from 'lucide-react';
+
 interface PostTagProps {
   label: string;
 }
 
+const TAG_COLORS: Record<string, string> = {
+  '架构': 'bg-copper/60',
+  '性能优化': 'bg-moss/60',
+  'AI哲学': 'bg-steel/60',
+  '安全': 'bg-ochre/60',
+  '自动化': 'bg-copper/50',
+  '分布式': 'bg-moss/50',
+};
+
 export function PostTag({ label }: PostTagProps) {
+  const dotColor = TAG_COLORS[label] || 'bg-ink-muted/40';
   return (
-    <span className="inline-block px-2 py-0.5 text-[10px] font-medium tracking-wide border border-wire/25 text-wire bg-wire/[0.04]">
+    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs text-ink-secondary tracking-wide">
+      <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
       {label}
     </span>
   );
@@ -33,59 +48,91 @@ export function VoteButtons({
   onDownvote,
   disabled = false,
 }: VoteButtonsProps) {
-  const isVertical = orientation === 'vertical';
+  const [showButtons, setShowButtons] = useState(false);
   const interactive = !!onUpvote && !disabled;
+  const total = upvotes + downvotes;
+  const upPercent = total > 0 ? (upvotes / total) * 100 : 50;
+  const downPercent = total > 0 ? (downvotes / total) * 100 : 50;
+  const isVertical = orientation === 'vertical';
 
   return (
-    <div className={`flex items-center gap-1 ${isVertical ? 'flex-col' : 'flex-row'}`}>
-      <button
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (interactive && onUpvote) onUpvote();
-        }}
-        disabled={!interactive}
-        className={`p-1 transition-colors ${
-          votedUp
-            ? 'text-data'
-            : interactive
-              ? 'text-text-dim hover:text-data cursor-pointer'
-              : 'text-text-dim cursor-default'
-        }`}
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter">
-          <path d="M12 19V5M5 12l7-7 7 7" />
-        </svg>
-      </button>
-      <span className={`text-[11px] font-mono font-bold tabular-nums min-w-[24px] text-center ${
-        votedUp ? 'text-data text-glow-green' : 'text-text-secondary'
-      }`}>
-        {upvotes}
-      </span>
-      <button
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (interactive && onDownvote) onDownvote();
-        }}
-        disabled={!interactive}
-        className={`p-1 transition-colors ${
-          votedDown
-            ? 'text-alert'
-            : interactive
-              ? 'text-text-dim hover:text-alert cursor-pointer'
-              : 'text-text-dim cursor-default'
-        }`}
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter">
-          <path d="M12 5v14M5 12l7 7 7-7" />
-        </svg>
-      </button>
-      <span className={`text-[11px] font-mono font-bold tabular-nums min-w-[24px] text-center ${
-        votedDown ? 'text-alert text-glow-red' : 'text-text-secondary'
-      }`}>
-        {downvotes}
-      </span>
+    <div
+      className={`flex items-center gap-2 ${isVertical ? 'flex-col' : 'flex-row'}`}
+      onMouseEnter={() => setShowButtons(true)}
+      onMouseLeave={() => setShowButtons(false)}
+    >
+      {/* 光谱条 */}
+      <div className={`relative ${isVertical ? 'w-1 h-12' : 'w-16 h-1'} rounded-full overflow-hidden bg-void-mid`}>
+        <div
+          className="absolute bg-moss/60 rounded-full transition-all duration-300"
+          style={
+            isVertical
+              ? { bottom: 0, width: '100%', height: `${upPercent}%` }
+              : { left: 0, height: '100%', width: `${upPercent}%` }
+          }
+        />
+        <div
+          className="absolute bg-ochre/40 rounded-full transition-all duration-300"
+          style={
+            isVertical
+              ? { top: 0, width: '100%', height: `${downPercent}%` }
+              : { right: 0, height: '100%', width: `${downPercent}%` }
+          }
+        />
+      </div>
+
+      {/* 数值 */}
+      <div className={`flex ${isVertical ? 'flex-col' : 'flex-row'} items-center gap-1`}>
+        <span className={`text-xs font-mono font-bold tabular-nums ${votedUp ? 'text-moss' : 'text-ink-muted'}`}>
+          {upvotes}
+        </span>
+        <span className="text-ink-muted/30 text-xs">/</span>
+        <span className={`text-[11px] font-mono font-bold tabular-nums ${votedDown ? 'text-ochre' : 'text-ink-muted'}`}>
+          {downvotes}
+        </span>
+      </div>
+
+      {/* 操作按钮 */}
+      <AnimatePresence>
+        {showButtons && interactive && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.15 }}
+            className={`flex ${isVertical ? 'flex-col' : 'flex-row'} items-center gap-0.5`}
+          >
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onUpvote) onUpvote();
+              }}
+              className={`p-1 rounded transition-colors ${
+                votedUp
+                  ? 'text-moss bg-moss/10'
+                  : 'text-ink-muted hover:text-moss hover:bg-moss/5'
+              }`}
+            >
+              <ArrowUp className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onDownvote) onDownvote();
+              }}
+              className={`p-1 rounded transition-colors ${
+                votedDown
+                  ? 'text-ochre bg-ochre/10'
+                  : 'text-ink-muted hover:text-ochre hover:bg-ochre/5'
+              }`}
+            >
+              <ArrowDown className="w-3.5 h-3.5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

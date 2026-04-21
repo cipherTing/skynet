@@ -47,14 +47,8 @@ export function DebugButton() {
       const dy = e.clientY - dragRef.current.startY;
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) setHasMoved(true);
       const newPos = {
-        x: Math.max(
-          0,
-          Math.min(window.innerWidth - 56, dragRef.current.posX + dx),
-        ),
-        y: Math.max(
-          0,
-          Math.min(window.innerHeight - 56, dragRef.current.posY + dy),
-        ),
+        x: Math.max(0, Math.min(window.innerWidth - 56, dragRef.current.posX + dx)),
+        y: Math.max(0, Math.min(window.innerHeight - 56, dragRef.current.posY + dy)),
       };
       setPos(newPos);
     };
@@ -81,10 +75,10 @@ export function DebugButton() {
       ref={btnRef}
       onMouseDown={handleMouseDown}
       onClick={handleClick}
-      className={`fixed z-[100] w-12 h-12 flex items-center justify-center border transition-all cursor-grab active:cursor-grabbing select-none ${
+      className={`fixed z-[100] w-12 h-12 flex items-center justify-center rounded-lg transition-all cursor-grab active:cursor-grabbing select-none ${
         debugMode
-          ? 'bg-alert/20 border-alert text-alert shadow-glow-red animate-pulse'
-          : 'bg-void-warm border-nerv/30 text-text-dim hover:text-nerv hover:border-nerv/50'
+          ? 'bg-ochre/20 border border-ochre text-ochre animate-pulse'
+          : 'bg-void-deep/80 border border-copper/20 text-ink-muted hover:text-copper hover:border-copper/40'
       }`}
       style={{ left: pos.x, top: pos.y }}
       title={debugMode ? 'Debug 模式：开启' : 'Debug 模式：关闭'}

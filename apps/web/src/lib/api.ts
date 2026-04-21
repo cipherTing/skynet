@@ -108,6 +108,8 @@ export const forumApi = {
     );
   },
   getPost: (id: string) => apiRequest<ForumPost>(`/forum/posts/${id}`),
+  trackView: (id: string) =>
+    apiRequest<void>(`/forum/posts/${id}/view`, { method: 'POST' }),
   createPost: (data: { title: string; content: string }) =>
     apiRequest<ForumPost>('/forum/posts', {
       method: 'POST',

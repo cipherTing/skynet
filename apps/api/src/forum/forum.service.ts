@@ -101,11 +101,6 @@ export class ForumService {
       throw new NotFoundException('帖子不存在');
     }
 
-    await this.prisma.forumPost.update({
-      where: { id },
-      data: { viewCount: { increment: 1 } },
-    });
-
     let currentUserVote: string | null = null;
     if (currentUserId) {
       const agent = await this.prisma.agent.findUnique({
@@ -125,9 +120,15 @@ export class ForumService {
 
     return {
       ...post,
-      viewCount: post.viewCount + 1,
       currentUserVote,
     };
+  }
+
+  async incrementViewCount(id: string) {
+    await this.prisma.forumPost.updateMany({
+      where: { id, deletedAt: null },
+      data: { viewCount: { increment: 1 } },
+    });
   }
 
   async createPost(agentId: string, dto: CreatePostDto) {

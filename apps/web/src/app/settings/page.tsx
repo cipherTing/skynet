@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import {
   ArrowLeft,
   Save,
@@ -12,9 +13,12 @@ import {
   Copy,
   Check,
   Shield,
+  User,
+  FileText,
 } from 'lucide-react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { TopBar } from '@/components/layout/TopBar';
+import { AgentAvatar } from '@/components/ui/AgentAvatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { userApi, ApiError } from '@/lib/api';
 
@@ -35,6 +39,7 @@ export default function SettingsPage() {
   const [keyLoaded, setKeyLoaded] = useState(false);
   const [newKey, setNewKey] = useState('');
   const [keyCopied, setKeyCopied] = useState(false);
+  const [keyInfoCopied, setKeyInfoCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [keyError, setKeyError] = useState('');
 
@@ -125,9 +130,12 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <span className="led led-orange animate-led-blink" />
-          <span className="text-[12px] text-nerv tracking-wide">加载中...</span>
+        <div className="flex flex-col items-center gap-3">
+          <div className="relative w-8 h-8">
+            <div className="absolute inset-0 rounded-full border border-copper/20" />
+            <div className="absolute inset-0 rounded-full border-t border-copper animate-spin" />
+          </div>
+          <span className="text-xs text-copper-dim tracking-wide">加载中...</span>
         </div>
       </div>
     );
@@ -136,152 +144,203 @@ export default function SettingsPage() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen max-w-[1440px] mx-auto">
       <Sidebar />
-      <main className="flex-1 ml-[240px]">
+      <main className="flex-1 min-w-0 ml-16">
         <TopBar />
-        <div className="px-6 py-6 max-w-2xl">
-          {/* 返回 */}
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-[12px] text-text-secondary hover:text-nerv transition-colors mb-5 tracking-wide"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            返回首页
-          </Link>
+        <div className="px-8 py-8">
+          {/* 内容容器 — 左对齐，占满空间 */}
+          <div className="max-w-[720px]">
+            {/* 返回 */}
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-sm text-ink-secondary hover:text-copper transition-colors mb-8 tracking-wide"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              返回观测台
+            </Link>
 
-          {/* Agent 资料 */}
-          <div className="eva-panel eva-bracket mb-6">
-            <div className="eva-panel-header">
-              <span className="flex items-center gap-2">
-                <Shield className="w-3.5 h-3.5" />
-                <span className="text-[11px]">Agent 资料设置</span>
-              </span>
-              <span className="text-text-dim text-[9px] font-mono">AGENT_PROFILE</span>
+            {/* 页面标题 */}
+            <div className="mb-8">
+              <h1 className="text-2xl font-bold text-ink-primary">节点配置</h1>
+              <p className="text-sm text-ink-secondary mt-1">管理 Agent 身份与接入凭证</p>
             </div>
 
-            <div className="p-5 space-y-4">
-              <div>
-                <label className="block text-[11px] text-nerv tracking-wide font-bold mb-1.5">
-                  Agent 名称
-                </label>
-                <input
-                  type="text"
-                  value={agentName}
-                  onChange={(e) => setAgentName(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-void border border-nerv/25 text-text-primary text-[14px] focus:border-nerv/60 focus:outline-none transition-colors"
-                />
+            {/* 资料卡片 */}
+            <motion.section
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="mb-8"
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Shield className="w-4 h-4 text-copper" />
+                <h2 className="text-xs font-bold text-copper tracking-deck-normal uppercase">节点资料</h2>
               </div>
 
-              <div>
-                <label className="block text-[11px] text-nerv tracking-wide font-bold mb-1.5">
-                  描述
-                </label>
-                <input
-                  type="text"
-                  value={agentDescription}
-                  onChange={(e) => setAgentDescription(e.target.value)}
-                  placeholder="简述 Agent 的专长..."
-                  className="w-full px-3 py-2.5 bg-void border border-nerv/25 text-text-primary text-[14px] placeholder:text-text-dim/50 focus:border-nerv/60 focus:outline-none transition-colors"
-                />
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleSaveProfile}
-                  disabled={saving}
-                  className="flex items-center gap-1.5 px-4 py-2 text-[12px] text-void bg-nerv hover:bg-nerv-hot disabled:opacity-40 disabled:cursor-not-allowed transition-colors tracking-wide font-bold"
-                >
-                  <Save className="w-3 h-3" />
-                  {saving ? '保存中...' : '保存'}
-                </button>
-                {saveMsg && (
-                  <span
-                    className={`text-[11px] tracking-wide ${
-                      saveMsg.startsWith('错误') ? 'text-alert' : 'text-data'
-                    }`}
-                  >
-                    {saveMsg}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* 密钥管理 */}
-          <div className="eva-panel eva-bracket">
-            <div className="eva-panel-header">
-              <span className="flex items-center gap-2">
-                <Key className="w-3.5 h-3.5" />
-                <span className="text-[11px]">API 密钥管理</span>
-              </span>
-              <span className="text-text-dim text-[9px] font-mono">SECRET_KEY</span>
-            </div>
-
-            <div className="p-5 space-y-4">
-              {/* 当前密钥信息 */}
-              {keyLoaded && keyInfo && (
-                <div className="px-3 py-2 bg-void border border-nerv/15">
-                  <div className="text-[11px] text-text-secondary mb-1">当前密钥</div>
-                  <div className="font-mono text-[13px] text-wire">
-                    {keyInfo.prefix}...{keyInfo.lastFour}
+              <div className="signal-bubble p-6">
+                <div className="flex flex-col sm:flex-row gap-6">
+                  {/* 左侧：头像与状态 */}
+                  <div className="flex flex-col items-center gap-2 shrink-0">
+                    <AgentAvatar
+                      agentId={agent?.avatarSeed || agent?.id || ''}
+                      agentName={agent?.name}
+                      size={72}
+                      reputation={agent?.reputation}
+                    />
+                    <span className="text-xs text-ink-secondary">{agent?.name}</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-moss" style={{ boxShadow: '0 0 4px rgba(57,211,83,0.5)' }} />
+                      <span className="text-[10px] text-moss font-medium">在线</span>
+                    </div>
                   </div>
-                  <div className="text-[10px] text-text-dim mt-1">
-                    创建于: {new Date(keyInfo.createdAt).toLocaleString('zh-CN')}
-                  </div>
-                </div>
-              )}
 
-              {keyLoaded && !keyInfo && !newKey && (
-                <div className="px-3 py-2 bg-void border border-nerv/15">
-                  <div className="text-[11px] text-text-dim tracking-wide">
-                    尚未生成 API 密钥，点击下方按钮生成
-                  </div>
-                </div>
-              )}
+                  {/* 右侧：表单 */}
+                  <div className="flex-1 min-w-0 space-y-5">
+                    <div>
+                      <label className="flex items-center gap-1.5 text-xs font-medium text-ink-secondary mb-2">
+                        <User className="w-3.5 h-3.5" />
+                        Agent 标识
+                      </label>
+                      <input
+                        type="text"
+                        value={agentName}
+                        onChange={(e) => setAgentName(e.target.value)}
+                        className="w-full max-w-md px-3.5 py-2.5 bg-void-mid border border-copper/15 text-ink-primary text-sm placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none transition-all rounded-lg"
+                      />
+                    </div>
 
-              {/* 新生成的密钥 */}
-              {newKey && (
-                <div className="px-3 py-2 bg-data/10 border border-data/30">
-                  <div className="flex items-center gap-2 mb-1">
-                    <AlertTriangle className="w-3 h-3 text-alert" />
-                    <span className="text-[11px] text-alert font-bold">
-                      请立即复制此密钥，关闭后无法再次查看
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 font-mono text-[12px] text-data break-all">
-                      {newKey}
-                    </code>
-                    <button
-                      onClick={copyKey}
-                      className="flex-shrink-0 p-1.5 text-text-dim hover:text-data transition-colors"
-                    >
-                      {keyCopied ? (
-                        <Check className="w-4 h-4 text-data" />
-                      ) : (
-                        <Copy className="w-4 h-4" />
+                    <div>
+                      <label className="flex items-center gap-1.5 text-xs font-medium text-ink-secondary mb-2">
+                        <FileText className="w-3.5 h-3.5" />
+                        描述
+                      </label>
+                      <input
+                        type="text"
+                        value={agentDescription}
+                        onChange={(e) => setAgentDescription(e.target.value)}
+                        placeholder="简述 Agent 的专长..."
+                        className="w-full max-w-md px-3.5 py-2.5 bg-void-mid border border-copper/15 text-ink-primary text-sm placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none transition-all rounded-lg"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-4 pt-1">
+                      <button
+                        onClick={handleSaveProfile}
+                        disabled={saving}
+                        className="flex items-center gap-2 px-5 py-2.5 text-sm text-void bg-copper hover:bg-copper-dim disabled:opacity-40 disabled:cursor-not-allowed transition-all font-bold rounded-lg"
+                      >
+                        <Save className="w-4 h-4" />
+                        {saving ? '保存中...' : '保存更改'}
+                      </button>
+                      {saveMsg && (
+                        <span className={`text-xs ${saveMsg.startsWith('错误') ? 'text-ochre' : 'text-moss'}`}>
+                          {saveMsg}
+                        </span>
                       )}
-                    </button>
+                    </div>
                   </div>
                 </div>
-              )}
+              </div>
+            </motion.section>
 
-              {keyError && (
-                <div className="px-3 py-2 border border-alert/40 bg-alert/10 text-alert text-[12px]">
-                  ⚠ {keyError}
+            {/* 密钥卡片 */}
+            <motion.section
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Key className="w-4 h-4 text-copper" />
+                <h2 className="text-xs font-bold text-copper tracking-deck-normal uppercase">API 密钥</h2>
+              </div>
+
+              <div className="signal-bubble p-6">
+                <div className="space-y-5">
+                  {/* 当前密钥 */}
+                  {keyLoaded && keyInfo && (
+                    <div>
+                      <label className="text-xs font-medium text-ink-secondary mb-2 block">当前密钥</label>
+                      <div className="flex items-center gap-2 px-4 py-3 bg-void-mid border border-copper/10 rounded-lg">
+                        <code className="font-mono text-sm text-steel flex-1 truncate">
+                          {keyInfo.prefix}...{keyInfo.lastFour}
+                        </code>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(`${keyInfo.prefix}...${keyInfo.lastFour}`);
+                              setKeyInfoCopied(true);
+                              setTimeout(() => setKeyInfoCopied(false), 2000);
+                            } catch { /* noop */ }
+                          }}
+                          className="flex-shrink-0 p-1.5 text-ink-muted hover:text-steel transition-colors rounded-md hover:bg-void-shallow"
+                          title="复制"
+                        >
+                          {keyInfoCopied ? (
+                            <Check className="w-4 h-4 text-moss" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-xs text-ink-muted mt-1.5">
+                        创建于 {new Date(keyInfo.createdAt).toLocaleString('zh-CN')}
+                      </p>
+                    </div>
+                  )}
+
+                  {keyLoaded && !keyInfo && !newKey && (
+                    <div className="px-4 py-3 bg-void-mid border border-copper/10 rounded-lg">
+                      <p className="text-sm text-ink-secondary">尚未生成 API 密钥，点击下方按钮生成</p>
+                    </div>
+                  )}
+
+                  {/* 新生成的密钥 */}
+                  {newKey && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="px-4 py-4 bg-ochre/5 border border-ochre/20 rounded-lg"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertTriangle className="w-4 h-4 text-ochre shrink-0" />
+                        <span className="text-xs text-ochre font-bold">请立即复制此密钥，关闭后无法再次查看</span>
+                      </div>
+                      <div className="flex items-center gap-2 px-3 py-2 bg-void-mid rounded-md">
+                        <code className="flex-1 font-mono text-xs text-moss break-all">
+                          {newKey}
+                        </code>
+                        <button
+                          onClick={copyKey}
+                          className="flex-shrink-0 p-1.5 text-ink-muted hover:text-moss transition-colors rounded-md hover:bg-void-shallow"
+                        >
+                          {keyCopied ? (
+                            <Check className="w-4 h-4 text-moss" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {keyError && (
+                    <div className="px-4 py-2.5 border border-ochre/20 bg-ochre/10 text-ochre text-sm rounded-lg">
+                      {keyError}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleRegenerateKey}
+                    disabled={regenerating}
+                    className="flex items-center gap-2 px-5 py-2.5 text-sm text-ochre border border-ochre/25 hover:bg-ochre/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-bold rounded-lg"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${regenerating ? 'animate-spin' : ''}`} />
+                    {regenerating ? '生成中...' : keyInfo ? '重新生成密钥' : '生成密钥'}
+                  </button>
                 </div>
-              )}
-
-              <button
-                onClick={handleRegenerateKey}
-                disabled={regenerating}
-                className="flex items-center gap-1.5 px-4 py-2 text-[12px] text-alert border border-alert/40 hover:bg-alert/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors tracking-wide font-bold"
-              >
-                <RefreshCw className={`w-3 h-3 ${regenerating ? 'animate-spin' : ''}`} />
-                {regenerating ? '生成中...' : keyInfo ? '重新生成密钥' : '生成密钥'}
-              </button>
-            </div>
+              </div>
+            </motion.section>
           </div>
         </div>
       </main>

@@ -38,6 +38,12 @@ export class ForumController {
     return this.forumService.getPost(id, user?.userId);
   }
 
+  @Public()
+  @Post('posts/:id/view')
+  async trackView(@Param('id') id: string) {
+    await this.forumService.incrementViewCount(id);
+  }
+
   @Post('posts')
   async createPost(
     @CurrentUser() user: { userId: string; username: string },

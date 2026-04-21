@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Reply } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
 import { VoteButtons } from '@/components/ui/PostWidgets';
 import { ReplyInput } from './ReplyInput';
@@ -22,18 +24,11 @@ interface ReplyThreadProps {
 
 const MAX_DEPTH = 2;
 
-const DEPTH_COLORS = [
-  'border-wire/40',
-  'border-nerv/35',
-  'border-data/30',
-];
-
 function highlightMentions(content: string): string {
-  return content.replace(/@(\w+)/g, '**@$1**');
+  return content.replace(/@([^\s]+)/g, '**@$1**');
 }
 
 export function ReplyThread({ reply, index, depth, postId, onReplyCreated }: ReplyThreadProps) {
-  const borderColor = DEPTH_COLORS[depth] ?? DEPTH_COLORS[DEPTH_COLORS.length - 1];
   const entryNum = String(index + 1).padStart(2, '0');
   const { debugMode } = useDebug();
   const [showReplyInput, setShowReplyInput] = useState(false);
@@ -67,45 +62,44 @@ export function ReplyThread({ reply, index, depth, postId, onReplyCreated }: Rep
   const processedContent = highlightMentions(reply.content);
 
   return (
-    <div className={`relative ${depth > 0 ? 'ml-6' : ''}`}>
+    <div className={`relative ${depth > 0 ? 'ml-5' : ''}`}>
       {/* 深度指示线 */}
       {depth > 0 && (
-        <div className={`absolute left-[-12px] top-0 bottom-0 w-px ${borderColor.replace('border-', 'bg-')}`} />
+        <div className="absolute left-[-14px] top-0 bottom-0 w-px bg-gradient-to-b from-copper/30 to-transparent" />
       )}
 
-      <div className={`border ${borderColor} bg-void-warm`}>
+      <div className="signal-bubble p-4">
         {/* 回复头部 */}
-        <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-nerv/15 bg-void-panel/50">
-          <span className="text-[9px] text-text-dim font-mono tabular-nums">
+        <div className="flex items-center gap-2.5 mb-3">
+          <span className="text-xs text-ink-muted font-mono tabular-nums">
             R-{entryNum}
           </span>
           <AgentAvatar
             agentId={reply.author?.avatarSeed || reply.author?.id || ''}
             agentName={reply.author?.name}
-            size={22}
+            size={24}
+            reputation={reply.author?.reputation}
           />
-          <span className="text-nerv text-[12px] font-bold">
+          <span className="text-copper text-sm font-bold">
             {reply.author?.name}
           </span>
-          <span className="text-[10px] text-text-dim ml-auto">
+          <span className="text-xs text-ink-muted ml-auto">
             {getRelativeTime(reply.createdAt)}
           </span>
         </div>
 
         {/* 回复内容 */}
-        <div className="px-4 py-3">
-          <div className="prose-eva text-[14px]">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{processedContent}</ReactMarkdown>
-          </div>
+        <div className="prose-deck text-sm mb-3">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{processedContent}</ReactMarkdown>
         </div>
 
         {/* 底部操作 */}
         {actionError && (
-          <div className="px-4 py-1.5 text-alert text-[11px] tracking-wide border-t border-alert/20 bg-alert/5">
-            ⚠ {actionError}
+          <div className="px-3 py-1.5 text-ochre text-[11px] tracking-wide border border-ochre/15 bg-ochre/5 rounded-md mb-2">
+            {actionError}
           </div>
         )}
-        <div className="flex items-center gap-3 px-4 py-2 border-t border-nerv/15">
+        <div className="flex items-center gap-3">
           <VoteButtons
             upvotes={reply.upvotes}
             downvotes={reply.downvotes}
@@ -117,7 +111,7 @@ export function ReplyThread({ reply, index, depth, postId, onReplyCreated }: Rep
           {debugMode && depth < MAX_DEPTH && (
             <button
               onClick={() => setShowReplyInput(!showReplyInput)}
-              className="flex items-center gap-1 ml-auto text-[11px] text-text-dim hover:text-wire transition-colors tracking-wide"
+              className="flex items-center gap-1 ml-auto text-[11px] text-ink-muted hover:text-steel transition-colors tracking-wide"
             >
               <Reply className="w-3 h-3" />
               回复
@@ -126,21 +120,28 @@ export function ReplyThread({ reply, index, depth, postId, onReplyCreated }: Rep
         </div>
 
         {/* 内联回复输入 */}
-        {showReplyInput && (
-          <div className="px-4 pb-3">
-            <ReplyInput
-              onSubmit={handleReply}
-              onCancel={() => setShowReplyInput(false)}
-              placeholder={`回复 ${reply.author?.name}...`}
-              compact
-            />
-          </div>
-        )}
+        <AnimatePresence>
+          {showReplyInput && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-3"
+            >
+              <ReplyInput
+                onSubmit={handleReply}
+                onCancel={() => setShowReplyInput(false)}
+                placeholder={`回复 ${reply.author?.name}...`}
+                compact
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* 子回复 */}
       {reply.children && reply.children.length > 0 && depth < MAX_DEPTH && (
-        <div className="mt-1.5 space-y-1.5">
+        <div className="mt-2 space-y-2">
           {reply.children.map((child: ForumReply, childIndex: number) => (
             <ReplyThread
               key={child.id}

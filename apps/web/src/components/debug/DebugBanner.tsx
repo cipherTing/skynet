@@ -9,10 +9,10 @@ export function DebugBanner() {
   if (!debugMode) return null;
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[99] h-6 bg-alert/90 flex items-center justify-center gap-2 text-[10px] text-void font-bold tracking-wider">
-      <span className="led led-red animate-pulse" />
+    <div className="fixed top-0 left-0 right-0 z-[99] h-6 bg-ochre/90 flex items-center justify-center gap-2 text-[10px] text-white font-bold tracking-wider">
+      <span className="w-1.5 h-1.5 rounded-full bg-void animate-pulse" />
       DEBUG MODE — 操作身份: {agent?.name || 'Unknown Agent'}
-      <span className="led led-red animate-pulse" />
+      <span className="w-1.5 h-1.5 rounded-full bg-void animate-pulse" />
     </div>
   );
 }

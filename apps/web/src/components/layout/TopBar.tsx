@@ -1,7 +1,8 @@
 'use client';
 
-import { RefreshCw, Search } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { Search, Radio } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 function useClock() {
@@ -22,70 +23,76 @@ function useClock() {
 
 export function TopBar() {
   const { time, date } = useClock();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 80);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
-    <header className="sticky top-0 z-30 bg-void/90 border-b border-nerv/20 backdrop-blur-sm">
-      {/* 状态指示条 */}
-      <div className="h-[2px] bg-data" />
-
-      <div className="flex items-center px-5 h-11">
+    <motion.header
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: scrolled ? 0 : 1, y: scrolled ? -10 : 0 }}
+      transition={{ duration: 0.3 }}
+      className="sticky top-0 z-30 pointer-events-none"
+    >
+      <div className="flex items-center justify-between px-6 py-3">
         {/* 左: 区域标识 */}
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <span className="text-nerv font-bold text-[12px] tracking-wide text-glow-orange">
-            ◆ 全域通信
-          </span>
-          <div className="w-px h-4 bg-nerv/25" />
-          <span className="text-[10px] text-text-dim tracking-wider">
-            情報交換HUB
+        <div className="flex items-center gap-3 pointer-events-auto">
+          <div className="flex items-center gap-2">
+            <Radio className="w-4 h-4 text-copper" />
+            <span className="text-copper font-display text-base font-bold tracking-deck-wide">
+              SKYNET
+            </span>
+          </div>
+          <div className="w-px h-4 bg-copper/20" />
+          <span className="text-xs text-ink-muted tracking-wider uppercase">
+            观测终端
           </span>
         </div>
 
-        {/* 中: 状态 */}
-        <div className="flex items-center gap-4 ml-6 flex-shrink-0">
+        {/* 中: 系统状态 */}
+        <div className="flex items-center gap-4 pointer-events-auto">
           <div className="flex items-center gap-1.5">
-            <span className="led led-green" />
-            <span className="text-[10px] text-text-secondary tracking-wider">状态：</span>
-            <span className="text-[10px] text-data font-mono font-bold tracking-wider text-glow-green">
-              正常
-            </span>
+            <div
+              className="w-2 h-2 rounded-full bg-moss"
+              style={{ boxShadow: '0 0 4px rgba(74, 222, 128, 0.5)' }}
+            />
+            <span className="text-xs text-ink-secondary tracking-wider uppercase">系统正常</span>
           </div>
         </div>
 
-        <div className="flex-1" />
-
-        {/* 右: 搜索 + 刷新 + 时钟 */}
-        <div className="flex items-center gap-3">
-          {/* 搜索框 */}
+        {/* 右: 搜索 + 主题 + 时钟 */}
+        <div className="flex items-center gap-4 pointer-events-auto">
+          {/* 搜索 */}
           <div className="relative group">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-nerv-dim group-focus-within:text-nerv transition-colors" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-muted group-focus-within:text-copper transition-colors" />
             <input
               type="text"
-              placeholder="搜索..."
-              className="w-48 pl-8 pr-3 py-1.5 text-[13px] tracking-wide bg-void border border-nerv/25 text-text-primary placeholder:text-text-dim focus:outline-none focus:border-nerv/50 focus:shadow-glow-orange transition-all font-sans"
+              placeholder="检索信号..."
+              className="w-56 pl-9 pr-3 py-2 text-sm tracking-wide bg-void-mid border border-copper/15 text-ink-primary placeholder:text-ink-muted/60 focus:outline-none focus:border-copper/40 rounded-lg transition-all font-sans"
             />
           </div>
 
-          {/* 刷新 */}
-          <button className="p-1.5 border border-nerv/20 text-text-dim hover:text-nerv hover:border-nerv/40 transition-colors">
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
-
-          {/* 主题切换 */}
           <ThemeToggle />
 
-          <div className="w-px h-4 bg-nerv/25" />
+          <div className="w-px h-4 bg-copper/15" />
 
           {/* 时钟 */}
-          <div className="text-right flex-shrink-0">
-            <div className="text-data text-[11px] font-mono font-bold tracking-wider tabular-nums text-glow-green">
+          <div className="text-right">
+            <div className="text-moss text-sm font-mono font-bold tracking-wider tabular-nums">
               {time}
             </div>
-            <div className="text-[9px] text-text-dim font-mono tracking-eva-normal tabular-nums">
+            <div className="text-xs text-ink-muted font-mono tracking-deck-normal tabular-nums">
               {date}
             </div>
           </div>
         </div>
       </div>
-    </header>
+    </motion.header>
   );
 }

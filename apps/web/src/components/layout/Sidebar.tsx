@@ -1,188 +1,180 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MessageSquare,
-  ChevronLeft,
-  ChevronRight,
+  Radio,
   LogIn,
   UserPlus,
   Settings,
+  LogOut,
+  Shield,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
 
 const navItems = [
-  { icon: MessageSquare, label: '论坛', href: '/', active: true },
+  { icon: Radio, label: '信号流', href: '/' },
 ];
 
 export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { isAuthenticated, agent, logout } = useAuth();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (!showLogoutConfirm) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowLogoutConfirm(false);
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [showLogoutConfirm]);
 
   return (
-    <aside
-      className={`fixed left-0 top-0 h-screen z-40 transition-all duration-300 ${
-        collapsed ? 'w-16' : 'w-[240px]'
-      }`}
-    >
-      {/* 背景 */}
-      <div className="absolute inset-0 bg-void-warm border-r border-nerv/20" />
+    <>
+      <aside className="fixed left-0 top-0 h-screen w-16 z-40 flex flex-col items-center py-4">
+        {/* 背景 */}
+        <div className="absolute inset-0 bg-void-deep border-r border-copper/10" />
 
-      <div className="relative h-full flex flex-col">
-        {/* Logo 区域 */}
-        <div className="px-4 pt-4 pb-2">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 flex-shrink-0 border border-nerv/60 flex items-center justify-center">
-              <span className="text-nerv font-display text-xs font-black tracking-eva-wide">S</span>
+        <div className="relative flex flex-col items-center h-full w-full px-2">
+          {/* Logo */}
+          <Link href="/" className="mb-4 group">
+            <div className="w-10 h-10 flex items-center justify-center border border-copper/40 rounded-lg">
+              <span className="text-copper font-display text-sm font-black tracking-deck-wide">
+                S
+              </span>
             </div>
-            {!collapsed && (
-              <div>
-                <h1 className="text-nerv font-display text-sm font-bold tracking-eva-wide text-glow-orange">
-                  SKYNET
-                </h1>
-                <p className="text-[9px] text-text-dim tracking-wider">
-                  情報交換平台
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+          </Link>
 
-        {/* 分隔线 */}
-        <div className="mx-4 eva-divider" />
+          {/* 分隔线 */}
+          <div className="w-8 deck-divider mb-3" />
 
-        {/* Section 标签 */}
-        {!collapsed && (
-          <div className="section-header mx-0 mt-2">
-            <span>総合掲示板</span>
-          </div>
-        )}
+          {/* 导航项 */}
+          <nav className="flex-1 flex flex-col items-center gap-1 w-full">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
 
-        {/* 导航项 */}
-        <nav className="flex-1 px-2 mt-1 space-y-0.5">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium tracking-wide transition-colors relative ${
-                  item.active
-                    ? 'text-nerv bg-nerv/[0.08]'
-                    : 'text-text-secondary hover:text-nerv hover:bg-nerv/[0.04]'
-                }`}
-              >
-                {/* 活跃指示条 */}
-                {item.active && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-5 bg-nerv shadow-led-orange" />
-                )}
-                <Icon className={`w-4 h-4 flex-shrink-0 ${item.active ? 'text-nerv' : ''}`} />
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
-            );
-          })}
-        </nav>
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className={`relative flex flex-col items-center justify-center w-full py-2 rounded-lg transition-all duration-200 gap-0.5 ${
+                    isActive
+                      ? 'text-copper bg-copper/10'
+                      : 'text-ink-muted hover:text-copper hover:bg-copper/5'
+                  }`}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="sidebar-active"
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-6 bg-copper rounded-r-full"
+                      style={{ boxShadow: '0 0 6px rgba(45, 212, 191, 0.5)' }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    />
+                  )}
+                  <Icon className="w-5 h-5" />
+                  <span className="text-[10px] font-medium tracking-wide">{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
 
-        {/* 用户区域 */}
-        <div className="px-3 py-3">
-          <div className="eva-divider mb-3" />
-          {isAuthenticated && agent ? (
-            <div>
-              {!collapsed && (
-                <div className="flex items-center gap-2.5 mb-2">
+          {/* 分隔线 */}
+          <div className="w-8 deck-divider mb-2" />
+
+          {/* 用户区域 */}
+          <div className="flex flex-col items-center gap-1 w-full">
+            {isAuthenticated && agent ? (
+              <>
+                <Link
+                  href="/settings"
+                  className="flex flex-col items-center justify-center w-full py-2 rounded-lg text-ink-muted hover:text-copper hover:bg-copper/5 transition-all gap-0.5"
+                  title="设置"
+                >
+                  <Settings className="w-5 h-5" />
+                  <span className="text-[10px] font-medium tracking-wide">设置</span>
+                </Link>
+                <button
+                  onClick={() => setShowLogoutConfirm(true)}
+                  className="flex flex-col items-center justify-center w-full py-2 rounded-lg text-ink-muted hover:text-ochre hover:bg-ochre/5 transition-all gap-0.5"
+                  title="登出"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span className="text-[10px] font-medium tracking-wide">断开</span>
+                </button>
+                <div className="mt-1">
                   <AgentAvatar
                     agentId={agent.avatarSeed || agent.id}
                     agentName={agent.name}
                     size={28}
                   />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-nerv text-[12px] font-bold truncate">
-                      {agent.name}
-                    </div>
-                    <div className="text-[10px] text-text-dim">
-                      声望 {agent.reputation}
-                    </div>
-                  </div>
                 </div>
-              )}
-              <div className="flex items-center gap-1">
+              </>
+            ) : (
+              <>
                 <Link
-                  href="/settings"
-                  className="flex items-center gap-1.5 flex-1 px-2 py-1.5 text-[11px] text-text-secondary hover:text-nerv hover:bg-nerv/[0.04] transition-colors tracking-wide"
+                  href="/auth"
+                  className="flex flex-col items-center justify-center w-full py-2 rounded-lg text-ink-muted hover:text-copper hover:bg-copper/5 transition-all gap-0.5"
+                  title="登录"
                 >
-                  <Settings className="w-3.5 h-3.5" />
-                  {!collapsed && '设置'}
+                  <LogIn className="w-5 h-5" />
+                  <span className="text-[10px] font-medium tracking-wide">接入</span>
                 </Link>
-                <button
-                  onClick={() => setShowLogoutConfirm(true)}
-                  className="px-2 py-1.5 text-[11px] text-text-dim hover:text-alert transition-colors tracking-wide"
+                <Link
+                  href="/auth"
+                  className="flex flex-col items-center justify-center w-full py-2 rounded-lg text-ink-muted hover:text-copper hover:bg-copper/5 transition-all gap-0.5"
+                  title="注册"
                 >
-                  {collapsed ? '×' : '登出'}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className={`flex ${collapsed ? 'flex-col' : 'flex-row'} gap-1.5`}>
-              <Link
-                href="/auth"
-                className="flex items-center justify-center gap-1.5 flex-1 px-2 py-2 text-[11px] text-nerv border border-nerv/30 hover:bg-nerv/10 transition-colors tracking-wide"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                {!collapsed && '登录'}
-              </Link>
-              <Link
-                href="/auth"
-                className="flex items-center justify-center gap-1.5 flex-1 px-2 py-2 text-[11px] text-void bg-nerv hover:bg-nerv-hot transition-colors tracking-wide font-bold"
-              >
-                <UserPlus className="w-3.5 h-3.5" />
-                {!collapsed && '注册'}
-              </Link>
-            </div>
-          )}
-        </div>
+                  <UserPlus className="w-5 h-5" />
+                  <span className="text-[10px] font-medium tracking-wide">注册</span>
+                </Link>
+              </>
+            )}
+          </div>
 
-        {/* 底部版本 */}
-        <div className="px-4 pb-3 pt-1">
-          <div className="eva-divider mb-2" />
-          <div className="flex items-center gap-1.5 text-[10px] text-text-dim">
-            <span className="led led-green" />
-            <span className="tracking-wide">
-              {collapsed ? '' : '系统正常 · v0.1'}
-            </span>
+          {/* 底部状态点 */}
+          <div className="mt-2 mb-1">
+            <div className="w-2 h-2 rounded-full bg-moss/60" style={{ boxShadow: '0 0 4px rgba(74, 222, 128, 0.4)' }} />
           </div>
         </div>
-
-        {/* 折叠按钮 */}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="absolute -right-3 top-16 w-5 h-5 bg-void-warm border border-nerv/25 flex items-center justify-center text-text-dim hover:text-nerv hover:border-nerv/40 transition-colors"
-        >
-          {collapsed ? (
-            <ChevronRight className="w-2.5 h-2.5" />
-          ) : (
-            <ChevronLeft className="w-2.5 h-2.5" />
-          )}
-        </button>
-      </div>
+      </aside>
 
       {/* 退出登录确认弹窗 */}
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-void/60 backdrop-blur-sm">
-          <div className="eva-panel w-[320px] animate-fade-in">
-            <div className="eva-panel-header">
-              <span className="text-alert text-[10px] tracking-eva-wide font-bold">確認退出</span>
-            </div>
-            <div className="p-5">
-              <p className="text-text-primary text-[13px] mb-5 leading-relaxed">
-                确定要退出登录吗？
+      <AnimatePresence>
+        {showLogoutConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-void/60 backdrop-blur-sm"
+            onClick={() => setShowLogoutConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              className="signal-bubble w-[340px] p-6"
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="logout-title"
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Shield className="w-5 h-5 text-ochre" />
+                <span id="logout-title" className="text-sm text-ochre font-bold tracking-deck-normal uppercase">确认断开连接</span>
+              </div>
+              <p className="text-ink-secondary text-sm mb-6 leading-relaxed">
+                确定要退出观测终端吗？
               </p>
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <button
                   onClick={() => setShowLogoutConfirm(false)}
-                  className="flex-1 px-3 py-2 text-[12px] text-text-secondary border border-wire/25 hover:border-nerv/40 hover:text-text-primary transition-colors tracking-wide"
+                  className="flex-1 px-4 py-2.5 text-sm text-ink-secondary border border-copper/20 hover:border-copper/40 hover:text-ink-primary transition-all rounded-lg tracking-wide"
                 >
                   取消
                 </button>
@@ -191,15 +183,15 @@ export function Sidebar() {
                     logout();
                     setShowLogoutConfirm(false);
                   }}
-                  className="flex-1 px-3 py-2 text-[12px] text-void bg-alert hover:bg-red-500 transition-colors tracking-wide font-bold"
+                  className="flex-1 px-4 py-2.5 text-sm text-void bg-ochre hover:bg-ochre-dim transition-all rounded-lg tracking-wide font-bold"
                 >
-                  确认退出
+                  确认断开
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </aside>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

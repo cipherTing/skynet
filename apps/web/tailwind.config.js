@@ -1,47 +1,40 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [
-    './src/**/*.{js,ts,jsx,tsx,mdx}',
-  ],
+  content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
     extend: {
       colors: {
-        // ═══ 背景 · 虚空系 ═══
-        'void': {
+        void: {
           DEFAULT: 'var(--void)',
-          warm:    'var(--void-warm)',
-          panel:   'var(--void-panel)',
-          raised:  'var(--void-raised)',
-          hover:   'var(--void-hover)',
+          deep: 'var(--void-deep)',
+          mid: 'var(--void-mid)',
+          shallow: 'var(--void-shallow)',
+          hover: 'var(--void-hover)',
         },
-        // ═══ NERV 橙 · 主品牌 ═══
-        'nerv': {
-          DEFAULT: 'var(--nerv)',
-          dim:     'var(--nerv-dim)',
-          hot:     'var(--nerv-hot)',
-          muted:   'var(--nerv-muted)',
+        copper: {
+          DEFAULT: 'var(--copper)',
+          dim: 'var(--copper-dim)',
+          bright: 'var(--copper-bright)',
+          muted: 'var(--copper-muted)',
         },
-        // ═══ 数据绿 · 正常状态/数值 ═══
-        'data': {
-          DEFAULT: 'var(--data)',
-          dim:     'var(--data-dim)',
-          bright:  'var(--data-bright)',
+        moss: {
+          DEFAULT: 'var(--moss)',
+          dim: 'var(--moss-dim)',
+          bright: 'var(--moss-bright)',
         },
-        // ═══ 线框青 · 结构/链接 ═══
-        'wire': {
-          DEFAULT: 'var(--wire)',
-          dim:     'var(--wire-dim)',
+        steel: {
+          DEFAULT: 'var(--steel)',
+          dim: 'var(--steel-dim)',
+          bright: 'var(--steel-bright)',
         },
-        // ═══ 警报红 · 仅紧急状态 ═══
-        'alert': {
-          DEFAULT: 'var(--alert)',
-          dim:     'var(--alert-dim)',
+        ochre: {
+          DEFAULT: 'var(--ochre)',
+          dim: 'var(--ochre-dim)',
         },
-        // ═══ 正文色 ═══
-        'text': {
-          primary:   'var(--text-primary)',
-          secondary: 'var(--text-secondary)',
-          dim:       'var(--text-dim)',
+        ink: {
+          primary: 'var(--ink-primary)',
+          secondary: 'var(--ink-secondary)',
+          muted: 'var(--ink-muted)',
         },
       },
       fontFamily: {
@@ -61,61 +54,64 @@ module.exports = {
           '"Courier New"',
           'monospace',
         ],
-        display: [
-          'Orbitron',
-          '"JetBrains Mono"',
-          'monospace',
-        ],
+        display: ['Orbitron', '"JetBrains Mono"', 'monospace'],
       },
       letterSpacing: {
-        'eva-wide': '0.2em',
-        'eva-normal': '0.12em',
-        'eva-tight': '0.05em',
-      },
-      backgroundImage: {
-        'eva-grid': `
-          linear-gradient(var(--grid-color) 1px, transparent 1px),
-          linear-gradient(90deg, var(--grid-color) 1px, transparent 1px),
-          linear-gradient(var(--grid-color-faint) 1px, transparent 1px),
-          linear-gradient(90deg, var(--grid-color-faint) 1px, transparent 1px)
-        `,
-      },
-      backgroundSize: {
-        'eva-grid': '200px 200px, 200px 200px, 40px 40px, 40px 40px',
+        'deck-wide': '0.15em',
+        'deck-normal': '0.1em',
+        'deck-tight': '0.04em',
       },
       boxShadow: {
-        'glow-green':  'var(--shadow-glow-green)',
-        'glow-orange': 'var(--shadow-glow-orange)',
-        'glow-cyan':   'var(--shadow-glow-cyan)',
-        'glow-red':    'var(--shadow-glow-red)',
-        'led-green':   'var(--shadow-led-green)',
-        'led-orange':  'var(--shadow-led-orange)',
-        'led-cyan':    'var(--shadow-led-cyan)',
-        'led-red':     'var(--shadow-led-red)',
+        'glow-copper': '0 0 12px rgba(255, 122, 46, 0.35), 0 0 24px rgba(255, 122, 46, 0.12)',
+        'glow-moss': '0 0 12px rgba(57, 211, 83, 0.35), 0 0 24px rgba(57, 211, 83, 0.12)',
+        'glow-steel': '0 0 12px rgba(56, 189, 248, 0.35), 0 0 24px rgba(56, 189, 248, 0.12)',
+        'glow-ochre': '0 0 12px rgba(255, 68, 102, 0.35), 0 0 24px rgba(255, 68, 102, 0.12)',
+        'led-copper': '0 0 6px rgba(255, 122, 46, 0.6)',
+        'led-moss': '0 0 6px rgba(57, 211, 83, 0.6)',
+        'led-steel': '0 0 6px rgba(56, 189, 248, 0.6)',
+        'card': '0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.24)',
+        'card-hover': '0 4px 12px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3)',
       },
       animation: {
-        'led-blink':   'led-blink 1s ease-in-out infinite',
-        'fade-in':     'fade-in 0.3s ease-out',
-        'slide-in':    'slide-in 0.2s ease-out',
-        'alert-pulse': 'alert-pulse 2s ease-in-out infinite',
+        'pulse-slow': 'pulse-slow 3s ease-in-out infinite',
+        'fade-in': 'fade-in 0.4s ease-out',
+        'slide-up': 'slide-up 0.4s ease-out',
+        'signal-ping': 'signal-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite',
+        'radar-sweep': 'radar-sweep 2s linear infinite',
+        'node-float': 'node-float 6s ease-in-out infinite',
       },
       keyframes: {
-        'led-blink': {
+        'pulse-slow': {
           '0%, 100%': { opacity: '1' },
-          '50%':      { opacity: '0.3' },
+          '50%': { opacity: '0.5' },
         },
         'fade-in': {
           from: { opacity: '0' },
-          to:   { opacity: '1' },
+          to: { opacity: '1' },
         },
-        'slide-in': {
-          from: { opacity: '0', transform: 'translateY(-8px)' },
-          to:   { opacity: '1', transform: 'translateY(0)' },
+        'slide-up': {
+          from: { opacity: '0', transform: 'translateY(16px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
         },
-        'alert-pulse': {
-          '0%, 100%': { opacity: '0.6' },
-          '50%':      { opacity: '1' },
+        'signal-ping': {
+          '75%, 100%': {
+            transform: 'scale(2)',
+            opacity: '0',
+          },
         },
+        'radar-sweep': {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
+        'node-float': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-8px)' },
+        },
+      },
+      borderRadius: {
+        bubble: '12px',
+        panel: '12px',
+        chip: '6px',
       },
     },
   },

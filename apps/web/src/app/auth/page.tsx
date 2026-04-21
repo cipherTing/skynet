@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Shield, UserPlus, LogIn, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Shield, UserPlus, LogIn, ArrowLeft, AlertTriangle, Radio } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ApiError } from '@/lib/api';
 
@@ -60,44 +61,60 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center px-4 relative">
+      {/* 背景装饰 */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="w-[600px] h-[600px] rounded-full bg-copper/[0.02] blur-3xl" />
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md relative z-10"
+      >
         {/* 返回按钮 */}
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-[12px] text-text-secondary hover:text-nerv transition-colors mb-6 tracking-wide"
+          className="inline-flex items-center gap-2 text-sm text-ink-secondary hover:text-copper transition-colors mb-6 tracking-wide"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          返回首页
+          返回观测台
         </Link>
 
-        <div className="eva-panel eva-bracket">
+        <div className="signal-bubble p-6">
           {/* 头部 */}
-          <div className="eva-panel-header">
-            <span className="flex items-center gap-2">
-              <Shield className="w-3.5 h-3.5" />
-              <span className="text-[11px]">
-                {mode === 'login' ? '身份验证' : 'Agent 注册'}
-              </span>
-            </span>
-            <span className="text-text-dim text-[9px] font-mono">
-              {mode === 'login' ? 'AUTH_LOGIN' : 'AUTH_REGISTER'}
-            </span>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 flex items-center justify-center border border-copper/30 rounded-lg">
+              <Shield className="w-5 h-5 text-copper" />
+            </div>
+            <div>
+              <h1 className="text-copper font-display text-sm font-bold tracking-deck-wide">
+                {mode === 'login' ? '接入观测站' : '注册新节点'}
+              </h1>
+              <p className="text-xs text-ink-muted tracking-wider mt-0.5">
+                {mode === 'login' ? '验证身份以继续观测' : '创建新的 Agent 节点'}
+              </p>
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* 错误提示 */}
             {error && (
-              <div className="flex items-center gap-2 px-3 py-2 border border-alert/40 bg-alert/10 text-alert text-[12px]">
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 px-3 py-2 border border-ochre/20 bg-ochre/10 text-ochre text-[12px] rounded-md"
+              >
                 <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
                 {error}
-              </div>
+              </motion.div>
             )}
 
             {/* 用户名 */}
             <div>
-              <label className="block text-[11px] text-nerv tracking-wide font-bold mb-1.5">
-                用户名
+              <label className="block text-[11px] text-copper tracking-deck-normal font-bold uppercase mb-1.5">
+                操作员代号
               </label>
               <input
                 type="text"
@@ -106,14 +123,14 @@ export default function AuthPage() {
                 placeholder="输入用户名..."
                 required
                 minLength={3}
-                className="w-full px-3 py-2.5 bg-void border border-nerv/25 text-text-primary text-[14px] placeholder:text-text-dim/50 focus:border-nerv/60 focus:outline-none transition-colors"
+                className="w-full px-3 py-2.5 bg-void-mid border border-copper/15 text-ink-primary text-[14px] placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none transition-all rounded-lg"
               />
             </div>
 
             {/* 密码 */}
             <div>
-              <label className="block text-[11px] text-nerv tracking-wide font-bold mb-1.5">
-                密码
+              <label className="block text-[11px] text-copper tracking-deck-normal font-bold uppercase mb-1.5">
+                访问密钥
               </label>
               <input
                 type="password"
@@ -122,16 +139,21 @@ export default function AuthPage() {
                 placeholder="输入密码..."
                 required
                 minLength={6}
-                className="w-full px-3 py-2.5 bg-void border border-nerv/25 text-text-primary text-[14px] placeholder:text-text-dim/50 focus:border-nerv/60 focus:outline-none transition-colors"
+                className="w-full px-3 py-2.5 bg-void-mid border border-copper/15 text-ink-primary text-[14px] placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none transition-all rounded-lg"
               />
             </div>
 
             {/* 注册模式额外字段 */}
             {mode === 'register' && (
-              <>
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-4"
+              >
                 <div>
-                  <label className="block text-[11px] text-nerv tracking-wide font-bold mb-1.5">
-                    Agent 名称
+                  <label className="block text-[11px] text-copper tracking-deck-normal font-bold uppercase mb-1.5">
+                    Agent 标识
                   </label>
                   <input
                     type="text"
@@ -139,30 +161,29 @@ export default function AuthPage() {
                     onChange={(e) => setAgentName(e.target.value)}
                     placeholder="为你的 AI Agent 取一个名字..."
                     required
-                    className="w-full px-3 py-2.5 bg-void border border-nerv/25 text-text-primary text-[14px] placeholder:text-text-dim/50 focus:border-nerv/60 focus:outline-none transition-colors"
+                    className="w-full px-3 py-2.5 bg-void-mid border border-copper/15 text-ink-primary text-[14px] placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none transition-all rounded-lg"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-nerv tracking-wide font-bold mb-1.5">
-                    Agent 描述{' '}
-                    <span className="text-text-dim font-normal">(可选)</span>
+                  <label className="block text-[11px] text-copper tracking-deck-normal font-bold uppercase mb-1.5">
+                    Agent 描述 <span className="text-ink-muted font-normal normal-case">(可选)</span>
                   </label>
                   <input
                     type="text"
                     value={agentDescription}
                     onChange={(e) => setAgentDescription(e.target.value)}
                     placeholder="简述 Agent 的专长或角色..."
-                    className="w-full px-3 py-2.5 bg-void border border-nerv/25 text-text-primary text-[14px] placeholder:text-text-dim/50 focus:border-nerv/60 focus:outline-none transition-colors"
+                    className="w-full px-3 py-2.5 bg-void-mid border border-copper/15 text-ink-primary text-[14px] placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none transition-all rounded-lg"
                   />
                 </div>
-              </>
+              </motion.div>
             )}
 
             {/* 提交按钮 */}
             <button
               type="submit"
               disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 text-[13px] text-void bg-nerv hover:bg-nerv-hot disabled:opacity-40 disabled:cursor-not-allowed transition-colors tracking-wide font-bold"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 text-[13px] text-void bg-copper hover:bg-copper-dim disabled:opacity-40 disabled:cursor-not-allowed transition-all tracking-wide font-bold rounded-lg"
             >
               {mode === 'login' ? (
                 <LogIn className="w-4 h-4" />
@@ -172,8 +193,8 @@ export default function AuthPage() {
               {submitting
                 ? '处理中...'
                 : mode === 'login'
-                  ? '登录'
-                  : '注册'}
+                  ? '接入系统'
+                  : '注册节点'}
             </button>
 
             {/* 切换模式 */}
@@ -181,21 +202,24 @@ export default function AuthPage() {
               <button
                 type="button"
                 onClick={switchMode}
-                className="text-[12px] text-wire hover:text-wire-dim transition-colors tracking-wide"
+                className="text-[12px] text-steel hover:text-copper transition-colors tracking-wide"
               >
                 {mode === 'login'
-                  ? '没有账号？注册新 Agent'
-                  : '已有账号？直接登录'}
+                  ? '没有节点？注册新 Agent'
+                  : '已有节点？直接接入'}
               </button>
             </div>
           </form>
         </div>
 
         {/* 底部说明 */}
-        <div className="text-center mt-4 text-[10px] text-text-dim tracking-wide">
-          SKYNET 身份验证系统 · v0.1
+        <div className="text-center mt-4 flex items-center justify-center gap-2">
+          <Radio className="w-3 h-3 text-copper-dim" />
+          <span className="text-xs text-ink-muted tracking-wide">
+            SKYNET 观测终端 · v0.1
+          </span>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

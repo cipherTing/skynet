@@ -3,382 +3,320 @@
 @tailwind utilities;
 
 @layer base {
+  /* ============================================================
+     DARK THEME - EVA NERV Terminal
+     Deep void black with NERV orange accent
+     ============================================================ */
   :root,
   :root[data-theme="dark"] {
-    /* ═══ 背景 · 虚空系（暗色）═══ */
-    --void:          #0F0E0C;
-    --void-warm:     #171513;
-    --void-panel:    #1D1B18;
-    --void-raised:   #252320;
-    --void-hover:    #2F2D29;
+    --void: #050508;
+    --void-deep: #0E0E14;
+    --void-mid: #181820;
+    --void-shallow: #22222C;
+    --void-hover: #2C2C38;
 
-    /* ═══ NERV 橙 · 主品牌 ═══ */
-    --nerv:          #FF9830;
-    --nerv-dim:      #CC7020;
-    --nerv-hot:      #FFBB55;
-    --nerv-muted:    #8B5500;
+    --copper: #FF7A2E;
+    --copper-dim: #CC5C1A;
+    --copper-bright: #FF9955;
+    --copper-muted: rgba(255, 122, 46, 0.15);
 
-    /* ═══ 数据绿 · 正常状态/数值 ═══ */
-    --data:          #50FF50;
-    --data-dim:      #30BB30;
-    --data-bright:   #88FF88;
+    --moss: #39D353;
+    --moss-dim: #2DA042;
+    --moss-bright: #5EEA6E;
 
-    /* ═══ 线框青 · 结构/链接 ═══ */
-    --wire:          #20F0FF;
-    --wire-dim:      #10A0B0;
+    --steel: #38BDF8;
+    --steel-dim: #0EA5E9;
+    --steel-bright: #7DD3FC;
 
-    /* ═══ 警报红 · 仅紧急状态 ═══ */
-    --alert:         #FF3030;
-    --alert-dim:     #CC2020;
+    --ochre: #FF4466;
+    --ochre-dim: #E11D48;
 
-    /* ═══ 正文 · 非纯白 ═══ */
-    --text-primary:  #E8E5E0;
-    --text-secondary:#A8A59E;
-    --text-dim:      #807C75;
+    --ink-primary: #F0F0F5;
+    --ink-secondary: #A0A0B5;
+    --ink-muted: #707088;
 
-    /* ═══ 边框 · 衍生 ═══ */
-    --border-strong: rgba(255, 152, 48, 0.45);
-    --border-base:   rgba(255, 152, 48, 0.25);
-    --border-faint:  rgba(255, 152, 48, 0.15);
+    --card-bg: #0E0E14;
+    --card-bg-hover: #181820;
+    --card-border: rgba(255, 255, 255, 0.1);
+    --card-border-hover: rgba(255, 122, 46, 0.25);
+    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.3);
+    --card-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
 
-    /* ═══ 发光 · 暗色满饱和 ═══ */
-    --glow-alpha:    0.5;
-    --scanline-alpha:0.04;
-    --vignette-alpha:0.45;
-    --top-glow-alpha:0.05;
-
-    /* ═══ 栅格底色（背景用）═══ */
-    --grid-color:        rgba(255, 152, 48, 0.04);
-    --grid-color-faint:  rgba(255, 152, 48, 0.02);
-    --section-tint:      rgba(255, 152, 48, 0.00);
-
-    /* ═══ Tailwind 引用的完整阴影 ═══ */
-    --shadow-glow-green:  0 0 8px rgba(80, 255, 80, 0.40), 0 0 16px rgba(80, 255, 80, 0.15);
-    --shadow-glow-orange: 0 0 8px rgba(255, 152, 48, 0.40), 0 0 16px rgba(255, 152, 48, 0.15);
-    --shadow-glow-cyan:   0 0 8px rgba(32, 240, 255, 0.40), 0 0 16px rgba(32, 240, 255, 0.15);
-    --shadow-glow-red:    0 0 8px rgba(255, 48, 48, 0.40), 0 0 16px rgba(255, 48, 48, 0.20);
-    --shadow-led-green:   0 0 5px var(--data);
-    --shadow-led-orange:  0 0 5px var(--nerv);
-    --shadow-led-cyan:    0 0 5px var(--wire);
-    --shadow-led-red:     0 0 5px var(--alert);
+    --glow-alpha: 0.4;
+    --top-glow-alpha: 0.04;
+    --noise-alpha: 0.01;
   }
 
-  /* ═══ 浅色主题 · 纸质数据终端 ═══ */
+  /* ============================================================
+     LIGHT THEME - Command Center Lit
+     ============================================================ */
   :root[data-theme="light"] {
-    /* 背景：暖米纸色（保持 panel/raised 亮度梯度）*/
-    --void:          #F4F1EA;
-    --void-warm:     #EDE9E0;
-    --void-panel:    #FBF9F4;
-    --void-raised:   #FFFFFF;
-    --void-hover:    #E8E3D6;
+    --void: #F2F2F5;
+    --void-deep: #FFFFFF;
+    --void-mid: #E8E8F0;
+    --void-shallow: #DCDCE6;
+    --void-hover: #D0D0DC;
 
-    /* NERV 橙 · AA 达标（5.2+ vs 纸色）*/
-    --nerv:          #A04A00;
-    --nerv-dim:      #7A3800;
-    --nerv-hot:      #B85700;
-    --nerv-muted:    #D49860;
+    --copper: #CC5C1A;
+    --copper-dim: #A64A14;
+    --copper-bright: #E8702E;
+    --copper-muted: rgba(204, 92, 26, 0.12);
 
-    /* 数据绿 · AA 达标 */
-    --data:          #0A6E24;
-    --data-dim:      #064E18;
-    --data-bright:   #128A30;
+    --moss: #15803D;
+    --moss-dim: #166534;
+    --moss-bright: #22C55E;
 
-    /* 线框青 · AA 达标 */
-    --wire:          #005F85;
-    --wire-dim:      #004562;
+    --steel: #0369A1;
+    --steel-dim: #075985;
+    --steel-bright: #0EA5E9;
 
-    /* 警报红 */
-    --alert:         #B81515;
-    --alert-dim:     #8A0E0E;
+    --ochre: #DC2626;
+    --ochre-dim: #B91C1C;
 
-    /* 正文 · 暖黑（dim 加深保 AA）*/
-    --text-primary:  #1A1816;
-    --text-secondary:#4A4741;
-    --text-dim:      #6C675F;
+    --ink-primary: #0A0A14;
+    --ink-secondary: #4A4A5E;
+    --ink-muted: #7A7A8E;
 
-    /* 边框 · 加强可见度 */
-    --border-strong: rgba(160, 74, 0, 0.45);
-    --border-base:   rgba(160, 74, 0, 0.26);
-    --border-faint:  rgba(160, 74, 0, 0.14);
+    --card-bg: #FFFFFF;
+    --card-bg-hover: #F8F8FB;
+    --card-border: #DCDCE6;
+    --card-border-hover: #FF7A2E;
+    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+    --card-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
 
-    /* 发光：浅色模式全面禁用 */
-    --glow-alpha:    0;
-    --scanline-alpha:0;
-    --vignette-alpha:0;
-    --top-glow-alpha:0;
-
-    /* 栅格：改为低饱和橙，适度可见 */
-    --grid-color:        rgba(160, 74, 0, 0.030);
-    --grid-color-faint:  rgba(160, 74, 0, 0.015);
-    /* section-header 渐变着色为淡橙染，解决白改问题 */
-    --section-tint:      rgba(160, 74, 0, 0.08);
-
-    /* 阴影：浅色下关闭所有发光 */
-    --shadow-glow-green:  none;
-    --shadow-glow-orange: none;
-    --shadow-glow-cyan:   none;
-    --shadow-glow-red:    none;
-    --shadow-led-green:   none;
-    --shadow-led-orange:  none;
-    --shadow-led-cyan:    none;
-    --shadow-led-red:     none;
+    --glow-alpha: 0;
+    --top-glow-alpha: 0;
+    --noise-alpha: 0.005;
   }
 
   body {
-    @apply bg-void text-text-primary font-sans antialiased;
+    @apply bg-void text-ink-primary font-sans antialiased;
     font-size: 15px;
-    line-height: 1.75;
-    letter-spacing: 0.02em;
+    line-height: 1.65;
+    letter-spacing: 0.01em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    transition: background-color 0.2s, color 0.2s;
   }
 
-  /* 滚动条 */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  input:focus, textarea:focus, button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255, 122, 46, 0.5), 0 0 0 4px var(--void);
+  }
+
   ::-webkit-scrollbar {
     @apply w-1.5;
   }
   ::-webkit-scrollbar-track {
-    background: var(--void-warm);
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--nerv-dim);
+    background: rgba(112, 112, 136, 0.4);
+    border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--nerv);
+    background: rgba(160, 160, 181, 0.5);
   }
 }
 
 @layer components {
-  /* ═══ EVA 面板 ═══ */
-  .eva-panel {
-    background: var(--void-panel);
-    border: 1px solid var(--border-base);
+  .signal-bubble {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    box-shadow: var(--card-shadow);
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
     position: relative;
-    transition: border-color 0.15s;
+    overflow: hidden;
   }
-  .eva-panel:hover {
-    border-color: var(--border-strong);
-  }
-
-  /* ═══ 面板标题头 ═══ */
-  .eva-panel-header {
-    font-family: var(--font-sans), "Noto Sans SC", sans-serif;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    color: var(--nerv);
-    padding: 8px 16px;
-    background: var(--void-warm);
-    border-bottom: 1px solid var(--border-base);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  /* ═══ 角括号装饰 ═══ */
-  .eva-bracket::before,
-  .eva-bracket::after {
+  .signal-bubble::before {
     content: '';
     position: absolute;
-    width: 14px;
-    height: 14px;
-    border-color: var(--nerv);
-    border-style: solid;
-    pointer-events: none;
-    opacity: 0.55;
+    left: 0;
+    top: 12px;
+    bottom: 12px;
+    width: 3px;
+    border-radius: 0 2px 2px 0;
+    background: linear-gradient(180deg, var(--copper-dim), transparent);
+    opacity: 0.7;
+    transition: opacity 0.2s ease, width 0.15s ease;
   }
-  .eva-bracket::before {
-    top: -1px; left: -1px;
-    border-width: 2px 0 0 2px;
+  .signal-bubble:hover {
+    background: var(--card-bg-hover);
+    border-color: var(--card-border-hover);
+    box-shadow: var(--card-shadow-hover);
+    transform: translateY(-1px);
   }
-  .eva-bracket::after {
-    bottom: -1px; right: -1px;
-    border-width: 0 2px 2px 0;
-  }
-
-  /* ═══ 扫描线 ═══ */
-  .scanlines {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 50;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0, 0, 0, var(--scanline-alpha)) 2px,
-      rgba(0, 0, 0, var(--scanline-alpha)) 4px
-    );
+  .signal-bubble:hover::before {
+    opacity: 1;
+    width: 3px;
+    background: linear-gradient(180deg, var(--copper), transparent);
+    box-shadow: 0 0 8px rgba(255, 122, 46, 0.3);
   }
 
-  /* ═══ 暗角 ═══ */
-  .eva-vignette {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 49;
-    background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,var(--vignette-alpha)) 100%);
+  .signal-bubble.hot::before {
+    background: linear-gradient(180deg, var(--copper-bright), var(--copper-dim));
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(255, 122, 46, 0.4);
   }
 
-  /* ═══ 顶部微光 · 使用变量可被浅色模式禁用 ═══ */
-  .eva-top-glow {
-    position: fixed;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 1000px;
-    height: 300px;
-    pointer-events: none;
-    background: radial-gradient(
-      ellipse at center,
-      rgba(255, 152, 48, var(--top-glow-alpha)),
-      transparent 60%
-    );
+  .deck-panel {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow);
   }
 
-  /* ═══ 数据标签 ═══ */
-  .eva-label {
+  .deck-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--ink-muted), transparent);
+    opacity: 0.4;
+  }
+
+  .deck-label {
     font-family: var(--font-mono), "JetBrains Mono", monospace;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--nerv);
+    color: var(--ink-muted);
   }
 
-  /* ═══ 数据值 ═══ */
-  .eva-value {
+  .deck-value {
     font-family: var(--font-mono), "JetBrains Mono", monospace;
     font-variant-numeric: tabular-nums;
-    color: var(--data);
+    color: var(--moss);
   }
 
-  /* ═══ 分隔线 ═══ */
-  .eva-divider {
-    height: 1px;
-    background: var(--nerv-dim);
-    opacity: 0.55;
+  .noise-texture {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: var(--noise-alpha);
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
   }
 
-  /* ═══ LED 指示灯 ═══ */
-  .led {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .led-green {
-    background: var(--data);
-    box-shadow: var(--shadow-led-green);
-  }
-  .led-orange {
-    background: var(--nerv);
-    box-shadow: var(--shadow-led-orange);
-  }
-  .led-red {
-    background: var(--alert);
-    box-shadow: var(--shadow-led-red);
-  }
-
-  /* ═══ 分区标签 ═══ */
-  .section-header {
-    font-family: var(--font-sans), "Noto Sans SC", sans-serif;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    color: var(--nerv);
-    padding: 10px 16px 8px;
-    border-bottom: 1px solid var(--border-base);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: linear-gradient(90deg, var(--section-tint) 0%, transparent 100%);
+  .ambient-glow {
+    position: fixed;
+    top: -20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1200px;
+    height: 500px;
+    pointer-events: none;
+    z-index: 0;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(255, 122, 46, var(--top-glow-alpha)),
+      transparent 60%
+    );
   }
 }
 
 @layer utilities {
-  /* 发光文字 · 通过 --glow-alpha 在浅色模式下自动关闭 */
-  .text-glow-green {
-    text-shadow: 0 0 6px rgba(80, 255, 80, var(--glow-alpha));
+  .text-glow-copper {
+    text-shadow: 0 0 12px rgba(255, 122, 46, var(--glow-alpha));
   }
-  .text-glow-orange {
-    text-shadow: 0 0 6px rgba(255, 152, 48, var(--glow-alpha));
+  .text-glow-moss {
+    text-shadow: 0 0 12px rgba(57, 211, 83, var(--glow-alpha));
   }
-  .text-glow-cyan {
-    text-shadow: 0 0 6px rgba(32, 240, 255, var(--glow-alpha));
+  .text-glow-steel {
+    text-shadow: 0 0 12px rgba(56, 189, 248, var(--glow-alpha));
   }
-  .text-glow-red {
-    text-shadow: 0 0 6px rgba(255, 48, 48, var(--glow-alpha));
+
+  .text-gradient-copper {
+    background: linear-gradient(135deg, var(--copper-bright), var(--copper));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 }
 
-/* ═══ Markdown prose — 中文适配 ═══ */
-.prose-eva {
+.prose-deck {
   font-size: 15px;
-  line-height: 1.75;
-  color: var(--text-primary);
+  line-height: 1.7;
+  color: var(--ink-primary);
 }
-.prose-eva p {
+.prose-deck p {
   margin-bottom: 1em;
 }
-.prose-eva pre {
-  background: var(--void-warm);
-  border: 1px solid var(--border-faint);
+.prose-deck pre {
+  background: var(--void-deep);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
   padding: 16px;
   overflow-x: auto;
   font-size: 13px;
   line-height: 1.6;
 }
-.prose-eva code {
-  color: var(--data);
-  background: var(--void-warm);
-  padding: 1px 5px;
+.prose-deck code {
+  color: var(--moss-bright);
+  background: var(--void-deep);
+  padding: 2px 6px;
+  border-radius: 4px;
   font-size: 0.9em;
   font-family: var(--font-mono), "JetBrains Mono", monospace;
 }
-.prose-eva pre code {
+.prose-deck pre code {
   background: transparent;
   padding: 0;
   font-size: inherit;
 }
-.prose-eva a {
-  color: var(--wire);
+.prose-deck a {
+  color: var(--steel);
   text-decoration: none;
-  transition: text-shadow 0.15s;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s, color 0.15s;
 }
-.prose-eva a:hover {
-  text-shadow: 0 0 8px rgba(32, 240, 255, var(--glow-alpha));
+.prose-deck a:hover {
+  color: var(--copper);
+  border-bottom-color: var(--copper-muted);
 }
-.prose-eva blockquote {
-  border-left: 3px solid var(--nerv-dim);
-  color: var(--text-secondary);
+.prose-deck blockquote {
+  border-left: 3px solid var(--copper-dim);
+  color: var(--ink-secondary);
   padding-left: 16px;
   margin: 1em 0;
+  font-style: italic;
 }
-.prose-eva h1, .prose-eva h2, .prose-eva h3, .prose-eva h4 {
-  color: var(--nerv);
+.prose-deck h1, .prose-deck h2, .prose-deck h3, .prose-deck h4 {
+  color: var(--copper);
   font-weight: 700;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   margin-top: 1.5em;
   margin-bottom: 0.5em;
 }
-.prose-eva h1 { font-size: 1.4em; }
-.prose-eva h2 { font-size: 1.2em; }
-.prose-eva h3 { font-size: 1.1em; }
-.prose-eva strong {
-  color: var(--text-primary);
+.prose-deck h1 { font-size: 1.5em; }
+.prose-deck h2 { font-size: 1.25em; }
+.prose-deck h3 { font-size: 1.1em; }
+.prose-deck strong {
+  color: var(--ink-primary);
   font-weight: 700;
 }
-.prose-eva ul, .prose-eva ol {
-  color: var(--text-primary);
+.prose-deck ul, .prose-deck ol {
+  color: var(--ink-primary);
   padding-left: 1.5em;
   margin: 0.75em 0;
 }
-.prose-eva li {
+.prose-deck li {
   margin: 0.25em 0;
 }
-.prose-eva li::marker {
-  color: var(--nerv-dim);
+.prose-deck li::marker {
+  color: var(--copper-dim);
+}
+.prose-deck hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--ink-muted), transparent);
+  opacity: 0.3;
+  margin: 1.5em 0;
 }

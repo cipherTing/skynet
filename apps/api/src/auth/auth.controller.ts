@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body } from '@nestjs/common';
+import { Controller, Post, Get, Body, ForbiddenException } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
@@ -6,6 +6,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
+import type { JwtAuthUser } from './interfaces/jwt-auth-user.interface';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -26,12 +27,24 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
+  @Post('logout')
+  async logout(@CurrentUser() user: JwtAuthUser) {
+    if (user.authType === 'agent') {
+      throw new ForbiddenException('该操作仅限用户本人执行');
+    }
+    await this.authService.logout(user.userId);
+    return { message: '已退出登录' };
+  }
+
   @Get('me')
-  async me(@CurrentUser() user: { userId: string; username: string }) {
-    const fullUser = await this.authService.validateUser({
-      sub: user.userId,
-      username: user.username,
-    });
+  async me(@CurrentUser() user: JwtAuthUser) {
+    if (user.authType === 'agent') {
+      throw new ForbiddenException('该操作仅限用户本人执行');
+    }
+    const fullUser = await this.authService.findUserWithAgentById(user.userId);
+    if (!fullUser) {
+      return { user: null, agent: null };
+    }
     return {
       user: {
         id: fullUser.id,

@@ -77,9 +77,8 @@ skynet/
 # 安装所有依赖
 pnpm install
 
-# 开发模式
-pnpm --filter @skynet/web dev        # Next.js 开发服务器
-pnpm --filter @skynet/api dev        # NestJS 开发服务器
+# 开发模式（唯一方式 —— 见下方"开发环境约定"）
+docker compose up -d --build
 
 # 构建
 pnpm --filter @skynet/web build
@@ -110,6 +109,19 @@ docker compose logs -f api    # 查看 API 日志
 - **代码改动**：`docker compose up -d --build`（重新构建镜像）
 - **Schema 改动**：构建后还需 `docker compose exec api npx prisma db push`
 - **仅配置改动**（docker-compose.yml / .env）：`docker compose up -d`（无需 --build）
+
+## 开发环境约定
+
+### 统一使用 Docker 进行开发
+
+- **唯一开发方式**：所有开发调试必须通过 `docker compose up -d --build` 启动，禁止同时运行本地 `pnpm --filter @skynet/web dev` 或 `pnpm --filter @skynet/api dev`
+- **端口竞争处理**：若 Docker 容器因端口被占用而启动失败，**不得偷偷更换端口**。应排查并停止占用端口的本地进程，确保 Docker 为唯一服务提供者
+- **原因**：本地 dev server 与 Docker 容器共用相同端口（8080/8081），会导致请求路由混乱（如 CSS/JS 404），造成难以排查的幽灵问题
+
+### Playwright 截图规范
+
+- 所有 Playwright MCP 截图、访问日志、诊断输出必须存放在项目根目录的 `.playwright-mcp/` 文件夹内
+- 禁止将截图或其他临时文件散落到项目其他位置，避免污染版本控制
 
 ## 代码规范
 
@@ -163,7 +175,7 @@ docker compose logs -f api    # 查看 API 日志
 ## 安全架构
 
 ### 认证
-- JWT 认证（7天过期），`JWT_SECRET` 通过 `.env` 加载（必需，无默认值）
+- JWT 认证，`JWT_SECRET` 通过 `.env` 加载（必需，无默认值）
 - 密码使用 bcrypt（cost 12）加密存储
 - 登录端点有恒定时间 bcrypt 比较（防时序攻击）
 - `@Public()` 装饰器标记公开路由，JwtAuthGuard 在公开路由上仍解析 JWT（可选认证），使 `@CurrentUser()` 可用
@@ -192,3 +204,28 @@ docker compose logs -f api    # 查看 API 日志
 ### 回复层级
 - 最多两层嵌套（顶级回复 + 子回复）
 - `@用户名` 提及会在前端高亮
+
+---
+
+## AGENTS.md 编写约束（Harness 工程要求）
+
+> **AGENTS.md 是约束的地图，不是解释的百科全书。**
+> 以下内容是对 AGENTS.md 本身的约束，防止文档膨胀和失效。
+
+### 必须遵守的约束
+
+- **只放约束和边界，不放解释和说明**。使用"必须"、"禁止"、"始终"等强制性语言。禁止使用"因为..."、"目的是..."、"通过...实现了..."等解释性 prose。
+- **不放具体实现细节**。禁止出现字段名（如 `suspendedAt`、`tokenVersion`）、方法名（如 `handleRequest`）、具体类的内部逻辑、某个功能的行为说明。这些属于代码注释或 docs/ 文档。
+- **不放阶段性功能设计**。封号机制、token 撤销策略、软删除中间件等行为规范，如果确实需要记录，应放在 `docs/` 下的专门文档中，不在 AGENTS.md 中展开。
+- **保持精简**。AGENTS.md 是地图，指向更深的文档来源。单节不超过必要长度。当一切都被标注为重要时，一切都不重要了。
+- **渐进式披露**。如果某项约束需要大量背景知识才能理解，说明它不应该出现在 AGENTS.md 中。把它放到 `docs/` 目录，在 AGENTS.md 中只保留一条指向它的链接。
+
+### 更新时的自检清单
+
+在修改 AGENTS.md 之前，逐条回答：
+
+1. **这是约束还是解释？** 如果是解释，不放。
+2. **这是核心约束还是阶段性细节？** 如果会随着功能迭代而过时，不放。
+3. **这里出现了字段名/方法名/类名吗？** 如果出现了，不放。
+4. **这段内容能放进一句"必须/禁止"里吗？** 如果不能，考虑拆分或移出。
+5. **这段内容是给 Agent 的行为边界，还是给人类的阅读说明？** 如果是后者，不放。

@@ -26,17 +26,17 @@ export async function apiRequest<T>(
   options: RequestInit = {},
 ): Promise<T> {
   const token = getToken();
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...((options.headers as Record<string, string>) || {}),
-  };
+  const headers = new Headers(options.headers || {});
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    headers.set('Authorization', `Bearer ${token}`);
   }
 
   const res = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
-    headers,
+    headers: Object.fromEntries(headers.entries()),
   });
 
   let json: Record<string, unknown>;
@@ -86,6 +86,10 @@ export const authApi = {
       body: JSON.stringify(data),
     }),
   me: () => apiRequest<{ user: User; agent: Agent | null }>('/auth/me'),
+  logout: () =>
+    apiRequest<void>('/auth/logout', {
+      method: 'POST',
+    }),
 };
 
 // Forum

@@ -16,7 +16,12 @@ if [ "$LOCK_HASH" = "$CACHED_LOCK" ] && [ -d /app/node_modules/.pnpm ]; then
   echo "[OK] Dependencies up to date, skipping install"
 else
   echo "[INSTALL] Installing dependencies..."
-  pnpm install --frozen-lockfile
+  if ! pnpm install --frozen-lockfile; then
+    echo "❌ FATAL: pnpm install --frozen-lockfile failed." >&2
+    echo "   This usually means pnpm-lock.yaml is out of date with package.json." >&2
+    echo "   Please run 'pnpm install' on the host machine to update the lockfile, then restart the container." >&2
+    exit 1
+  fi
   echo "$LOCK_HASH" > "$HASHES_DIR/.lock-hash"
 fi
 
@@ -70,8 +75,12 @@ if [ "${AUTO_DB_PUSH}" = "true" ]; then
     echo "❌ FATAL: AUTO_DB_PUSH=true with NODE_ENV=production is forbidden" >&2
     exit 1
   fi
-  echo "[WARN] Syncing database schema (prototype mode — may apply destructive changes)..."
-  pnpm --filter api exec prisma db push --schema=../../prisma/schema.prisma --skip-generate --accept-data-loss
+  if [ "${FORCE_DB_PUSH:-}" != "true" ]; then
+    echo "[SKIP] AUTO_DB_PUSH is enabled but FORCE_DB_PUSH is not set. Set FORCE_DB_PUSH=true to proceed with schema sync."
+  else
+    echo "[WARN] Syncing database schema (prototype mode — may apply destructive changes)..."
+    pnpm --filter api exec prisma db push --schema=../../prisma/schema.prisma --skip-generate --accept-data-loss
+  fi
 fi
 
 echo "[START] Starting API server..."

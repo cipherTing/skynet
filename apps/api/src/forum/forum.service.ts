@@ -251,183 +251,169 @@ export class ForumService {
   }
 
   async voteOnPost(agentId: string, postId: string, dto: VoteDto) {
-    const post = await this.prisma.forumPost.findFirst({
-      where: { id: postId, deletedAt: null },
+    const post = await this.prisma.forumPost.findUnique({
+      where: { id: postId },
     });
-    if (!post) {
+    if (!post || post.deletedAt) {
       throw new NotFoundException('帖子不存在');
     }
 
     const result = await this.prisma.$transaction(async (tx) => {
-      const existingVote = await tx.vote.findFirst({
-        where: { agentId, postId, targetType: VoteTargetType.POST },
+      // 获取排他锁，防止并发竞态
+      await tx.$executeRaw`SELECT id FROM "forum_posts" WHERE id = ${postId} FOR UPDATE`;
+
+      const existingVote = await tx.vote.findUnique({
+        where: {
+          agentId_postId_targetType: {
+            agentId,
+            postId,
+            targetType: VoteTargetType.POST,
+          },
+        },
       });
+
+      // 锁后重新读取当前计数，确保是最新值
+      const currentPost = await tx.forumPost.findUnique({
+        where: { id: postId },
+      });
+      if (!currentPost || currentPost.deletedAt) {
+        throw new NotFoundException('帖子不存在');
+      }
+
+      let upvotes = currentPost.upvotes;
+      let downvotes = currentPost.downvotes;
+      let action: 'created' | 'changed' | 'removed';
+      let vote: typeof existingVote;
 
       if (existingVote) {
         if (existingVote.type === dto.type) {
-          // Same vote type — cancel (toggle off)
+          // Same vote type — cancel
           await tx.vote.delete({ where: { id: existingVote.id } });
-          const counterDecrement =
-            dto.type === 'UPVOTE'
-              ? { upvotes: { decrement: 1 } }
-              : { downvotes: { decrement: 1 } };
-          const updatedPost = await tx.forumPost.update({
-            where: { id: postId },
-            data: counterDecrement,
-          });
-          const hotScore = calculateHotScore(
-            Math.max(updatedPost.upvotes, 0),
-            Math.max(updatedPost.downvotes, 0),
-            updatedPost.createdAt,
-          );
-          await tx.forumPost.update({
-            where: { id: postId },
-            data: {
-              hotScore,
-              upvotes: Math.max(updatedPost.upvotes, 0),
-              downvotes: Math.max(updatedPost.downvotes, 0),
-            },
-          });
-          return { action: 'removed' as const, vote: null };
+          if (dto.type === 'UPVOTE') upvotes = Math.max(upvotes - 1, 0);
+          else downvotes = Math.max(downvotes - 1, 0);
+          action = 'removed';
+          vote = null;
         } else {
-          // Different vote type — switch
-          const updated = await tx.vote.update({
+          // Switch vote type
+          vote = await tx.vote.update({
             where: { id: existingVote.id },
             data: { type: dto.type },
           });
-          const counterSwitch =
-            dto.type === 'UPVOTE'
-              ? { upvotes: { increment: 1 }, downvotes: { decrement: 1 } }
-              : { upvotes: { decrement: 1 }, downvotes: { increment: 1 } };
-          const updatedPost = await tx.forumPost.update({
-            where: { id: postId },
-            data: counterSwitch,
-          });
-          const hotScore = calculateHotScore(
-            Math.max(updatedPost.upvotes, 0),
-            Math.max(updatedPost.downvotes, 0),
-            updatedPost.createdAt,
-          );
-          await tx.forumPost.update({
-            where: { id: postId },
-            data: {
-              hotScore,
-              upvotes: Math.max(updatedPost.upvotes, 0),
-              downvotes: Math.max(updatedPost.downvotes, 0),
-            },
-          });
-          return { action: 'changed' as const, vote: updated };
+          if (dto.type === 'UPVOTE') {
+            upvotes = Math.max(upvotes + 1, 0);
+            downvotes = Math.max(downvotes - 1, 0);
+          } else {
+            upvotes = Math.max(upvotes - 1, 0);
+            downvotes = Math.max(downvotes + 1, 0);
+          }
+          action = 'changed';
         }
+      } else {
+        // New vote
+        vote = await tx.vote.create({
+          data: {
+            type: dto.type,
+            targetType: VoteTargetType.POST,
+            agentId,
+            postId,
+          },
+        });
+        if (dto.type === 'UPVOTE') upvotes += 1;
+        else downvotes += 1;
+        action = 'created';
       }
 
-      // New vote
-      const vote = await tx.vote.create({
-        data: {
-          type: dto.type,
-          targetType: VoteTargetType.POST,
-          agentId,
-          postId,
-        },
-      });
-      const updateData =
-        dto.type === 'UPVOTE'
-          ? { upvotes: { increment: 1 } }
-          : { downvotes: { increment: 1 } };
-      const updatedPost = await tx.forumPost.update({
-        where: { id: postId },
-        data: updateData,
-      });
-      const hotScore = calculateHotScore(
-        updatedPost.upvotes,
-        updatedPost.downvotes,
-        updatedPost.createdAt,
-      );
+      const hotScore = calculateHotScore(upvotes, downvotes, currentPost.createdAt);
       await tx.forumPost.update({
         where: { id: postId },
-        data: { hotScore },
+        data: { upvotes, downvotes, hotScore },
       });
-      return { action: 'created' as const, vote };
+
+      return { action, vote };
     });
 
     return result;
   }
 
   async voteOnReply(agentId: string, replyId: string, dto: VoteDto) {
-    const reply = await this.prisma.forumReply.findFirst({
-      where: { id: replyId, deletedAt: null },
+    const reply = await this.prisma.forumReply.findUnique({
+      where: { id: replyId },
     });
-    if (!reply) {
+    if (!reply || reply.deletedAt) {
       throw new NotFoundException('回复不存在');
     }
 
     const result = await this.prisma.$transaction(async (tx) => {
-      const existingVote = await tx.vote.findFirst({
-        where: { agentId, replyId, targetType: VoteTargetType.REPLY },
+      // 获取排他锁，防止并发竞态
+      await tx.$executeRaw`SELECT id FROM "forum_replies" WHERE id = ${replyId} FOR UPDATE`;
+
+      const existingVote = await tx.vote.findUnique({
+        where: {
+          agentId_replyId_targetType: {
+            agentId,
+            replyId,
+            targetType: VoteTargetType.REPLY,
+          },
+        },
       });
+
+      // 锁后重新读取当前计数，确保是最新值
+      const currentReply = await tx.forumReply.findUnique({
+        where: { id: replyId },
+      });
+      if (!currentReply || currentReply.deletedAt) {
+        throw new NotFoundException('回复不存在');
+      }
+
+      let upvotes = currentReply.upvotes;
+      let downvotes = currentReply.downvotes;
+      let action: 'created' | 'changed' | 'removed';
+      let vote: typeof existingVote;
 
       if (existingVote) {
         if (existingVote.type === dto.type) {
           // Same vote type — cancel
           await tx.vote.delete({ where: { id: existingVote.id } });
-          const counterDecrement =
-            dto.type === 'UPVOTE'
-              ? { upvotes: { decrement: 1 } }
-              : { downvotes: { decrement: 1 } };
-          const updatedReply = await tx.forumReply.update({
-            where: { id: replyId },
-            data: counterDecrement,
-          });
-          await tx.forumReply.update({
-            where: { id: replyId },
-            data: {
-              upvotes: Math.max(updatedReply.upvotes, 0),
-              downvotes: Math.max(updatedReply.downvotes, 0),
-            },
-          });
-          return { action: 'removed' as const, vote: null };
+          if (dto.type === 'UPVOTE') upvotes = Math.max(upvotes - 1, 0);
+          else downvotes = Math.max(downvotes - 1, 0);
+          action = 'removed';
+          vote = null;
         } else {
-          // Switch vote
-          const updated = await tx.vote.update({
+          // Switch vote type
+          vote = await tx.vote.update({
             where: { id: existingVote.id },
             data: { type: dto.type },
           });
-          const counterSwitch =
-            dto.type === 'UPVOTE'
-              ? { upvotes: { increment: 1 }, downvotes: { decrement: 1 } }
-              : { upvotes: { decrement: 1 }, downvotes: { increment: 1 } };
-          const updatedReply = await tx.forumReply.update({
-            where: { id: replyId },
-            data: counterSwitch,
-          });
-          await tx.forumReply.update({
-            where: { id: replyId },
-            data: {
-              upvotes: Math.max(updatedReply.upvotes, 0),
-              downvotes: Math.max(updatedReply.downvotes, 0),
-            },
-          });
-          return { action: 'changed' as const, vote: updated };
+          if (dto.type === 'UPVOTE') {
+            upvotes = Math.max(upvotes + 1, 0);
+            downvotes = Math.max(downvotes - 1, 0);
+          } else {
+            upvotes = Math.max(upvotes - 1, 0);
+            downvotes = Math.max(downvotes + 1, 0);
+          }
+          action = 'changed';
         }
+      } else {
+        // New vote
+        vote = await tx.vote.create({
+          data: {
+            type: dto.type,
+            targetType: VoteTargetType.REPLY,
+            agentId,
+            replyId,
+          },
+        });
+        if (dto.type === 'UPVOTE') upvotes += 1;
+        else downvotes += 1;
+        action = 'created';
       }
 
-      // New vote
-      const vote = await tx.vote.create({
-        data: {
-          type: dto.type,
-          targetType: VoteTargetType.REPLY,
-          agentId,
-          replyId,
-        },
-      });
-      const updateData =
-        dto.type === 'UPVOTE'
-          ? { upvotes: { increment: 1 } }
-          : { downvotes: { increment: 1 } };
       await tx.forumReply.update({
         where: { id: replyId },
-        data: updateData,
+        data: { upvotes, downvotes },
       });
-      return { action: 'created' as const, vote };
+
+      return { action, vote };
     });
 
     return result;

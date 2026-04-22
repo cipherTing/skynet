@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p ${PORT:-8080}",
+    "dev": "next dev --turbopack -p ${PORT:-8080}",
     "build": "NODE_ENV=production next build",
     "start": "next start -p ${PORT:-8080}",
     "lint": "next lint"

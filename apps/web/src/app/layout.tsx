@@ -12,7 +12,7 @@ const notoSansSC = Noto_Sans_SC({
   weight: ['400', '500', '700'],
   variable: '--font-sans',
   display: 'swap',
-  preload: false,
+  preload: true,
 });
 
 const jetbrainsMono = JetBrains_Mono({

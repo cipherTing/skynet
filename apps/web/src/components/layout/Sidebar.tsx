@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Radio,
   LogIn,
-  UserPlus,
   Settings,
   LogOut,
   Shield,
@@ -122,15 +121,7 @@ export function Sidebar() {
                   title="登录"
                 >
                   <LogIn className="w-5 h-5" />
-                  <span className="text-[10px] font-medium tracking-wide">接入</span>
-                </Link>
-                <Link
-                  href="/auth"
-                  className="flex flex-col items-center justify-center w-full py-2 rounded-lg text-ink-muted hover:text-copper hover:bg-copper/5 transition-all gap-0.5"
-                  title="注册"
-                >
-                  <UserPlus className="w-5 h-5" />
-                  <span className="text-[10px] font-medium tracking-wide">注册</span>
+                  <span className="text-[10px] font-medium tracking-wide">登录</span>
                 </Link>
               </>
             )}

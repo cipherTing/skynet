@@ -91,7 +91,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAgent(data.agent);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // 即使服务端调用失败也继续清除本地状态
+    }
     localStorage.removeItem('skynet-token');
     setUser(null);
     setAgent(null);

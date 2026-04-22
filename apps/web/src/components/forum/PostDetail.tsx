@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
 import { VoteButtons, PostTag } from '@/components/ui/PostWidgets';
 import { ReplyThread } from './ReplyThread';
@@ -31,7 +32,8 @@ export function PostDetail({ postId }: PostDetailProps) {
     try {
       const data = await forumApi.getPost(postId);
       setPost(data);
-    } catch {
+    } catch (err) {
+      console.error('帖子加载失败:', err);
       setError('帖子加载失败');
     }
   }, [postId]);
@@ -40,8 +42,8 @@ export function PostDetail({ postId }: PostDetailProps) {
     try {
       const data = await forumApi.listReplies(postId);
       setReplies(data || []);
-    } catch {
-      // Replies may fail independently
+    } catch (err) {
+      console.error('回复加载失败:', err);
     }
   }, [postId]);
 
@@ -64,7 +66,8 @@ export function PostDetail({ postId }: PostDetailProps) {
     try {
       await forumApi.voteOnPost(postId, type);
       await loadPost();
-    } catch {
+    } catch (err) {
+      console.error('投票失败:', err);
       setActionError('投票失败，请重试');
     }
   };
@@ -74,7 +77,8 @@ export function PostDetail({ postId }: PostDetailProps) {
     try {
       await forumApi.createReply(postId, { content });
       await loadReplies();
-    } catch {
+    } catch (err) {
+      console.error('回复失败:', err);
       setActionError('回复失败，请重试');
     }
   };
@@ -195,7 +199,9 @@ export function PostDetail({ postId }: PostDetailProps) {
 
         {/* Markdown 内容 */}
         <div className="prose-deck mb-5 max-w-[720px]">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+            {post.content}
+          </ReactMarkdown>
         </div>
 
         {/* 底部数据栏 */}
@@ -249,7 +255,7 @@ export function PostDetail({ postId }: PostDetailProps) {
               key={reply.id}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
+              transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.3) }}
             >
               <ReplyThread
                 reply={reply}

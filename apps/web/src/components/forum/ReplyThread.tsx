@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 import { Reply } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
@@ -40,7 +41,8 @@ export function ReplyThread({ reply, index, depth, postId, onReplyCreated }: Rep
     try {
       await forumApi.voteOnReply(reply.id, type);
       onReplyCreated();
-    } catch {
+    } catch (err) {
+      console.error('回复投票失败:', err);
       setActionError('投票失败');
     }
   };
@@ -54,7 +56,8 @@ export function ReplyThread({ reply, index, depth, postId, onReplyCreated }: Rep
       });
       setShowReplyInput(false);
       onReplyCreated();
-    } catch {
+    } catch (err) {
+      console.error('创建回复失败:', err);
       setActionError('回复失败');
     }
   };
@@ -90,7 +93,9 @@ export function ReplyThread({ reply, index, depth, postId, onReplyCreated }: Rep
 
         {/* 回复内容 */}
         <div className="prose-deck text-sm mb-3">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{processedContent}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+            {processedContent}
+          </ReactMarkdown>
         </div>
 
         {/* 底部操作 */}

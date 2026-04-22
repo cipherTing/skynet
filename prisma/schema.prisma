@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../apps/api/generated/prisma"
+  provider      = "prisma-client-js"
+  output        = "../apps/api/generated/prisma"
+  binaryTargets = ["native", "linux-arm64-openssl-3.0.x"]
 }
 
 datasource db {
@@ -14,6 +15,8 @@ model User {
   id           String    @id @default(cuid())
   username     String    @unique
   passwordHash String    @map("password_hash")
+  tokenVersion Int       @default(0) @map("token_version")
+  suspendedAt  DateTime? @map("suspended_at")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")
@@ -33,6 +36,7 @@ model Agent {
   reputation  Int       @default(0)
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
 
   // Secret Key fields
   secretKeyHash      String?   @map("secret_key_hash")
@@ -42,12 +46,13 @@ model Agent {
 
   // User relation (one-to-one)
   userId String @unique @map("user_id")
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   posts   ForumPost[]
   replies ForumReply[]
   votes   Vote[]
 
+  @@unique([secretKeyPrefix])
   @@map("agents")
 }
 
@@ -67,7 +72,7 @@ model ForumPost {
   deletedAt  DateTime? @map("deleted_at")
 
   authorId String     @map("author_id")
-  author   Agent      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author   Agent      @relation(fields: [authorId], references: [id], onDelete: Restrict)
   replies  ForumReply[]
   votes    Vote[]
 
@@ -90,11 +95,11 @@ model ForumReply {
   deletedAt DateTime? @map("deleted_at")
 
   postId        String       @map("post_id")
-  post          ForumPost    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post          ForumPost    @relation(fields: [postId], references: [id], onDelete: Restrict)
   authorId      String       @map("author_id")
-  author        Agent        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author        Agent        @relation(fields: [authorId], references: [id], onDelete: Restrict)
   parentReplyId String?      @map("parent_reply_id")
-  parentReply   ForumReply?  @relation("ReplyToReply", fields: [parentReplyId], references: [id], onDelete: Cascade)
+  parentReply   ForumReply?  @relation("ReplyToReply", fields: [parentReplyId], references: [id], onDelete: Restrict)
   children      ForumReply[] @relation("ReplyToReply")
   votes         Vote[]
 
@@ -125,11 +130,11 @@ model Vote {
   createdAt  DateTime       @default(now()) @map("created_at")
 
   agentId String      @map("agent_id")
-  agent   Agent       @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  agent   Agent       @relation(fields: [agentId], references: [id], onDelete: Restrict)
   postId  String?     @map("post_id")
-  post    ForumPost?  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post    ForumPost?  @relation(fields: [postId], references: [id], onDelete: Restrict)
   replyId String?     @map("reply_id")
-  reply   ForumReply? @relation(fields: [replyId], references: [id], onDelete: Cascade)
+  reply   ForumReply? @relation(fields: [replyId], references: [id], onDelete: Restrict)
 
   @@unique([agentId, postId, targetType])
   @@unique([agentId, replyId, targetType])

@@ -79,6 +79,13 @@ export class AuthService {
     };
   }
 
+  async logout(userId: string) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { tokenVersion: { increment: 1 } },
+    });
+  }
+
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { username: dto.username, deletedAt: null },
@@ -89,6 +96,10 @@ export class AuthService {
       // Constant-time comparison to prevent username enumeration via timing
       await bcrypt.compare(dto.password, '$2b$12$000000000000000000000uGdrFhdg0cMNpMTknGjRZ3PluYUnPOra');
       throw new UnauthorizedException('用户名或密码错误');
+    }
+
+    if (user.suspendedAt) {
+      throw new UnauthorizedException('该账号已被封禁');
     }
 
     const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
@@ -118,23 +129,38 @@ export class AuthService {
     };
   }
 
-  async validateUser(payload: { sub: string; username: string }) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub, deletedAt: null },
+  async findUserById(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id, deletedAt: null },
+    });
+  }
+
+  async findUserWithAgentById(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id, deletedAt: null },
       include: { agent: true },
     });
+  }
+
+  async validateUser(payload: { sub: string; username: string }) {
+    const user = await this.findUserById(payload.sub);
 
     if (!user) {
       throw new UnauthorizedException('用户不存在');
     }
 
+    if (user.suspendedAt) {
+      throw new UnauthorizedException('该账号已被封禁');
+    }
+
     return user;
   }
 
-  private generateToken(user: { id: string; username: string }) {
+  private generateToken(user: { id: string; username: string; tokenVersion: number }) {
     return this.jwtService.sign({
       sub: user.id,
       username: user.username,
+      tokenVersion: user.tokenVersion,
     });
   }
 }

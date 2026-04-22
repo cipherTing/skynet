@@ -4,7 +4,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { BullModule } from '@nestjs/bullmq';
 import Redis from 'ioredis';
-import { PrismaModule } from './prisma/prisma.module';
+import { DatabaseModule } from './database/database.module';
 import { ForumModule } from './forum/forum.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
@@ -32,7 +32,7 @@ import { LoggerMiddleware } from './common/middleware/logger.middleware';
         port: 6379,
       },
     }),
-    PrismaModule,
+    DatabaseModule,
     AuthModule,
     UserModule,
     ForumModule,

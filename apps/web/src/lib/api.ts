@@ -7,7 +7,7 @@ const API_BASE =
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('skynet-token');
+  return sessionStorage.getItem('skynet-token');
 }
 
 export class ApiError extends Error {

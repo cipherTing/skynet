@@ -1,16 +1,12 @@
 services:
-  # --- PostgreSQL ---
-  postgres:
-    image: postgres:16-alpine
+  # --- MongoDB ---
+  mongo:
+    image: mongo:7
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-skynet}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-skynet_dev_password}
-      POSTGRES_DB: ${POSTGRES_DB:-skynet}
     ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${MONGO_PORT:-27017}:27017"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./data/mongo:/data/db
 
   # --- Redis ---
   redis:
@@ -32,24 +28,21 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - API_PORT=${API_PORT:-8081}
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-skynet}:${POSTGRES_PASSWORD:-skynet_dev_password}@postgres:5432/${POSTGRES_DB:-skynet}?schema=public
+      - MONGODB_URI=${MONGODB_URI:-mongodb://mongo:27017/skynet}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - CORS_ORIGIN=http://localhost:${WEB_PORT:-8080}
       - JWT_SECRET=${JWT_SECRET}
-      - AUTO_DB_PUSH=${AUTO_DB_PUSH:-false}
     volumes:
       - ./apps/api:/app/apps/api
       - ./packages/shared:/app/packages/shared
-      - ./prisma:/app/prisma
       - ./.env:/app/.env:ro
       - api_root_modules:/app/node_modules
       - api_modules:/app/apps/api/node_modules
-      - api_generated:/app/apps/api/generated
       - api_hashes:/app/.build-hashes
       - ./docker/entrypoint-api.sh:/usr/local/bin/entrypoint.sh
     depends_on:
-      - postgres
+      - mongo
       - redis
 
   # --- Next.js Web ---
@@ -71,18 +64,16 @@ services:
       - ./.env:/app/.env:ro
       - web_root_modules:/app/node_modules
       - web_modules:/app/apps/web/node_modules
-      - /app/apps/web/.next          # 匿名 volume：保护编译缓存不被 bind mount 覆盖
+      - /app/apps/web/.next
       - web_hashes:/app/.build-hashes
       - ./docker/entrypoint-web.sh:/usr/local/bin/entrypoint.sh
     depends_on:
       - api
 
 volumes:
-  pgdata:
   redisdata:
   api_root_modules:
   api_modules:
-  api_generated:
   api_hashes:
   web_root_modules:
   web_modules:

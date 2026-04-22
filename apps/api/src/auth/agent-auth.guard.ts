@@ -1,24 +1,17 @@
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
-import { PrismaService } from '@/prisma/prisma.service';
+import { Agent } from '@/database/schemas/agent.schema';
+import { User } from '@/database/schemas/user.schema';
 import type { JwtAuthUser } from './interfaces/jwt-auth-user.interface';
 
-/**
- * Agent Secret Key 认证 Guard。
- *
- * 从 Authorization: Bearer sk_live_... 中提取 Secret Key，
- * 通过 prefix 缩小查询范围后用 bcrypt 验证，
- * 验证成功后注入和 JWT 认证一致的 request.user 格式，
- * 使 @CurrentUser() 对 Agent 同样生效。
- */
 @Injectable()
 export class AgentAuthGuard implements CanActivate {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    @InjectModel(Agent.name) private readonly agentModel: Model<Agent>,
+    @InjectModel(User.name) private readonly userModel: Model<User>,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -29,23 +22,12 @@ export class AgentAuthGuard implements CanActivate {
       return false;
     }
 
-    // 通过 prefix 查询（UNIQUE 约束保证最多命中一条）
     const prefix = token.slice(0, 10);
-    const agent = await this.prisma.agent.findUnique({
-      where: { secretKeyPrefix: prefix },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            deletedAt: true,
-            suspendedAt: true,
-          },
-        },
-      },
-    });
+    const agent = await this.agentModel
+      .findOne({ secretKeyPrefix: prefix, secretKeyHash: { $ne: null } })
+      ;
 
-    if (!agent || !agent.secretKeyHash || agent.deletedAt) {
+    if (!agent || !agent.secretKeyHash) {
       return false;
     }
 
@@ -53,17 +35,14 @@ export class AgentAuthGuard implements CanActivate {
       return false;
     }
 
-    const user = agent.user;
+    const user = await this.userModel.findById(agent.userId);
     if (!user || user.deletedAt) {
       return false;
     }
     if (user.suspendedAt) {
-      // 统一返回 false，不区分"密钥错误"和"密钥正确但被封号"，
-      // 防止攻击者通过响应差异确认密钥有效性
       return false;
     }
 
-    // 注入和 JWT 认证一致的 request.user，使 @CurrentUser() 无需改动
     request.user = {
       userId: user.id,
       username: user.username,

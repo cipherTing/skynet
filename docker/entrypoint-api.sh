@@ -25,37 +25,21 @@ else
   echo "$LOCK_HASH" > "$HASHES_DIR/.lock-hash"
 fi
 
-# --- 2. 智能 Prisma generate（schema hash 比对）---
-if [ ! -f /app/prisma/schema.prisma ]; then
-  echo "❌ FATAL: prisma/schema.prisma not found" >&2
-  exit 1
-fi
-SCHEMA_HASH=$(sha256sum /app/prisma/schema.prisma | cut -d' ' -f1)
-CACHED_SCHEMA=$(cat "$HASHES_DIR/.schema-hash" 2>/dev/null || echo "")
-
-if [ "$SCHEMA_HASH" = "$CACHED_SCHEMA" ] && [ -d /app/apps/api/generated/prisma ]; then
-  echo "[OK] Prisma Client up to date, skipping generate"
-else
-  echo "[PRISMA] Generating Prisma Client..."
-  pnpm --filter api exec prisma generate --schema=../../prisma/schema.prisma
-  echo "$SCHEMA_HASH" > "$HASHES_DIR/.schema-hash"
-fi
-
-# --- 3. 等待 PostgreSQL 就绪 ---
-echo "[WAIT] Waiting for PostgreSQL..."
-PG_RETRIES=0
-PG_MAX_RETRIES=30
-until node -e "const net=require('net');const c=net.connect(5432,'postgres');c.on('connect',()=>{c.end();process.exit(0)});c.on('error',()=>process.exit(1))" 2>/dev/null; do
-  PG_RETRIES=$((PG_RETRIES + 1))
-  if [ "$PG_RETRIES" -ge "$PG_MAX_RETRIES" ]; then
-    echo "❌ FATAL: PostgreSQL not ready after ${PG_MAX_RETRIES}s" >&2
+# --- 2. 等待 MongoDB 就绪 ---
+echo "[WAIT] Waiting for MongoDB..."
+MONGO_RETRIES=0
+MONGO_MAX_RETRIES=30
+until node -e "const net=require('net');const c=net.connect(27017,'mongo');c.on('connect',()=>{c.end();process.exit(0)});c.on('error',()=>process.exit(1))" 2>/dev/null; do
+  MONGO_RETRIES=$((MONGO_RETRIES + 1))
+  if [ "$MONGO_RETRIES" -ge "$MONGO_MAX_RETRIES" ]; then
+    echo "❌ FATAL: MongoDB not ready after ${MONGO_MAX_RETRIES}s" >&2
     exit 1
   fi
   sleep 1
 done
-echo "[OK] PostgreSQL is ready"
+echo "[OK] MongoDB is ready"
 
-# --- 4. 等待 Redis 就绪 ---
+# --- 3. 等待 Redis 就绪 ---
 echo "[WAIT] Waiting for Redis..."
 REDIS_RETRIES=0
 REDIS_MAX_RETRIES=15
@@ -68,20 +52,6 @@ until node -e "const net=require('net');const c=net.connect(6379,'redis');c.on('
   sleep 1
 done
 echo "[OK] Redis is ready"
-
-# --- 5. 数据库 schema 同步（环境变量控制）---
-if [ "${AUTO_DB_PUSH}" = "true" ]; then
-  if [ "${NODE_ENV:-development}" = "production" ]; then
-    echo "❌ FATAL: AUTO_DB_PUSH=true with NODE_ENV=production is forbidden" >&2
-    exit 1
-  fi
-  if [ "${FORCE_DB_PUSH:-}" != "true" ]; then
-    echo "[SKIP] AUTO_DB_PUSH is enabled but FORCE_DB_PUSH is not set. Set FORCE_DB_PUSH=true to proceed with schema sync."
-  else
-    echo "[WARN] Syncing database schema (prototype mode — may apply destructive changes)..."
-    pnpm --filter api exec prisma db push --schema=../../prisma/schema.prisma --skip-generate --accept-data-loss
-  fi
-fi
 
 echo "[START] Starting API server..."
 exec "$@"

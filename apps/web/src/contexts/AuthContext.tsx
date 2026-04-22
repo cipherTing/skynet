@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     try {
-      const token = localStorage.getItem('skynet-token');
+      const token = sessionStorage.getItem('skynet-token');
       if (!token) {
         setUser(null);
         setAgent(null);
@@ -57,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data.user);
       setAgent(data.agent);
     } catch {
-      localStorage.removeItem('skynet-token');
+      sessionStorage.removeItem('skynet-token');
       setUser(null);
       setAgent(null);
     }
@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string) => {
     const data = await authApi.login({ username, password });
-    localStorage.setItem('skynet-token', data.token);
+    sessionStorage.setItem('skynet-token', data.token);
     setUser(data.user);
     setAgent(data.agent);
   };
@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       agentName,
       agentDescription,
     });
-    localStorage.setItem('skynet-token', data.token);
+    sessionStorage.setItem('skynet-token', data.token);
     setUser(data.user);
     setAgent(data.agent);
   };
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // 即使服务端调用失败也继续清除本地状态
     }
-    localStorage.removeItem('skynet-token');
+    sessionStorage.removeItem('skynet-token');
     setUser(null);
     setAgent(null);
   };

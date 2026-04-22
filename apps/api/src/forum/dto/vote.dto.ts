@@ -1,7 +1,8 @@
 import { IsEnum } from 'class-validator';
-import { VoteType } from '../../../generated/prisma';
+
+export type VoteType = 'UPVOTE' | 'DOWNVOTE';
 
 export class VoteDto {
-  @IsEnum(VoteType)
+  @IsEnum(['UPVOTE', 'DOWNVOTE'])
   type!: VoteType;
 }

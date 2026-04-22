@@ -1,100 +1,89 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  ConflictException,
-} from '@nestjs/common';
-import { Prisma } from '../../generated/prisma';
+import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { PrismaService } from '@/prisma/prisma.service';
+import { User } from '@/database/schemas/user.schema';
+import { Agent } from '@/database/schemas/agent.schema';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectModel(User.name) private readonly userModel: Model<User>,
+    @InjectModel(Agent.name) private readonly agentModel: Model<Agent>,
     private readonly jwtService: JwtService,
   ) {}
 
   async register(dto: RegisterDto) {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { username: dto.username },
-    });
+    const existingUser = await this.userModel.findOne({ username: dto.username });
     if (existingUser) {
       throw new ConflictException('用户名已被占用');
     }
 
-    const existingAgent = await this.prisma.agent.findUnique({
-      where: { name: dto.agentName },
-    });
+    const existingAgent = await this.agentModel.findOne({ name: dto.agentName });
     if (existingAgent) {
       throw new ConflictException('Agent 名称已被占用');
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
-    let user;
+    // Create user first
+    const user = await this.userModel.create({
+      username: dto.username,
+      passwordHash,
+    });
+
     try {
-      user = await this.prisma.user.create({
-        data: {
-          username: dto.username,
-          passwordHash,
-          agent: {
-            create: {
-              name: dto.agentName,
-              description: dto.agentDescription || '',
-            },
-          },
-        },
-        include: { agent: true },
+      // Then create agent linked to user
+      const agent = await this.agentModel.create({
+        name: dto.agentName,
+        description: dto.agentDescription || '',
+        userId: user.id,
       });
+
+      const token = this.generateToken(user);
+
+      return {
+        user: {
+          id: user.id,
+          username: user.username,
+          createdAt: user.createdAt.toISOString(),
+        },
+        agent: {
+          id: agent.id,
+          name: agent.name,
+          description: agent.description,
+          avatarSeed: agent.avatarSeed,
+          reputation: agent.reputation,
+          createdAt: agent.createdAt.toISOString(),
+        },
+        token,
+      };
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
+      // Compensation: rollback user creation if agent creation fails
+      await this.userModel.findByIdAndUpdate(user.id, { deletedAt: new Date() });
+      if ((error as any)?.code === 11000) {
         throw new ConflictException('用户名或 Agent 名称已被占用');
       }
       throw error;
     }
-
-    const token = this.generateToken(user);
-
-    return {
-      user: {
-        id: user.id,
-        username: user.username,
-        createdAt: user.createdAt.toISOString(),
-      },
-      agent: {
-        id: user.agent!.id,
-        name: user.agent!.name,
-        description: user.agent!.description,
-        avatarSeed: user.agent!.avatarSeed,
-        reputation: user.agent!.reputation,
-        createdAt: user.agent!.createdAt.toISOString(),
-      },
-      token,
-    };
   }
 
   async logout(userId: string) {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { tokenVersion: { increment: 1 } },
-    });
+    await this.userModel.findByIdAndUpdate(userId, { $inc: { tokenVersion: 1 } });
   }
 
   async login(dto: LoginDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { username: dto.username, deletedAt: null },
-      include: { agent: true },
-    });
+    const user = await this.userModel.findOne({ username: dto.username });
 
     if (!user) {
       // Constant-time comparison to prevent username enumeration via timing
-      await bcrypt.compare(dto.password, '$2b$12$000000000000000000000uGdrFhdg0cMNpMTknGjRZ3PluYUnPOra');
+      await bcrypt.compare(
+        dto.password,
+        '$2b$12$000000000000000000000uGdrFhdg0cMNpMTknGjRZ3PluYUnPOra',
+      );
       throw new UnauthorizedException('用户名或密码错误');
     }
 
@@ -107,7 +96,8 @@ export class AuthService {
       throw new UnauthorizedException('用户名或密码错误');
     }
 
-    const token = this.generateToken(user);
+    const agent = await this.agentModel.findOne({ userId: user.id });
+    const token = this.generateToken(user as any);
 
     return {
       user: {
@@ -115,14 +105,14 @@ export class AuthService {
         username: user.username,
         createdAt: user.createdAt.toISOString(),
       },
-      agent: user.agent
+      agent: agent
         ? {
-            id: user.agent.id,
-            name: user.agent.name,
-            description: user.agent.description,
-            avatarSeed: user.agent.avatarSeed,
-            reputation: user.agent.reputation,
-            createdAt: user.agent.createdAt.toISOString(),
+            id: agent.id,
+            name: agent.name,
+            description: agent.description,
+            avatarSeed: agent.avatarSeed,
+            reputation: agent.reputation,
+            createdAt: agent.createdAt.toISOString(),
           }
         : null,
       token,
@@ -130,16 +120,14 @@ export class AuthService {
   }
 
   async findUserById(id: string) {
-    return this.prisma.user.findUnique({
-      where: { id, deletedAt: null },
-    });
+    return this.userModel.findById(id);
   }
 
   async findUserWithAgentById(id: string) {
-    return this.prisma.user.findUnique({
-      where: { id, deletedAt: null },
-      include: { agent: true },
-    });
+    const user = await this.userModel.findById(id);
+    if (!user) return null;
+    const agent = await this.agentModel.findOne({ userId: user.id });
+    return { ...user, agent };
   }
 
   async validateUser(payload: { sub: string; username: string }) {

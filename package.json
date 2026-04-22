@@ -8,9 +8,6 @@
     "build": "pnpm --filter './apps/*' build",
     "lint": "pnpm --filter './apps/*' --filter './packages/*' lint",
     "format": "prettier --write '**/*.{ts,tsx,js,jsx,json,md}'",
-    "prisma:generate": "pnpm --filter api prisma:generate",
-    "prisma:push": "pnpm --filter api prisma:push",
-    "prisma:studio": "pnpm --filter api prisma:studio",
     "db:reset": "bash scripts/db-reset.sh"
   },
   "devDependencies": {

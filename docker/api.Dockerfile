@@ -1,28 +1,21 @@
 FROM node:20-bookworm-slim
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -y && apt-get install -y procps && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
-
-# 跳过 postinstall 自动生成，后续手动 generate 到自定义 output 路径（apps/api/generated/prisma）
-ENV PRISMA_SKIP_POSTINSTALL_GENERATE=true
 
 # 复制 workspace 配置和依赖清单（利用 Docker 缓存层）
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json .npmrc ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/shared/package.json ./packages/shared/
 
-# 安装依赖（prisma/ 不参与此层，避免 schema 变更破坏缓存）
+# 安装依赖
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
-# 复制 Prisma schema 和源代码
-COPY prisma/ ./prisma/
+# 复制源代码
 COPY apps/api/ ./apps/api/
 COPY packages/shared/ ./packages/shared/
-
-# 构建时生成 Prisma Client（自定义 output 路径，不依赖 node_modules/.prisma）
-RUN pnpm --filter api exec prisma generate --schema=../../prisma/schema.prisma
 
 # 复制 entrypoint 脚本（docker-compose dev 模式下会被 bind mount 覆盖）
 COPY docker/entrypoint-api.sh /usr/local/bin/entrypoint.sh

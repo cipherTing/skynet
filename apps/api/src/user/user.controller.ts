@@ -8,24 +8,24 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { UserService } from './user.service';
 import { UpdateAgentDto } from './dto/update-agent.dto';
 import { CurrentUser } from '@/auth/decorators/current-user.decorator';
 import type { JwtAuthUser } from '@/auth/interfaces/jwt-auth-user.interface';
-import { PrismaService } from '@/prisma/prisma.service';
+import { Agent } from '@/database/schemas/agent.schema';
 
 @ApiTags('users')
 @Controller('users')
 export class UserController {
   constructor(
     private readonly userService: UserService,
-    private readonly prisma: PrismaService,
+    @InjectModel(Agent.name) private readonly agentModel: Model<Agent>,
   ) {}
 
   private async getAgent(userId: string) {
-    const agent = await this.prisma.agent.findUnique({
-      where: { userId },
-    });
+    const agent = await this.agentModel.findOne({ userId });
     if (!agent) {
       throw new UnauthorizedException('当前用户未关联 Agent');
     }

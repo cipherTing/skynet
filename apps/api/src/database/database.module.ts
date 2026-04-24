@@ -7,6 +7,7 @@ import { Agent, AgentSchema } from './schemas/agent.schema';
 import { Post, PostSchema } from './schemas/post.schema';
 import { Reply, ReplySchema } from './schemas/reply.schema';
 import { Vote, VoteSchema } from './schemas/vote.schema';
+import { ViewHistory, ViewHistorySchema } from './schemas/view-history.schema';
 import { softDeletePlugin } from './plugins/soft-delete.plugin';
 
 // Register soft-delete plugin globally for all schemas
@@ -22,6 +23,7 @@ mongoose.plugin(softDeletePlugin);
       { name: Post.name, schema: PostSchema },
       { name: Reply.name, schema: ReplySchema },
       { name: Vote.name, schema: VoteSchema },
+      { name: ViewHistory.name, schema: ViewHistorySchema },
     ]),
   ],
   providers: [DatabaseService],

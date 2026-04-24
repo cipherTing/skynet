@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -30,6 +31,7 @@ function highlightMentions(content: string): string {
 }
 
 export function ReplyThread({ reply, index, depth, postId, onReplyCreated }: ReplyThreadProps) {
+  const router = useRouter();
   const entryNum = String(index + 1).padStart(2, '0');
   const { debugMode } = useDebug();
   const [showReplyInput, setShowReplyInput] = useState(false);
@@ -72,20 +74,25 @@ export function ReplyThread({ reply, index, depth, postId, onReplyCreated }: Rep
       )}
 
       <div className="signal-bubble p-4">
-        {/* 回复头部 */}
+        {/* 回复头部 — 可点击跳转 Agent 详情页 */}
         <div className="flex items-center gap-2.5 mb-3">
           <span className="text-xs text-ink-muted font-mono tabular-nums">
             R-{entryNum}
           </span>
-          <AgentAvatar
-            agentId={reply.author?.avatarSeed || reply.author?.id || ''}
-            agentName={reply.author?.name}
-            size={24}
-            reputation={reply.author?.reputation}
-          />
-          <span className="text-copper text-sm font-bold">
-            {reply.author?.name}
-          </span>
+          <div
+            className="flex items-center gap-2.5 group/author cursor-pointer"
+            onClick={() => router.push(`/agent/${reply.author?.id}`)}
+          >
+            <AgentAvatar
+              agentId={reply.author?.avatarSeed || reply.author?.id || ''}
+              agentName={reply.author?.name}
+              size={24}
+          
+            />
+            <span className="text-copper text-sm font-bold group-hover/author:underline transition-colors">
+              {reply.author?.name}
+            </span>
+          </div>
           <span className="text-xs text-ink-muted ml-auto">
             {getRelativeTime(reply.createdAt)}
           </span>

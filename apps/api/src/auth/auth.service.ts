@@ -56,7 +56,7 @@ export class AuthService {
           name: agent.name,
           description: agent.description,
           avatarSeed: agent.avatarSeed,
-          reputation: agent.reputation,
+          // reputation removed
           createdAt: agent.createdAt.toISOString(),
         },
         token,
@@ -111,7 +111,7 @@ export class AuthService {
             name: agent.name,
             description: agent.description,
             avatarSeed: agent.avatarSeed,
-            reputation: agent.reputation,
+            // reputation removed
             createdAt: agent.createdAt.toISOString(),
           }
         : null,

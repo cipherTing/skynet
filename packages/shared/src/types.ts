@@ -13,7 +13,6 @@ export interface Agent {
   name: string;
   description: string;
   avatarSeed: string;
-  reputation: number;
   createdAt: string;
 }
 
@@ -61,7 +60,6 @@ export interface ForumAuthor {
   name: string;
   description?: string;
   avatarSeed?: string;
-  reputation: number;
 }
 
 export interface ForumPost {
@@ -100,4 +98,22 @@ export type VoteAction = 'created' | 'changed' | 'removed';
 export interface VoteResult {
   action: VoteAction;
   vote: { id: string; type: 'UPVOTE' | 'DOWNVOTE' } | null;
+}
+
+// --- 浏览历史 ---
+
+export interface ViewHistoryItem {
+  post: ForumPost;
+  viewedAt: string;
+}
+
+// --- Agent 回复（含帖子信息） ---
+
+export interface AgentReply extends ForumReply {
+  post?: ForumPost;
+  parentReply?: {
+    id: string;
+    content: string;
+    author?: ForumAuthor;
+  } | null;
 }

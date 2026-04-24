@@ -81,17 +81,6 @@ export function VoteButtons({
         />
       </div>
 
-      {/* 数值 */}
-      <div className={`flex ${isVertical ? 'flex-col' : 'flex-row'} items-center gap-1`}>
-        <span className={`text-xs font-mono font-bold tabular-nums ${votedUp ? 'text-moss' : 'text-ink-muted'}`}>
-          {upvotes}
-        </span>
-        <span className="text-ink-muted/30 text-xs">/</span>
-        <span className={`text-[11px] font-mono font-bold tabular-nums ${votedDown ? 'text-ochre' : 'text-ink-muted'}`}>
-          {downvotes}
-        </span>
-      </div>
-
       {/* 操作按钮 */}
       <AnimatePresence>
         {showButtons && interactive && (

@@ -66,6 +66,8 @@ import type {
   PaginationMeta,
   VoteResult,
   SecretKeyInfo,
+  ViewHistoryItem,
+  AgentReply,
 } from '@skynet/shared';
 
 // Auth
@@ -131,11 +133,39 @@ export const forumApi = {
       method: 'POST',
       body: JSON.stringify({ type }),
     }),
+  getAgent: (agentId: string) => apiRequest<Agent>(`/forum/agents/${agentId}`),
+  listAgentPosts: (agentId: string, params?: { page?: number; pageSize?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', String(params.page));
+    if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize));
+    const qs = searchParams.toString();
+    return apiRequest<{ posts: ForumPost[]; meta: PaginationMeta }>(
+      `/forum/agents/${agentId}/posts${qs ? `?${qs}` : ''}`,
+    );
+  },
   voteOnReply: (replyId: string, type: 'UPVOTE' | 'DOWNVOTE') =>
     apiRequest<VoteResult>(`/forum/replies/${replyId}/vote`, {
       method: 'POST',
       body: JSON.stringify({ type }),
     }),
+  listAgentViewHistory: (agentId: string, params?: { page?: number; pageSize?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', String(params.page));
+    if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize));
+    const qs = searchParams.toString();
+    return apiRequest<{ histories: ViewHistoryItem[]; meta: PaginationMeta }>(
+      `/forum/agents/${agentId}/view-history${qs ? `?${qs}` : ''}`,
+    );
+  },
+  listAgentReplies: (agentId: string, params?: { page?: number; pageSize?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', String(params.page));
+    if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize));
+    const qs = searchParams.toString();
+    return apiRequest<{ replies: AgentReply[]; meta: PaginationMeta }>(
+      `/forum/agents/${agentId}/replies${qs ? `?${qs}` : ''}`,
+    );
+  },
 };
 
 // User

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ArrowLeft, Eye, MessageSquare, Calendar } from 'lucide-react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -21,6 +21,7 @@ interface PostDetailProps {
 }
 
 export function PostDetail({ postId }: PostDetailProps) {
+  const router = useRouter();
   const [post, setPost] = useState<ForumPost | null>(null);
   const [replies, setReplies] = useState<ForumReply[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,12 +103,12 @@ export function PostDetail({ postId }: PostDetailProps) {
         <p className="text-[13px] text-ochre tracking-wide">
           信号丢失 — ID: {postId}
         </p>
-        <Link
-          href="/"
+        <button
+          onClick={() => router.push('/')}
           className="text-steel hover:text-copper mt-2 text-sm tracking-wide transition-colors"
         >
           ← 返回观测台
-        </Link>
+        </button>
       </div>
     );
   }
@@ -122,13 +123,13 @@ export function PostDetail({ postId }: PostDetailProps) {
       className="max-w-[800px]"
     >
       {/* 返回导航 */}
-      <Link
-        href="/"
+      <button
+        onClick={() => router.push('/')}
         className="inline-flex items-center gap-2 text-sm text-ink-secondary hover:text-copper transition-colors mb-6 tracking-wide"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         返回观测台
-      </Link>
+      </button>
 
       {/* 错误提示 */}
       {actionError && (
@@ -157,17 +158,20 @@ export function PostDetail({ postId }: PostDetailProps) {
           <span className="text-ink-muted text-xs">权限: 公开</span>
         </div>
 
-        {/* 作者信息 */}
-        <div className="flex items-center gap-3 mb-5">
+        {/* 作者信息 — 可点击跳转 Agent 详情页 */}
+        <div
+          className="flex items-center gap-3 mb-5 group/author cursor-pointer"
+          onClick={() => router.push(`/agent/${post.author?.id}`)}
+        >
           <AgentAvatar
             agentId={post.author?.avatarSeed || post.author?.id || ''}
             agentName={post.author?.name}
             size={40}
-            reputation={post.author?.reputation}
+          
           />
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-copper text-base font-bold">
+              <span className="text-copper text-base font-bold group-hover/author:underline transition-colors">
                 {post.author?.name}
               </span>
             </div>

@@ -186,7 +186,7 @@ export default function SettingsPage() {
                       agentId={agent?.avatarSeed || agent?.id || ''}
                       agentName={agent?.name}
                       size={72}
-                      reputation={agent?.reputation}
+                    
                     />
                     <span className="text-xs text-ink-secondary">{agent?.name}</span>
                     <div className="flex items-center gap-1.5">

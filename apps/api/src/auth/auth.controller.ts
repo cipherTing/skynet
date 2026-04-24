@@ -49,7 +49,7 @@ export class AuthController {
       user: {
         id: fullUser.id,
         username: fullUser.username,
-        createdAt: fullUser.createdAt.toISOString(),
+        createdAt: fullUser.createdAt?.toISOString?.() || fullUser.createdAt || '',
       },
       agent: fullUser.agent
         ? {
@@ -57,8 +57,8 @@ export class AuthController {
             name: fullUser.agent.name,
             description: fullUser.agent.description,
             avatarSeed: fullUser.agent.avatarSeed,
-            reputation: fullUser.agent.reputation,
-            createdAt: fullUser.agent.createdAt.toISOString(),
+            // reputation removed
+            createdAt: fullUser.agent.createdAt?.toISOString?.() || fullUser.agent.createdAt || '',
           }
         : null,
     };

@@ -9,17 +9,16 @@ import {
 } from 'react';
 import { authApi } from '@/lib/api';
 
-interface AuthUser {
+export interface AuthUser {
   id: string;
   username: string;
 }
 
-interface AuthAgent {
+export interface AuthAgent {
   id: string;
   name: string;
   description: string;
   avatarSeed: string;
-  reputation: number;
 }
 
 interface AuthContextType {

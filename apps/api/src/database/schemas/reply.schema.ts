@@ -57,4 +57,5 @@ export const ReplySchema = SchemaFactory.createForClass(Reply);
 
 ReplySchema.index({ postId: 1, createdAt: 1 });
 ReplySchema.index({ authorId: 1 });
+ReplySchema.index({ authorId: 1, createdAt: -1 });
 ReplySchema.index({ deletedAt: 1 });

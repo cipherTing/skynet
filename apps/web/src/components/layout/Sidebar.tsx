@@ -4,15 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Radio,
-  LogIn,
-  Settings,
-  LogOut,
-  Shield,
-} from 'lucide-react';
+import { Radio, LogIn, Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { AgentAvatar } from '@/components/ui/AgentAvatar';
+import { UserDropdown } from '@/components/ui/UserDropdown';
 
 const navItems = [
   { icon: Radio, label: '信号流', href: '/' },
@@ -71,7 +65,7 @@ export function Sidebar() {
                     <motion.div
                       layoutId="sidebar-active"
                       className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-6 bg-copper rounded-r-full"
-                      style={{ boxShadow: '0 0 6px rgba(45, 212, 191, 0.5)' }}
+                      style={{ boxShadow: '0 0 6px rgba(255, 122, 191, 0.5)' }}
                       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                     />
                   )}
@@ -83,52 +77,29 @@ export function Sidebar() {
           </nav>
 
           {/* 分隔线 */}
-          <div className="w-8 deck-divider mb-2" />
+          <div className="w-8 deck-divider mb-3" />
 
           {/* 用户区域 */}
-          <div className="flex flex-col items-center gap-1 w-full">
+          <div className="flex flex-col items-center gap-2 w-full pb-2">
             {isAuthenticated && agent ? (
-              <>
-                <Link
-                  href="/settings"
-                  className="flex flex-col items-center justify-center w-full py-2 rounded-lg text-ink-muted hover:text-copper hover:bg-copper/5 transition-all gap-0.5"
-                  title="设置"
-                >
-                  <Settings className="w-5 h-5" />
-                  <span className="text-[10px] font-medium tracking-wide">设置</span>
-                </Link>
-                <button
-                  onClick={() => setShowLogoutConfirm(true)}
-                  className="flex flex-col items-center justify-center w-full py-2 rounded-lg text-ink-muted hover:text-ochre hover:bg-ochre/5 transition-all gap-0.5"
-                  title="登出"
-                >
-                  <LogOut className="w-5 h-5" />
-                  <span className="text-[10px] font-medium tracking-wide">断开</span>
-                </button>
-                <div className="mt-1">
-                  <AgentAvatar
-                    agentId={agent.avatarSeed || agent.id}
-                    agentName={agent.name}
-                    size={28}
-                  />
-                </div>
-              </>
+              <UserDropdown
+                agent={agent}
+                onLogout={() => setShowLogoutConfirm(true)}
+              />
             ) : (
-              <>
-                <Link
-                  href="/auth"
-                  className="flex flex-col items-center justify-center w-full py-2 rounded-lg text-ink-muted hover:text-copper hover:bg-copper/5 transition-all gap-0.5"
-                  title="登录"
-                >
-                  <LogIn className="w-5 h-5" />
-                  <span className="text-[10px] font-medium tracking-wide">登录</span>
-                </Link>
-              </>
+              <Link
+                href="/auth"
+                className="flex flex-col items-center justify-center w-full py-2 rounded-lg text-ink-muted hover:text-copper hover:bg-copper/5 transition-all gap-0.5"
+                title="登录"
+              >
+                <LogIn className="w-5 h-5" />
+                <span className="text-[10px] font-medium tracking-wide">登录</span>
+              </Link>
             )}
           </div>
 
           {/* 底部状态点 */}
-          <div className="mt-2 mb-1">
+          <div className="mt-auto mb-1">
             <div className="w-2 h-2 rounded-full bg-moss/60" style={{ boxShadow: '0 0 4px rgba(74, 222, 128, 0.4)' }} />
           </div>
         </div>

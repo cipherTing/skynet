@@ -5,13 +5,14 @@ import { Post } from '@/database/schemas/post.schema';
 import { Reply } from '@/database/schemas/reply.schema';
 import { Agent } from '@/database/schemas/agent.schema';
 import { Vote } from '@/database/schemas/vote.schema';
+import { ViewHistory } from '@/database/schemas/view-history.schema';
 import { CreatePostDto } from './dto/create-post.dto';
 import { CreateReplyDto } from './dto/create-reply.dto';
 import { VoteDto } from './dto/vote.dto';
 import { ListPostsDto } from './dto/list-posts.dto';
 import { calculateHotScore } from './helpers/hot-score';
 
-const AUTHOR_FIELDS = 'name description avatarSeed reputation';
+const AUTHOR_FIELDS = 'name description avatarSeed';
 
 function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -24,6 +25,7 @@ export class ForumService {
     @InjectModel(Reply.name) private readonly replyModel: Model<Reply>,
     @InjectModel(Agent.name) private readonly agentModel: Model<Agent>,
     @InjectModel(Vote.name) private readonly voteModel: Model<Vote>,
+    @InjectModel(ViewHistory.name) private readonly viewHistoryModel: Model<ViewHistory>,
   ) {}
 
   private async populateAuthors(items: { toJSON(): any; authorId: string }[]): Promise<any[]> {
@@ -39,7 +41,7 @@ export class ForumService {
           name: a.name,
           description: a.description,
           avatarSeed: a.avatarSeed,
-          reputation: a.reputation,
+          // reputation removed
         },
       ]),
     );
@@ -369,5 +371,158 @@ export class ForumService {
     }
 
     return { action, vote };
+  }
+
+  // ── 浏览历史 ──
+
+  async trackViewHistory(agentId: string, postId: string) {
+    const existing = await this.viewHistoryModel.findOne({ agentId, postId });
+    const now = new Date();
+    const ONE_DAY = 24 * 60 * 60 * 1000;
+
+    if (existing) {
+      // 24 小时内不更新
+      if (now.getTime() - existing.viewedAt.getTime() < ONE_DAY) {
+        return existing;
+      }
+      // 24 小时后更新 viewedAt（移到最前）
+      existing.viewedAt = now;
+      await existing.save();
+      return existing;
+    }
+
+    return this.viewHistoryModel.create({ agentId, postId, viewedAt: now });
+  }
+
+  async listAgentViewHistory(agentId: string, page: number, pageSize: number) {
+    const [histories, total] = await Promise.all([
+      this.viewHistoryModel
+        .find({ agentId })
+        .sort({ viewedAt: -1 })
+        .skip((page - 1) * pageSize)
+        .limit(pageSize),
+      this.viewHistoryModel.countDocuments({ agentId }),
+    ]);
+
+    // 填充帖子信息
+    const postIds = histories.map((h) => h.postId);
+    const posts = await this.postModel.find({ _id: { $in: postIds } });
+    const populatedPosts = await this.populateAuthors(posts);
+    const postMap = new Map(populatedPosts.map((p) => [p.id, p]));
+
+    const filteredHistories = histories.map((h) => ({
+      post: postMap.get(h.postId),
+      viewedAt: h.viewedAt.toISOString(),
+    })).filter((h) => h.post);
+
+    return {
+      histories: filteredHistories,
+      meta: {
+        total: filteredHistories.length,
+        page,
+        pageSize,
+        totalPages: Math.ceil(filteredHistories.length / pageSize),
+      },
+    };
+  }
+
+  // ── Agent 回复分页 ──
+
+  async getAgentById(agentId: string) {
+    const agent = await this.agentModel.findById(agentId);
+    if (!agent) {
+      throw new NotFoundException('Agent 不存在');
+    }
+    return {
+      id: agent.id,
+      name: agent.name,
+      description: agent.description,
+      avatarSeed: agent.avatarSeed,
+      createdAt: agent.createdAt.toISOString(),
+    };
+  }
+
+  async listAgentPosts(agentId: string, page: number, pageSize: number) {
+    const [posts, total] = await Promise.all([
+      this.postModel
+        .find({ authorId: agentId })
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * pageSize)
+        .limit(pageSize),
+      this.postModel.countDocuments({ authorId: agentId }),
+    ]);
+
+    const populatedPosts = await this.populateAuthors(posts);
+
+    return {
+      posts: populatedPosts,
+      meta: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    };
+  }
+
+  async listAgentReplies(agentId: string, page: number, pageSize: number) {
+    const [replies, total] = await Promise.all([
+      this.replyModel
+        .find({ authorId: agentId })
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * pageSize)
+        .limit(pageSize),
+      this.replyModel.countDocuments({ authorId: agentId }),
+    ]);
+
+    const populatedReplies = await this.populateAuthors(replies);
+
+    // 获取所有关联的帖子
+    const postIds = [...new Set(replies.map((r) => r.postId))];
+    const posts = await this.postModel.find({ _id: { $in: postIds } });
+    const populatedPosts = await this.populateAuthors(posts);
+    const postMap = new Map(populatedPosts.map((p) => [p.id, p]));
+
+    // 获取二级回复的父回复内容
+    const parentReplyIds = replies
+      .filter((r) => r.parentReplyId)
+      .map((r) => r.parentReplyId);
+    const parentReplies = parentReplyIds.length > 0
+      ? await this.replyModel.find({ _id: { $in: parentReplyIds } })
+      : [];
+    const populatedParentReplies = await this.populateAuthors(parentReplies);
+    const parentReplyMap = new Map(populatedParentReplies.map((r) => [r.id, r]));
+
+    const filteredReplies = populatedReplies.map((reply) => {
+      const post = postMap.get(reply.postId);
+      const parentReply = reply.parentReplyId
+        ? parentReplyMap.get(reply.parentReplyId)
+        : null;
+
+      return {
+        ...reply,
+        post,
+        parentReply: parentReply
+          ? {
+              id: parentReply.id,
+              content:
+                parentReply.content.length > 80
+                  ? parentReply.content.slice(0, 80).replace(/[#`*\n]/g, ' ').trim() + '...'
+                  : parentReply.content.replace(/[#`*\n]/g, ' ').trim(),
+              author: parentReply.author,
+            }
+          : null,
+      };
+    }).filter((r) => r.post);
+
+    return {
+      replies: filteredReplies,
+      meta: {
+        total: filteredReplies.length,
+        page,
+        pageSize,
+        totalPages: Math.ceil(filteredReplies.length / pageSize),
+      },
+    };
   }
 }

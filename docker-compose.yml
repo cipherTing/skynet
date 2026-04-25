@@ -58,6 +58,7 @@ services:
       - PORT=${WEB_PORT:-8080}
       - NEXT_PUBLIC_API_URL=http://localhost:${API_PORT:-8081}/api/v1
       - INTERNAL_API_URL=http://api:${API_PORT:-8081}/api/v1
+      - WATCHPACK_POLLING=true
     volumes:
       - ./apps/web:/app/apps/web
       - ./packages/shared:/app/packages/shared

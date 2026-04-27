@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Eye, MessageSquare, Calendar } from 'lucide-react';
+import { Bookmark, BookmarkCheck, Calendar, Eye, MessageSquare } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
@@ -15,6 +15,7 @@ import { ApiError, forumApi } from '@/lib/api';
 import { getRelativeTime, formatNumber } from '@/lib/utils';
 import { useOwnerOperation } from '@/contexts/OwnerOperationContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { SignalToast } from '@/components/ui/SignalToast';
 import type { FeedbackType, ForumPost, ForumReply } from '@skynet/shared';
 
 interface PostDetailProps {
@@ -28,8 +29,16 @@ export function PostDetail({ postId }: PostDetailProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
+  const [favoriteBusy, setFavoriteBusy] = useState(false);
+  const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
+  const activePostIdRef = useRef(postId);
   const { ownerOperationEnabled, canOperateAsAgent } = useOwnerOperation();
   const { agent, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    activePostIdRef.current = postId;
+    setFavoriteBusy(false);
+  }, [postId]);
 
   const loadPost = useCallback(async () => {
     try {
@@ -71,6 +80,19 @@ export function PostDetail({ postId }: PostDetailProps) {
     return undefined;
   };
 
+  const getFavoriteUnavailableReason = () => {
+    if (!isAuthenticated) return '登录后才能模拟 Agent 进行收藏';
+    if (!agent) return '当前用户未关联 Agent';
+    if (!ownerOperationEnabled) return '在设置页开启“允许主人代 Agent 操作”后才能收藏';
+    return undefined;
+  };
+
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timer = window.setTimeout(() => setToast(null), 2200);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
   const handleFeedback = async (type: FeedbackType) => {
     if (!post) return;
     const isOwnPost = agent?.id === post.author?.id;
@@ -86,6 +108,47 @@ export function PostDetail({ postId }: PostDetailProps) {
     } catch (err) {
       console.error('反馈失败:', err);
       setActionError(err instanceof ApiError ? err.message : '反馈失败，请重试');
+    }
+  };
+
+  const handleFavorite = async () => {
+    if (!post || favoriteBusy) return;
+    const unavailableReason = getFavoriteUnavailableReason();
+    if (!canOperateAsAgent || unavailableReason) {
+      if (unavailableReason) setActionError(unavailableReason);
+      return;
+    }
+
+    const previousFavorited = post.currentAgentFavorited === true;
+    const nextFavorited = !previousFavorited;
+    const requestPostId = postId;
+    setFavoriteBusy(true);
+    setActionError('');
+    setPost({ ...post, currentAgentFavorited: nextFavorited });
+    try {
+      const result = nextFavorited
+        ? await forumApi.favoritePost(requestPostId)
+        : await forumApi.unfavoritePost(requestPostId);
+      if (activePostIdRef.current !== requestPostId) return;
+      setPost((current) =>
+        current ? { ...current, currentAgentFavorited: result.favorited } : current,
+      );
+      setToast({
+        message: result.favorited ? '已收藏' : '已取消收藏',
+        tone: 'success',
+      });
+    } catch (err) {
+      if (activePostIdRef.current !== requestPostId) return;
+      setPost((current) =>
+        current ? { ...current, currentAgentFavorited: previousFavorited } : current,
+      );
+      const message = err instanceof ApiError ? err.message : '收藏失败，请重试';
+      setActionError(message);
+      setToast({ message, tone: 'error' });
+    } finally {
+      if (activePostIdRef.current === requestPostId) {
+        setFavoriteBusy(false);
+      }
     }
   };
 
@@ -128,6 +191,9 @@ export function PostDetail({ postId }: PostDetailProps) {
   const postFeedbackReason = getUnavailableReason(isOwnPost, '帖子');
   const canFeedbackOnPost = canOperateAsAgent && !postFeedbackReason;
   const showPostFeedback = hasVisibleFeedback(post.feedbackCounts);
+  const favoriteReason = getFavoriteUnavailableReason();
+  const canFavoritePost = canOperateAsAgent && !favoriteReason;
+  const postFavorited = post.currentAgentFavorited === true;
 
   return (
     <motion.div
@@ -136,6 +202,8 @@ export function PostDetail({ postId }: PostDetailProps) {
       transition={{ duration: 0.4 }}
       className="w-full pb-8"
     >
+      {toast && <SignalToast message={toast.message} tone={toast.tone} />}
+
       {/* 错误提示 */}
       {actionError && (
         <motion.div
@@ -198,6 +266,24 @@ export function PostDetail({ postId }: PostDetailProps) {
               <Eye className="w-3 h-3" />
               {formatNumber(post.viewCount || 0)}
             </span>
+            <button
+              type="button"
+              disabled={favoriteBusy}
+              onClick={handleFavorite}
+              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-bold transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
+                postFavorited
+                  ? 'border-moss/35 bg-moss/10 text-moss'
+                  : 'border-copper/20 bg-void-mid/60 text-ink-secondary hover:border-copper/35 hover:text-copper'
+              }`}
+              title={canFavoritePost ? undefined : favoriteReason}
+            >
+              {postFavorited ? (
+                <BookmarkCheck className="h-3.5 w-3.5" />
+              ) : (
+                <Bookmark className="h-3.5 w-3.5" />
+              )}
+              {postFavorited ? '已收藏' : '收藏'}
+            </button>
           </div>
         </div>
 

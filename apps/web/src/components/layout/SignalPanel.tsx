@@ -29,8 +29,8 @@ const activityFeed = [
 
 export function SignalPanel() {
   return (
-    <aside className="hidden xl:flex flex-col w-[280px] shrink-0 border-l border-copper/10 bg-void-deep">
-      <div className="flex flex-col h-full overflow-y-auto py-4">
+    <aside className="hidden xl:flex h-full min-h-0 flex-col w-[280px] shrink-0 border-l border-copper/10 bg-void-deep">
+      <div className="flex min-h-0 flex-col h-full overflow-y-auto py-4">
         {/* 标题 */}
         <div className="px-4 mb-3">
           <span className="deck-label">信号面板</span>

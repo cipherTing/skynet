@@ -22,15 +22,26 @@ export function ForumFeed() {
   const [failedReset, setFailedReset] = useState(false);
   const [feedEpoch, setFeedEpoch] = useState(0);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [scrollRoot, setScrollRoot] = useState<HTMLDivElement | null>(null);
+  const scrollRootRef = useRef<HTMLDivElement | null>(null);
   const retryCountRef = useRef(0);
   const loadingRef = useRef(false);
   const requestSeqRef = useRef(0);
   const { canOperateAsAgent } = useOwnerOperation();
 
-  const { ref: loaderRef, inView } = useInView({ threshold: 0.5 });
+  const { ref: loaderRef, inView } = useInView({
+    root: scrollRoot,
+    rootMargin: '320px 0px',
+    threshold: 0,
+  });
 
   const MAX_RETRIES = 2;
   const PAGE_SIZE = 20;
+
+  const bindScrollRoot = useCallback((node: HTMLDivElement | null) => {
+    scrollRootRef.current = node;
+    setScrollRoot(node);
+  }, []);
 
   const loadPosts = useCallback(
     async (mode: SortMode, pageNum: number, reset = false) => {
@@ -60,6 +71,7 @@ export function ForumFeed() {
           setPosts(newPosts);
           setPage(1);
           setFeedEpoch((epoch) => epoch + 1);
+          scrollRootRef.current?.scrollTo({ top: 0, behavior: 'auto' });
         } else {
           setPosts((prev) => [...prev, ...newPosts]);
           setPage(pageNum);
@@ -112,11 +124,14 @@ export function ForumFeed() {
     loadPosts(sortMode, 1, true);
   };
 
+  const hasInitialError = error && !loading && posts.length === 0;
+  const isEmpty = !loading && posts.length === 0 && !error;
+
   return (
-    <div>
+    <div className="flex h-full min-h-0 flex-col">
       {/* 排序标签 + 创建按钮 */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-1 bg-void-deep/60 border border-copper/10 rounded-lg p-1 backdrop-blur-sm">
+      <div className="mb-5 flex flex-none flex-wrap items-center justify-between gap-3">
+        <div className="flex max-w-full flex-wrap items-center gap-1 rounded-lg border border-copper/10 bg-void-deep/60 p-1 backdrop-blur-sm">
           <SortTab
             icon={<Flame className="w-3.5 h-3.5" />}
             label="热门"
@@ -152,37 +167,8 @@ export function ForumFeed() {
       </div>
 
       {/* 错误提示 */}
-      <AnimatePresence>
-        {error && !loading && posts.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="flex flex-col items-center justify-center py-16 gap-4"
-          >
-            <div className="w-12 h-12 flex items-center justify-center border border-ochre/30 bg-ochre/10 rounded-full">
-              <Radio className="w-5 h-5 text-ochre" />
-            </div>
-            <div className="text-center">
-              <p className="text-ochre text-sm font-bold tracking-wide mb-2">
-                信号接收异常
-              </p>
-              <p className="text-ink-muted text-xs tracking-wide mb-4">
-                {error}
-              </p>
-              <button
-                onClick={() => loadPosts(sortMode, 1, true)}
-                className="px-4 py-2 text-sm text-copper border border-copper/25 hover:bg-copper/10 transition-all rounded-lg tracking-wide"
-              >
-                重新扫描
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {error && posts.length > 0 && (
-        <div className="mb-4 px-4 py-3 border border-ochre/20 bg-ochre/10 text-ochre text-[12px] tracking-wide flex items-center justify-between rounded-lg">
+        <div className="mb-4 flex flex-none items-center justify-between rounded-lg border border-ochre/20 bg-ochre/10 px-4 py-3 text-[12px] tracking-wide text-ochre">
           <span>信号接收异常: {error}</span>
           <button
             onClick={() =>
@@ -198,15 +184,51 @@ export function ForumFeed() {
       )}
 
       {/* 帖子列表 */}
-      <div className="space-y-4">
-        {posts.map((post, index) => (
-          <PostCard
-            key={`${feedEpoch}-${post.id}-${index}`}
-            post={post}
-            index={index}
-            animationIndex={index % PAGE_SIZE}
-          />
-        ))}
+      <div
+        ref={bindScrollRoot}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-6 pr-3 pt-1 [scrollbar-gutter:stable]"
+      >
+        <AnimatePresence>
+          {hasInitialError && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="flex min-h-full flex-col items-center justify-center gap-4 py-16"
+            >
+              <div className="w-12 h-12 flex items-center justify-center border border-ochre/30 bg-ochre/10 rounded-full">
+                <Radio className="w-5 h-5 text-ochre" />
+              </div>
+              <div className="text-center">
+                <p className="text-ochre text-sm font-bold tracking-wide mb-2">
+                  信号接收异常
+                </p>
+                <p className="text-ink-muted text-xs tracking-wide mb-4">
+                  {error}
+                </p>
+                <button
+                  onClick={() => loadPosts(sortMode, 1, true)}
+                  className="px-4 py-2 text-sm text-copper border border-copper/25 hover:bg-copper/10 transition-all rounded-lg tracking-wide"
+                >
+                  重新扫描
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {posts.length > 0 && (
+          <div className="space-y-4">
+            {posts.map((post, index) => (
+              <PostCard
+                key={`${feedEpoch}-${post.id}-${index}`}
+                post={post}
+                index={index}
+                animationIndex={index % PAGE_SIZE}
+              />
+            ))}
+          </div>
+        )}
 
         {loading && (
           <div className="flex justify-center py-10">
@@ -226,8 +248,8 @@ export function ForumFeed() {
           </div>
         )}
 
-        {!loading && posts.length === 0 && !error && (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
+        {isEmpty && (
+          <div className="flex min-h-full flex-col items-center justify-center gap-3 py-16">
             <div className="w-3 h-3 rounded-full bg-ink-muted/30" />
             <span className="text-sm text-ink-muted tracking-wide">
               虚空静默 — 暂无信号

@@ -16,6 +16,7 @@ import {
   User,
   FileText,
   Bot,
+  Bookmark,
 } from 'lucide-react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { TopBar } from '@/components/layout/TopBar';
@@ -32,8 +33,13 @@ export default function SettingsPage() {
 
   const [agentName, setAgentName] = useState('');
   const [agentDescription, setAgentDescription] = useState('');
+  const [favoritesPublic, setFavoritesPublic] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
+  const [privacySaving, setPrivacySaving] = useState(false);
+  const [privacyMsg, setPrivacyMsg] = useState('');
+  const [ownerOperationSaving, setOwnerOperationSaving] = useState(false);
+  const [ownerOperationMsg, setOwnerOperationMsg] = useState('');
 
   const [keyInfo, setKeyInfo] = useState<{
     prefix: string;
@@ -57,6 +63,7 @@ export default function SettingsPage() {
     if (agent) {
       setAgentName(agent.name);
       setAgentDescription(agent.description || '');
+      setFavoritesPublic(agent.favoritesPublic !== false);
     }
   }, [agent]);
 
@@ -98,6 +105,46 @@ export default function SettingsPage() {
       }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleFavoritesPublicChange = async (next: boolean) => {
+    const previous = favoritesPublic;
+    setFavoritesPublic(next);
+    setPrivacySaving(true);
+    setPrivacyMsg('');
+    try {
+      await userApi.updateAgent({ favoritesPublic: next });
+      await refreshUser();
+      setPrivacyMsg('已保存');
+      setTimeout(() => setPrivacyMsg(''), 2500);
+    } catch (err) {
+      setFavoritesPublic(previous);
+      if (err instanceof ApiError) {
+        setPrivacyMsg(`错误: ${err.message}`);
+      } else {
+        setPrivacyMsg('保存失败');
+      }
+    } finally {
+      setPrivacySaving(false);
+    }
+  };
+
+  const handleOwnerOperationChange = async (next: boolean) => {
+    setOwnerOperationSaving(true);
+    setOwnerOperationMsg('');
+    try {
+      await setOwnerOperationEnabled(next);
+      setOwnerOperationMsg('已保存');
+      setTimeout(() => setOwnerOperationMsg(''), 2500);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setOwnerOperationMsg(`错误: ${err.message}`);
+      } else {
+        setOwnerOperationMsg('保存失败');
+      }
+    } finally {
+      setOwnerOperationSaving(false);
     }
   };
 
@@ -265,16 +312,26 @@ export default function SettingsPage() {
                   <div className="min-w-0">
                     <h3 className="text-sm font-bold text-ink-primary">允许主人代 Agent 操作</h3>
                     <p className="text-xs text-ink-secondary mt-1">
-                      开启后，可模拟当前 Agent 进行发帖、回复和评价操作。
+                      开启后，可模拟当前 Agent 进行发帖、回复、评价和收藏操作。
                     </p>
+                    {ownerOperationMsg && (
+                      <p
+                        className={`mt-2 text-xs ${
+                          ownerOperationMsg.startsWith('错误') ? 'text-ochre' : 'text-moss'
+                        }`}
+                      >
+                        {ownerOperationMsg}
+                      </p>
+                    )}
                   </div>
                   <button
                     type="button"
                     role="switch"
                     aria-label="允许主人代 Agent 操作"
                     aria-checked={ownerOperationEnabled}
-                    onClick={() => setOwnerOperationEnabled(!ownerOperationEnabled)}
-                    className={`relative h-7 w-12 shrink-0 rounded-full border transition-all ${
+                    disabled={ownerOperationSaving}
+                    onClick={() => handleOwnerOperationChange(!ownerOperationEnabled)}
+                    className={`relative h-7 w-12 shrink-0 rounded-full border transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
                       ownerOperationEnabled
                         ? 'border-moss/50 bg-moss/20'
                         : 'border-copper/15 bg-void-mid'
@@ -283,6 +340,60 @@ export default function SettingsPage() {
                     <span
                       className={`absolute top-1 h-5 w-5 rounded-full transition-all ${
                         ownerOperationEnabled
+                          ? 'left-6 bg-moss shadow-[0_0_10px_rgba(57,211,83,0.35)]'
+                          : 'left-1 bg-ink-muted'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </motion.section>
+
+            {/* 收藏公开设置 */}
+            <motion.section
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.11 }}
+              className="mb-8"
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Bookmark className="w-4 h-4 text-copper" />
+                <h2 className="text-xs font-bold text-copper tracking-deck-normal uppercase">收藏展示</h2>
+              </div>
+
+              <div className="signal-bubble p-5">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold text-ink-primary">公开收藏列表</h3>
+                    <p className="text-xs text-ink-secondary mt-1">
+                      关闭后其他访问者只能看到“已隐藏”，你自己仍可查看和管理收藏。
+                    </p>
+                    {privacyMsg && (
+                      <p
+                        className={`mt-2 text-xs ${
+                          privacyMsg.startsWith('错误') ? 'text-ochre' : 'text-moss'
+                        }`}
+                      >
+                        {privacyMsg}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-label="公开收藏列表"
+                    aria-checked={favoritesPublic}
+                    disabled={privacySaving}
+                    onClick={() => handleFavoritesPublicChange(!favoritesPublic)}
+                    className={`relative h-7 w-12 shrink-0 rounded-full border transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
+                      favoritesPublic
+                        ? 'border-moss/50 bg-moss/20'
+                        : 'border-copper/15 bg-void-mid'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-1 h-5 w-5 rounded-full transition-all ${
+                        favoritesPublic
                           ? 'left-6 bg-moss shadow-[0_0_10px_rgba(57,211,83,0.35)]'
                           : 'left-1 bg-ink-muted'
                       }`}

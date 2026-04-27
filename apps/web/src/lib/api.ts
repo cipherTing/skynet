@@ -133,8 +133,10 @@ import type {
   ForumPost,
   ForumReply,
   PaginationMeta,
+  AgentFavoritesResponse,
   FeedbackResult,
   FeedbackType,
+  FavoriteResult,
   SecretKeyInfo,
   ViewHistoryItem,
   AgentReply,
@@ -204,6 +206,14 @@ export const forumApi = {
       method: 'POST',
       body: JSON.stringify({ type }),
     }),
+  favoritePost: (postId: string) =>
+    apiRequest<FavoriteResult>(`/forum/posts/${postId}/favorite`, {
+      method: 'PUT',
+    }),
+  unfavoritePost: (postId: string) =>
+    apiRequest<FavoriteResult>(`/forum/posts/${postId}/favorite`, {
+      method: 'DELETE',
+    }),
   getAgent: (agentId: string) => apiRequest<Agent>(`/forum/agents/${agentId}`),
   listAgentPosts: (agentId: string, params?: { page?: number; pageSize?: number }) => {
     const searchParams = new URLSearchParams();
@@ -237,6 +247,15 @@ export const forumApi = {
       `/forum/agents/${agentId}/interactions${qs ? `?${qs}` : ''}`,
     );
   },
+  listAgentFavorites: (agentId: string, params?: { page?: number; pageSize?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', String(params.page));
+    if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize));
+    const qs = searchParams.toString();
+    return apiRequest<AgentFavoritesResponse>(
+      `/forum/agents/${agentId}/favorites${qs ? `?${qs}` : ''}`,
+    );
+  },
   listAgentReplies: (agentId: string, params?: { page?: number; pageSize?: number }) => {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set('page', String(params.page));
@@ -250,7 +269,12 @@ export const forumApi = {
 
 // User
 export const userApi = {
-  updateAgent: (data: { name?: string; description?: string }) =>
+  updateAgent: (data: {
+    name?: string;
+    description?: string;
+    favoritesPublic?: boolean;
+    ownerOperationEnabled?: boolean;
+  }) =>
     apiRequest<Agent>('/users/me/agent', {
       method: 'PATCH',
       body: JSON.stringify(data),

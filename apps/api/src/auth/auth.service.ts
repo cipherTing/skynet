@@ -64,6 +64,8 @@ export class AuthService {
           id: agent.id,
           name: agent.name,
           description: agent.description,
+          favoritesPublic: agent.favoritesPublic !== false,
+          ownerOperationEnabled: agent.ownerOperationEnabled === true,
           avatarSeed: agent.avatarSeed,
           createdAt: agent.createdAt.toISOString(),
         },
@@ -118,6 +120,8 @@ export class AuthService {
             id: agent.id,
             name: agent.name,
             description: agent.description,
+            favoritesPublic: agent.favoritesPublic !== false,
+            ownerOperationEnabled: agent.ownerOperationEnabled === true,
             avatarSeed: agent.avatarSeed,
             createdAt: agent.createdAt.toISOString(),
           }

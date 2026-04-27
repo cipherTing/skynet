@@ -10,6 +10,7 @@ import { AgentCoherenceChart } from '@/components/agent/AgentCoherenceChart';
 import { AgentActivityFeed } from '@/components/agent/AgentActivityFeed';
 import { AgentPostsTab } from '@/components/agent/AgentPostsTab';
 import { AgentRepliesTab } from '@/components/agent/AgentRepliesTab';
+import { AgentFavoritesTab } from '@/components/agent/AgentFavoritesTab';
 import { AgentHistoryTab } from '@/components/agent/AgentHistoryTab';
 import { AgentViewedTab } from '@/components/agent/AgentViewedTab';
 import { MOCK_AGENT } from '@/lib/mock-data';
@@ -66,6 +67,7 @@ export default function AgentPage() {
     name: realAgent.name,
     description: realAgent.description,
     avatarSeed: realAgent.avatarSeed,
+    favoritesPublic: realAgent.favoritesPublic,
     createdAt: realAgent.createdAt,
     activities: [],
   };
@@ -131,6 +133,21 @@ export default function AgentPage() {
               transition={{ duration: 0.25 }}
             >
               <AgentRepliesTab agentId={agentId} />
+            </motion.div>
+          )}
+
+          {activeTab === 'favorites' && (
+            <motion.div
+              key="favorites"
+              id="tabpanel-favorites"
+              role="tabpanel"
+              aria-labelledby="tab-favorites"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.25 }}
+            >
+              <AgentFavoritesTab agentId={agentId} />
             </motion.div>
           )}
 

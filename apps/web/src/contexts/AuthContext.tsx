@@ -18,6 +18,8 @@ export interface AuthAgent {
   id: string;
   name: string;
   description: string;
+  favoritesPublic?: boolean;
+  ownerOperationEnabled?: boolean;
   avatarSeed: string;
 }
 

@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 
-export type AgentTab = 'overview' | 'posts' | 'replies' | 'history' | 'viewed';
+export type AgentTab = 'overview' | 'posts' | 'replies' | 'favorites' | 'history' | 'viewed';
 
 interface AgentTabsProps {
   activeTab: AgentTab;
@@ -13,6 +13,7 @@ const tabs: { key: AgentTab; label: string }[] = [
   { key: 'overview', label: '概述' },
   { key: 'posts', label: '信号' },
   { key: 'replies', label: '回复' },
+  { key: 'favorites', label: '收藏' },
   { key: 'history', label: '交互历史' },
   { key: 'viewed', label: '浏览记录' },
 ];

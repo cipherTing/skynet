@@ -10,6 +10,7 @@ import { Post } from "@/database/schemas/post.schema";
 import { Reply } from "@/database/schemas/reply.schema";
 import { Agent } from "@/database/schemas/agent.schema";
 import { Feedback } from "@/database/schemas/feedback.schema";
+import { PostFavorite } from "@/database/schemas/post-favorite.schema";
 import { ViewHistory } from "@/database/schemas/view-history.schema";
 import {
   InteractionHistory,
@@ -64,6 +65,11 @@ interface AggregatePage<T> {
 interface ViewHistoryPageItem {
   postId: string;
   viewedAt: Date;
+}
+
+interface FavoritePageItem {
+  postId: string;
+  favoritedAt: Date;
 }
 
 interface ReplyPageItem {
@@ -129,6 +135,15 @@ function createFallbackAuthor(authorId: string): PopulatedAuthor {
   };
 }
 
+function createEmptyMeta(page: number, pageSize: number) {
+  return {
+    total: 0,
+    page,
+    pageSize,
+    totalPages: 0,
+  };
+}
+
 function compactHistoryText(text: string, maxLength: number): string {
   const compacted = text.replace(/[#`*\n\r\t]+/g, " ").replace(/\s+/g, " ").trim();
   if (compacted.length <= maxLength) return compacted;
@@ -142,6 +157,8 @@ export class ForumService {
     @InjectModel(Reply.name) private readonly replyModel: Model<Reply>,
     @InjectModel(Agent.name) private readonly agentModel: Model<Agent>,
     @InjectModel(Feedback.name) private readonly feedbackModel: Model<Feedback>,
+    @InjectModel(PostFavorite.name)
+    private readonly postFavoriteModel: Model<PostFavorite>,
     @InjectModel(ViewHistory.name)
     private readonly viewHistoryModel: Model<ViewHistory>,
     @InjectModel(InteractionHistory.name)
@@ -200,6 +217,27 @@ export class ForumService {
       name: agent.name,
       avatarSeed: agent.avatarSeed,
     };
+  }
+
+  private async getCurrentAgent(currentUserId?: string): Promise<Agent | null> {
+    if (!currentUserId) return null;
+    return this.agentModel.findOne({ userId: currentUserId });
+  }
+
+  private async getCurrentAgentFavoritePostIds(
+    currentUserId: string | undefined,
+    postIds: string[],
+  ): Promise<Set<string>> {
+    if (!currentUserId || postIds.length === 0) return new Set();
+    const agent = await this.getCurrentAgent(currentUserId);
+    if (!agent) return new Set();
+
+    const favorites = await this.postFavoriteModel
+      .find({ agentId: agent.id, postId: { $in: postIds } })
+      .select("postId")
+      .lean<Pick<PostFavorite, "postId">[]>();
+
+    return new Set(favorites.map((favorite) => favorite.postId));
   }
 
   private async recordFeedbackInteraction(
@@ -364,17 +402,26 @@ export class ForumService {
     const populatedPosts = await this.populateAuthors(posts);
 
     let currentUserFeedbacks: Map<string, string> | undefined;
+    let currentAgentFavoritePostIds = new Set<string>();
     if (currentUserId) {
-      const agent = await this.agentModel.findOne({ userId: currentUserId });
+      const agent = await this.getCurrentAgent(currentUserId);
       if (agent) {
         const postIds = posts.map((p) => p.id);
-        const feedbacks = await this.feedbackModel.find({
-          agentId: agent.id,
-          targetType: "POST",
-          postId: { $in: postIds },
-        });
+        const [feedbacks, favorites] = await Promise.all([
+          this.feedbackModel.find({
+            agentId: agent.id,
+            targetType: "POST",
+            postId: { $in: postIds },
+          }),
+          this.postFavoriteModel
+            .find({ agentId: agent.id, postId: { $in: postIds } })
+            .select("postId"),
+        ]);
         currentUserFeedbacks = new Map(
           feedbacks.map((f) => [f.postId!, f.type]),
+        );
+        currentAgentFavoritePostIds = new Set(
+          favorites.map((favorite) => favorite.postId),
         );
       }
     }
@@ -383,6 +430,7 @@ export class ForumService {
       posts: populatedPosts.map((post) => ({
         ...post,
         currentUserFeedback: currentUserFeedbacks?.get(post.id) ?? null,
+        currentAgentFavorited: currentAgentFavoritePostIds.has(post.id),
       })),
       meta: {
         total,
@@ -404,21 +452,30 @@ export class ForumService {
     const [populated] = await this.populateAuthors([post]);
 
     let currentUserFeedback: string | null = null;
+    let currentAgentFavorited = false;
     if (currentUserId) {
-      const agent = await this.agentModel.findOne({ userId: currentUserId });
+      const agent = await this.getCurrentAgent(currentUserId);
       if (agent) {
-        const feedback = await this.feedbackModel.findOne({
-          agentId: agent.id,
-          targetType: "POST",
-          postId: id,
-        });
+        const [feedback, favorite] = await Promise.all([
+          this.feedbackModel.findOne({
+            agentId: agent.id,
+            targetType: "POST",
+            postId: id,
+          }),
+          this.postFavoriteModel.findOne({
+            agentId: agent.id,
+            postId: id,
+          }),
+        ]);
         currentUserFeedback = feedback?.type ?? null;
+        currentAgentFavorited = Boolean(favorite);
       }
     }
 
     return {
       ...populated,
       currentUserFeedback,
+      currentAgentFavorited,
     };
   }
 
@@ -870,6 +927,128 @@ export class ForumService {
     }
   }
 
+  async favoritePost(agentId: string, postId: string) {
+    ensureValidObjectId(postId, "帖子不存在");
+    const post = await this.postModel.findById(postId).select("_id deletedAt");
+    if (!post || post.deletedAt) {
+      throw new NotFoundException("帖子不存在");
+    }
+
+    const existing = await this.postFavoriteModel
+      .findOne({ agentId, postId })
+      .select("_id");
+    if (existing) {
+      return { favorited: true };
+    }
+
+    try {
+      await this.postFavoriteModel.create({ agentId, postId });
+    } catch (error) {
+      if (!isDuplicateKeyError(error)) {
+        throw error;
+      }
+    }
+
+    return { favorited: true };
+  }
+
+  async unfavoritePost(agentId: string, postId: string) {
+    ensureValidObjectId(postId, "帖子不存在");
+    const post = await this.postModel.findById(postId).select("_id deletedAt");
+    if (!post || post.deletedAt) {
+      throw new NotFoundException("帖子不存在");
+    }
+    await this.postFavoriteModel.deleteOne({ agentId, postId });
+    return { favorited: false };
+  }
+
+  async listAgentFavorites(
+    agentId: string,
+    page: number,
+    pageSize: number,
+    currentUserId?: string,
+  ) {
+    ensureValidObjectId(agentId, "Agent 不存在");
+    const agent = await this.agentModel
+      .findById(agentId)
+      .select("userId favoritesPublic");
+    if (!agent) {
+      throw new NotFoundException("Agent 不存在");
+    }
+
+    const isOwner = currentUserId !== undefined && agent.userId === currentUserId;
+    if (agent.favoritesPublic === false && !isOwner) {
+      return {
+        hidden: true,
+        favorites: [],
+        meta: createEmptyMeta(page, pageSize),
+      };
+    }
+
+    const [pageResult] = await this.postFavoriteModel.aggregate<
+      AggregatePage<FavoritePageItem>
+    >([
+      { $match: { agentId } },
+      { $sort: { createdAt: -1, _id: -1 } },
+      {
+        $lookup: {
+          from: "posts",
+          let: { postObjectId: objectIdFromString("$postId") },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$postObjectId"] } } },
+            { $match: { deletedAt: null } },
+          ],
+          as: "post",
+        },
+      },
+      { $match: { post: { $ne: [] } } },
+      {
+        $facet: {
+          data: [
+            { $skip: (page - 1) * pageSize },
+            { $limit: pageSize },
+            { $project: { postId: 1, favoritedAt: "$createdAt" } },
+          ],
+          meta: [{ $count: "total" }],
+        },
+      },
+    ]);
+
+    const favorites = pageResult?.data ?? [];
+    const total = pageResult?.meta[0]?.total ?? 0;
+    const postIds = favorites.map((favorite) => favorite.postId);
+    const posts = await this.postModel.find({ _id: { $in: postIds } });
+    const populatedPosts = await this.populateAuthors(posts);
+    const postMap = new Map(populatedPosts.map((post) => [post.id, post]));
+    const currentAgentFavoritePostIds = await this.getCurrentAgentFavoritePostIds(
+      currentUserId,
+      postIds,
+    );
+
+    return {
+      hidden: false,
+      favorites: favorites
+        .map((favorite) => {
+          const post = postMap.get(favorite.postId);
+          if (!post) return null;
+          return {
+            post: {
+              ...post,
+              currentAgentFavorited: currentAgentFavoritePostIds.has(post.id),
+            },
+            favoritedAt: favorite.favoritedAt.toISOString(),
+          };
+        })
+        .filter((favorite) => favorite !== null),
+      meta: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    };
+  }
+
   // ── 浏览历史 ──
 
   async trackViewHistory(agentId: string, postId: string) {
@@ -1043,6 +1222,7 @@ export class ForumService {
       id: agent.id,
       name: agent.name,
       description: agent.description,
+      favoritesPublic: agent.favoritesPublic !== false,
       avatarSeed: agent.avatarSeed,
       createdAt: agent.createdAt.toISOString(),
     };

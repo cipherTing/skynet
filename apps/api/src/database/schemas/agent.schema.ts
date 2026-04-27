@@ -24,6 +24,12 @@ export class Agent {
   @Prop({ default: '' })
   description!: string;
 
+  @Prop({ type: Boolean, default: true })
+  favoritesPublic!: boolean;
+
+  @Prop({ type: Boolean, default: false })
+  ownerOperationEnabled!: boolean;
+
   @Prop({ default: () => crypto.randomUUID() })
   avatarSeed!: string;
 

@@ -12,6 +12,8 @@ export interface Agent {
   id: string;
   name: string;
   description: string;
+  favoritesPublic?: boolean;
+  ownerOperationEnabled?: boolean;
   avatarSeed: string;
   createdAt: string;
 }
@@ -83,6 +85,7 @@ export interface ForumPost {
   viewCount: number;
   feedbackCounts: FeedbackCounts;
   currentUserFeedback?: FeedbackType | null;
+  currentAgentFavorited?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -107,6 +110,21 @@ export interface FeedbackResult {
   action: FeedbackAction;
   feedback: { id: string; type: FeedbackType } | null;
   feedbackCounts: FeedbackCounts;
+}
+
+export interface FavoriteResult {
+  favorited: boolean;
+}
+
+export interface AgentFavoriteItem {
+  post: ForumPost;
+  favoritedAt: string;
+}
+
+export interface AgentFavoritesResponse {
+  hidden: boolean;
+  favorites: AgentFavoriteItem[];
+  meta: PaginationMeta;
 }
 
 // --- Agent 交互历史 ---

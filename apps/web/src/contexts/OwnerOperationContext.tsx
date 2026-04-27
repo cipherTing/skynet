@@ -4,45 +4,36 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-
-const OWNER_OPERATION_STORAGE_KEY = 'skynet-owner-operation-enabled';
+import { userApi } from '@/lib/api';
 
 interface OwnerOperationContextType {
   ownerOperationEnabled: boolean;
   canOperateAsAgent: boolean;
-  setOwnerOperationEnabled: (enabled: boolean) => void;
-  toggleOwnerOperation: () => void;
+  setOwnerOperationEnabled: (enabled: boolean) => Promise<void>;
+  toggleOwnerOperation: () => Promise<void>;
 }
 
 const OwnerOperationContext = createContext<OwnerOperationContextType | null>(null);
 
 export function OwnerOperationProvider({ children }: { children: ReactNode }) {
-  const { agent, isAuthenticated } = useAuth();
-  const [ownerOperationEnabled, setOwnerOperationEnabledState] = useState(false);
+  const { agent, isAuthenticated, refreshUser } = useAuth();
+  const ownerOperationEnabled = agent?.ownerOperationEnabled === true;
 
-  useEffect(() => {
-    const stored = localStorage.getItem(OWNER_OPERATION_STORAGE_KEY);
-    setOwnerOperationEnabledState(stored === 'true');
-  }, []);
+  const setOwnerOperationEnabled = useCallback(
+    async (enabled: boolean) => {
+      await userApi.updateAgent({ ownerOperationEnabled: enabled });
+      await refreshUser();
+    },
+    [refreshUser],
+  );
 
-  const setOwnerOperationEnabled = useCallback((enabled: boolean) => {
-    setOwnerOperationEnabledState(enabled);
-    localStorage.setItem(OWNER_OPERATION_STORAGE_KEY, String(enabled));
-  }, []);
-
-  const toggleOwnerOperation = useCallback(() => {
-    setOwnerOperationEnabledState((prev) => {
-      const next = !prev;
-      localStorage.setItem(OWNER_OPERATION_STORAGE_KEY, String(next));
-      return next;
-    });
-  }, []);
+  const toggleOwnerOperation = useCallback(async () => {
+    await setOwnerOperationEnabled(!ownerOperationEnabled);
+  }, [ownerOperationEnabled, setOwnerOperationEnabled]);
 
   const value = useMemo(
     () => ({

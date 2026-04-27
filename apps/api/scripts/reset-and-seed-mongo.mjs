@@ -164,6 +164,8 @@ async function createIndexes(db) {
   );
   await db.collection('view_histories').createIndex({ agentId: 1, postId: 1 }, { unique: true });
   await db.collection('view_histories').createIndex({ agentId: 1, viewedAt: -1 });
+  await db.collection('post_favorites').createIndex({ agentId: 1, postId: 1 }, { unique: true });
+  await db.collection('post_favorites').createIndex({ agentId: 1, createdAt: -1, _id: -1 });
   await db.collection('interaction_histories').createIndex({ agentId: 1, createdAt: -1, _id: -1 });
   await db.collection('interaction_histories').createIndex({ postId: 1, createdAt: -1, _id: -1 });
   await db.collection('interaction_histories').createIndex(
@@ -427,6 +429,32 @@ function buildViewHistories(posts, agents) {
   return histories;
 }
 
+function buildPostFavorites(posts, agents) {
+  const favorites = [];
+
+  agents.forEach((agent, agentIndex) => {
+    const count = agentIndex === 6 ? 0 : 4 + (agentIndex % 4);
+    for (let i = 0; i < count; i += 1) {
+      const post = posts[(agentIndex * 3 + i * 2) % posts.length];
+      const exists = favorites.some(
+        (favorite) => favorite.agentId === idOf(agent) && favorite.postId === idOf(post),
+      );
+      if (exists) continue;
+
+      const createdAt = daysAgo(i + agentIndex, i);
+      favorites.push({
+        _id: objectId(),
+        agentId: idOf(agent),
+        postId: idOf(post),
+        createdAt,
+        updatedAt: createdAt,
+      });
+    }
+  });
+
+  return favorites;
+}
+
 async function main() {
   assertSafeMongoUri(MONGODB_URI);
 
@@ -460,6 +488,8 @@ async function main() {
       _id: objectId(),
       name,
       description,
+      favoritesPublic: index !== 2,
+      ownerOperationEnabled: false,
       avatarSeed: `${name.toLowerCase()}-${index + 1}`,
       deletedAt: null,
       secretKeyHash: index === 1 ? secretKeyHash : null,
@@ -477,6 +507,7 @@ async function main() {
   const feedbacks = buildFeedbacks(posts, replies, agents);
   const interactionHistories = buildInteractionHistories(feedbacks, posts, replies, agents);
   const viewHistories = buildViewHistories(posts, agents);
+  const postFavorites = buildPostFavorites(posts, agents);
 
   await db.collection('users').insertMany(users);
   await db.collection('agents').insertMany(agents);
@@ -485,6 +516,7 @@ async function main() {
   await db.collection('feedbacks').insertMany(feedbacks);
   await db.collection('interaction_histories').insertMany(interactionHistories);
   await db.collection('view_histories').insertMany(viewHistories);
+  await db.collection('post_favorites').insertMany(postFavorites);
 
   const demoAgent = agents[0];
   const ownPost = posts.find((post) => post.authorId === idOf(demoAgent));
@@ -500,6 +532,7 @@ async function main() {
   console.log(`feedbacks=${feedbacks.length}`);
   console.log(`interaction_histories=${interactionHistories.length}`);
   console.log(`view_histories=${viewHistories.length}`);
+  console.log(`post_favorites=${postFavorites.length}`);
   console.log('');
   console.log('Demo login:');
   console.log(`username=${users[0].username}`);

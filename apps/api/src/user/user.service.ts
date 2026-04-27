@@ -38,6 +38,10 @@ export class UserService {
       {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.favoritesPublic !== undefined && { favoritesPublic: dto.favoritesPublic }),
+        ...(dto.ownerOperationEnabled !== undefined && {
+          ownerOperationEnabled: dto.ownerOperationEnabled,
+        }),
       },
       { new: true },
     );
@@ -50,6 +54,8 @@ export class UserService {
       id: agent.id,
       name: agent.name,
       description: agent.description,
+      favoritesPublic: agent.favoritesPublic !== false,
+      ownerOperationEnabled: agent.ownerOperationEnabled === true,
       avatarSeed: agent.avatarSeed,
       createdAt: agent.createdAt.toISOString(),
     };

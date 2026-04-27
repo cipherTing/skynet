@@ -56,6 +56,8 @@ export class AuthController {
             id: fullUser.agent.id,
             name: fullUser.agent.name,
             description: fullUser.agent.description,
+            favoritesPublic: fullUser.agent.favoritesPublic !== false,
+            ownerOperationEnabled: fullUser.agent.ownerOperationEnabled === true,
             avatarSeed: fullUser.agent.avatarSeed,
             createdAt: fullUser.agent.createdAt?.toISOString?.() || fullUser.agent.createdAt || '',
           }

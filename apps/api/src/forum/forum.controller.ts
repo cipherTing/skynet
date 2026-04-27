@@ -1,7 +1,10 @@
 import {
   Controller,
+  Delete,
+  ForbiddenException,
   Get,
   Post,
+  Put,
   Body,
   Param,
   Query,
@@ -27,6 +30,15 @@ export class ForumController {
     private readonly forumService: ForumService,
     @InjectQueue('view-count') private readonly viewCountQueue: Queue,
   ) {}
+
+  private ensureOwnerOperationAllowed(
+    user: JwtAuthUser,
+    agent: { ownerOperationEnabled?: boolean },
+  ) {
+    if (user.authType === 'agent') return;
+    if (agent.ownerOperationEnabled === true) return;
+    throw new ForbiddenException('在设置页开启“允许主人代 Agent 操作”后才能操作');
+  }
 
   @Public()
   @Get('posts')
@@ -69,7 +81,9 @@ export class ForumController {
     if (user?.userId) {
       try {
         const agent = await this.forumService.getAgentByUserId(user.userId);
-        await this.forumService.trackViewHistory(agent.id, id);
+        if (user.authType === 'agent' || agent.ownerOperationEnabled === true) {
+          await this.forumService.trackViewHistory(agent.id, id);
+        }
       } catch (err) { console.error("trackViewHistory error:", err);
         // 浏览历史记录失败不阻塞用户
       }
@@ -82,6 +96,7 @@ export class ForumController {
     @Body() dto: CreatePostDto,
   ) {
     const agent = await this.forumService.getAgentByUserId(user.userId);
+    this.ensureOwnerOperationAllowed(user, agent);
     return this.forumService.createPost(agent.id, dto);
   }
 
@@ -101,6 +116,7 @@ export class ForumController {
     @Body() dto: CreateReplyDto,
   ) {
     const agent = await this.forumService.getAgentByUserId(user.userId);
+    this.ensureOwnerOperationAllowed(user, agent);
     return this.forumService.createReply(agent.id, postId, dto);
   }
 
@@ -111,7 +127,28 @@ export class ForumController {
     @Body() dto: FeedbackDto,
   ) {
     const agent = await this.forumService.getAgentByUserId(user.userId);
+    this.ensureOwnerOperationAllowed(user, agent);
     return this.forumService.feedbackOnPost(agent.id, postId, dto);
+  }
+
+  @Put('posts/:postId/favorite')
+  async favoritePost(
+    @CurrentUser() user: JwtAuthUser,
+    @Param('postId') postId: string,
+  ) {
+    const agent = await this.forumService.getAgentByUserId(user.userId);
+    this.ensureOwnerOperationAllowed(user, agent);
+    return this.forumService.favoritePost(agent.id, postId);
+  }
+
+  @Delete('posts/:postId/favorite')
+  async unfavoritePost(
+    @CurrentUser() user: JwtAuthUser,
+    @Param('postId') postId: string,
+  ) {
+    const agent = await this.forumService.getAgentByUserId(user.userId);
+    this.ensureOwnerOperationAllowed(user, agent);
+    return this.forumService.unfavoritePost(agent.id, postId);
   }
 
   @Post('replies/:replyId/feedback')
@@ -121,6 +158,7 @@ export class ForumController {
     @Body() dto: FeedbackDto,
   ) {
     const agent = await this.forumService.getAgentByUserId(user.userId);
+    this.ensureOwnerOperationAllowed(user, agent);
     return this.forumService.feedbackOnReply(agent.id, replyId, dto);
   }
 
@@ -166,6 +204,21 @@ export class ForumController {
       agentId,
       dto.page ?? 1,
       dto.pageSize ?? 20,
+    );
+  }
+
+  @Public()
+  @Get('agents/:agentId/favorites')
+  async listAgentFavorites(
+    @Param('agentId') agentId: string,
+    @Query(new ValidationPipe({ transform: true })) dto: PaginationQueryDto,
+    @CurrentUser() user?: JwtAuthUser,
+  ) {
+    return this.forumService.listAgentFavorites(
+      agentId,
+      dto.page ?? 1,
+      dto.pageSize ?? 20,
+      user?.userId,
     );
   }
 

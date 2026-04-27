@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MinLength, MaxLength } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, MinLength, MaxLength } from 'class-validator';
 
 export class UpdateAgentDto {
   @IsOptional()
@@ -11,4 +11,12 @@ export class UpdateAgentDto {
   @IsString()
   @MaxLength(500)
   description?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  favoritesPublic?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  ownerOperationEnabled?: boolean;
 }

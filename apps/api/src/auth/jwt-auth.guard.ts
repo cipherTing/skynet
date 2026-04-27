@@ -1,9 +1,41 @@
 import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
+import type { Request } from 'express';
 import { IS_PUBLIC_KEY } from './decorators/public.decorator';
 import { JwtAuthUser } from './interfaces/jwt-auth-user.interface';
 import { AgentAuthGuard } from './agent-auth.guard';
+
+type PassportError = Error | null | undefined;
+type JwtAuthRequest = Request & { user?: JwtAuthUser };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isJwtAuthUser(value: unknown): value is JwtAuthUser {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.userId === 'string' &&
+    typeof value.username === 'string' &&
+    typeof value.dbTokenVersion === 'number' &&
+    typeof value.payloadTokenVersion === 'number' &&
+    (value.suspendedAt === undefined || typeof value.suspendedAt === 'string') &&
+    (value.authType === 'jwt' || value.authType === 'agent')
+  );
+}
+
+function isAuthenticationError(error: unknown): boolean {
+  return (
+    error instanceof UnauthorizedException ||
+    (error instanceof Error &&
+      ['TokenExpiredError', 'JsonWebTokenError', 'NotBeforeError'].includes(error.name))
+  );
+}
+
+function toPassportError(error: unknown): PassportError {
+  return error instanceof Error ? error : undefined;
+}
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -15,7 +47,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<JwtAuthRequest>();
     const authHeader = request.headers.authorization || '';
     const token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
@@ -28,7 +60,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       const result = await this.agentAuthGuard.canActivate(context);
       if (!result) {
         if (isPublic) {
-          request.user = null;
+          delete request.user;
           return true;
         }
         throw new UnauthorizedException();
@@ -40,49 +72,47 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     return (await super.canActivate(context)) as boolean;
   }
 
-  handleRequest<TUser = any>(
-    err: any,
-    user: any,
-    info: any,
+  handleRequest<TUser = JwtAuthUser | null>(
+    err: unknown,
+    user: unknown,
+    _info: unknown,
     context: ExecutionContext,
-    status?: any,
-  ): TUser {
+    _status?: unknown,
+  ): TUser;
+  handleRequest(
+    err: unknown,
+    user: unknown,
+    _info: unknown,
+    context: ExecutionContext,
+    _status?: unknown,
+  ): unknown {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
+    const authError = toPassportError(err);
+    const authUser = isJwtAuthUser(user) ? user : null;
 
     // 公开路由：任何认证/授权问题都降级为匿名访问
     if (isPublic) {
-      if (err) {
-        const isAuthError =
-          err instanceof UnauthorizedException ||
-          ['TokenExpiredError', 'JsonWebTokenError', 'NotBeforeError'].includes(
-            err?.name,
-          );
-        if (isAuthError) {
-          return null as TUser;
+      if (authError) {
+        if (isAuthenticationError(authError)) {
+          return null;
         }
-        throw err;
+        throw authError;
       }
-      if (!user) {
-        return null as TUser;
+      if (!authUser) {
+        return null;
       }
       // 业务无效 token（tokenVersion 不匹配、封号）也降级为匿名
-      const authUser = user as JwtAuthUser;
-      if (
-        authUser.dbTokenVersion !== authUser.payloadTokenVersion ||
-        authUser.suspendedAt
-      ) {
-        return null as TUser;
+      if (authUser.dbTokenVersion !== authUser.payloadTokenVersion || authUser.suspendedAt) {
+        return null;
       }
-      return user as TUser;
+      return authUser;
     }
 
-    if (err) throw err;
-    if (!user) throw new UnauthorizedException();
-
-    const authUser = user as JwtAuthUser;
+    if (authError) throw authError;
+    if (!authUser) throw new UnauthorizedException();
 
     // 注意：Agent 认证在 canActivate 中直接返回 true，不走此处。
     // handleRequest 仅处理 JWT 认证路径。
@@ -96,6 +126,6 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       throw new UnauthorizedException('该账号已被封禁');
     }
 
-    return user as TUser;
+    return authUser;
   }
 }

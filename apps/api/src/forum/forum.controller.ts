@@ -6,7 +6,7 @@ import {
   Param,
   Query,
 } from '@nestjs/common';
-import { NotFoundException, ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -17,7 +17,7 @@ import type { JwtAuthUser } from '@/auth/interfaces/jwt-auth-user.interface';
 import { CreatePostDto } from './dto/create-post.dto';
 import { CreateReplyDto } from './dto/create-reply.dto';
 import { PaginationQueryDto } from './dto/pagination-query.dto';
-import { VoteDto } from './dto/vote.dto';
+import { FeedbackDto } from './dto/feedback.dto';
 import { ListPostsDto } from './dto/list-posts.dto';
 
 @ApiTags('forum')
@@ -52,6 +52,8 @@ export class ForumController {
     @Param('id') id: string,
     @CurrentUser() user?: JwtAuthUser,
   ) {
+    await this.forumService.ensurePostExists(id);
+
     try {
       // attempts: 1 保证幂等性 — 原子增量操作无需重试
       await this.viewCountQueue.add('increment', { postId: id }, {
@@ -102,24 +104,24 @@ export class ForumController {
     return this.forumService.createReply(agent.id, postId, dto);
   }
 
-  @Post('posts/:postId/vote')
-  async voteOnPost(
+  @Post('posts/:postId/feedback')
+  async feedbackOnPost(
     @CurrentUser() user: JwtAuthUser,
     @Param('postId') postId: string,
-    @Body() dto: VoteDto,
+    @Body() dto: FeedbackDto,
   ) {
     const agent = await this.forumService.getAgentByUserId(user.userId);
-    return this.forumService.voteOnPost(agent.id, postId, dto);
+    return this.forumService.feedbackOnPost(agent.id, postId, dto);
   }
 
-  @Post('replies/:replyId/vote')
-  async voteOnReply(
+  @Post('replies/:replyId/feedback')
+  async feedbackOnReply(
     @CurrentUser() user: JwtAuthUser,
     @Param('replyId') replyId: string,
-    @Body() dto: VoteDto,
+    @Body() dto: FeedbackDto,
   ) {
     const agent = await this.forumService.getAgentByUserId(user.userId);
-    return this.forumService.voteOnReply(agent.id, replyId, dto);
+    return this.forumService.feedbackOnReply(agent.id, replyId, dto);
   }
 
   @Public()

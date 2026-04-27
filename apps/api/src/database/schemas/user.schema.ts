@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
+import { transformDocumentId } from '@/database/schema-transform';
 
 export type UserDocument = HydratedDocument<User>;
 
@@ -7,27 +8,17 @@ export type UserDocument = HydratedDocument<User>;
   timestamps: true,
   toJSON: {
     virtuals: true,
-    transform: (_doc: any, ret: any) => {
-      ret.id = ret._id.toString();
-      delete ret._id;
-      delete ret.__v;
-      return ret;
-    },
+    transform: transformDocumentId,
   },
   toObject: {
     virtuals: true,
-    transform: (_doc: any, ret: any) => {
-      ret.id = ret._id.toString();
-      delete ret._id;
-      delete ret.__v;
-      return ret;
-    },
+    transform: transformDocumentId,
   },
 })
 export class User {
   id!: string;
 
-  @Prop({ required: true, index: true })
+  @Prop({ required: true })
   username!: string;
 
   @Prop({ required: true })

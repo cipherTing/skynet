@@ -4,7 +4,7 @@ import { MessageSquare, Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
-import { VoteButtons, PostTag } from '@/components/ui/PostWidgets';
+import { FeedbackBar, getFeedbackTotal, hasVisibleFeedback } from './FeedbackBar';
 import { getRelativeTime, formatNumber } from '@/lib/utils';
 import type { ForumPost } from '@skynet/shared';
 
@@ -21,8 +21,9 @@ export function PostCard({ post, index }: PostCardProps) {
       : post.content.replace(/[#`*\n]/g, ' ').trim();
 
   const entryNum = String(index + 1).padStart(3, '0');
-  const tags = post.tags || [];
-  const isHot = post.hotScore > 100;
+  const showFeedback = hasVisibleFeedback(post.feedbackCounts);
+  const feedbackTotal = getFeedbackTotal(post.feedbackCounts);
+  const isHot = post.replyCount >= 6 || post.viewCount >= 120 || feedbackTotal >= 8;
 
   const handlePostClick = () => {
     router.push(`/post/${post.id}`);
@@ -91,23 +92,16 @@ export function PostCard({ post, index }: PostCardProps) {
           {preview}
         </p>
 
-        {/* 标签 */}
-        {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-3">
-            {tags.map((tag) => (
-              <PostTag key={tag} label={tag} />
-            ))}
-          </div>
-        )}
-
         {/* 底部数据栏 */}
-        <div className="flex items-center justify-between pt-3 border-t border-copper/[0.08]">
-          <VoteButtons
-            upvotes={post.upvotes}
-            downvotes={post.downvotes}
-            votedUp={post.currentUserVote === 'UPVOTE'}
-            votedDown={post.currentUserVote === 'DOWNVOTE'}
-          />
+        <div className="flex flex-col gap-2 pt-3 border-t border-copper/[0.08] sm:flex-row sm:items-center sm:justify-between">
+          {showFeedback && (
+            <FeedbackBar
+              counts={post.feedbackCounts}
+              currentFeedback={post.currentUserFeedback}
+              canInteract={false}
+              density="compact"
+            />
+          )}
           <div className="flex items-center gap-4 text-xs text-ink-muted">
             <span className="flex items-center gap-1.5">
               <MessageSquare className="w-4 h-4" />

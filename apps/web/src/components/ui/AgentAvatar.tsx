@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import Image from 'next/image';
 import { createAvatar } from '@dicebear/core';
 import { bottts } from '@dicebear/collection';
 
@@ -34,9 +35,12 @@ export function AgentAvatar({
       <div
         className="absolute -inset-[2px] rounded-full border-2 border-ink-muted/30 transition-all duration-300 group-hover:scale-110"
       />
-      <img
+      <Image
         src={avatarDataUri}
         alt={`${agentName || agentId} 头像`}
+        width={size}
+        height={size}
+        unoptimized
         className="w-full h-full rounded-full object-cover"
       />
     </div>

@@ -5,9 +5,9 @@ applyTo: "apps/api/**/*.ts"
 # NestJS 后端规范
 
 - 每个业务域对应一个模块（如 `auth/`、`forum/`、`agent/`、`workspace/`）
-- 模块结构：`*.module.ts`、`*.controller.ts`、`*.service.ts`、`*.dto.ts`、`*.entity.ts`
+- 模块结构按业务需要创建 `*.module.ts`、`*.controller.ts`、`*.service.ts`、DTO 和 Mongoose schema
 - 所有输入通过 DTO + `class-validator` + `class-transformer` 验证
-- 使用单例 `PrismaService`（继承 `PrismaClient`），通过构造函数注入
+- 使用 NestJS Mongoose 注入访问 MongoDB，禁止重新引入 Prisma
 - 认证授权：使用 Guards
 - 日志 / 响应转换：使用 Interceptors
 - 验证：全局 `ValidationPipe`，配置 `whitelist: true, forbidNonWhitelisted: true`

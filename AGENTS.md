@@ -8,13 +8,13 @@
 
 ## 产品愿景
 
-产品愿景文档（`产品愿景.md`）可以随时调用查阅，但**该文档仅提供大致的开发方向和产品理念，绝对不代表实际开发的具体内容**。实际开发以用户的指令和当前阶段的需求为准。
+产品愿景文档（`docs/产品愿景.md`）可以随时调用查阅，但**该文档仅提供大致的开发方向和产品理念，绝对不代表实际开发的具体内容**。实际开发以用户的指令和当前阶段的需求为准。
 
 ## 开发阶段
 
 当前处于 **原型开发阶段**，适用以下特殊约束：
 
-- **数据库迁移**：不需要考虑。Schema 变更直接 `db push`，不创建 migration 文件
+- **数据库演进**：当前使用 MongoDB + Mongoose，不创建迁移文件；破坏性变更配合清库脚本处理
 - **数据库清空**：项目提供 `scripts/db-reset.sh` 脚本，发生破坏性迭代时可随时手动清空数据库
 - **前端 UI 库**：允许按需接入第三方 UI 库和组件库，不限于 shadcn/ui
 - **Vibe Coding**：这是一个 vibe coding 项目，用户的想法可能非常抽象。**如果可以，请尽可能向用户提问**，确认需求后再动手
@@ -54,31 +54,10 @@
 
 **执行顺序**：开发 → 测试 → 审查 → 修复审查问题 → 重新测试（如有代码改动）
 
-## 技术栈
+## 项目入口
 
-| 层级 | 技术 |
-|------|------|
-| 前端 | React + Next.js (App Router) + TypeScript + Tailwind CSS + shadcn/ui |
-| 后端 | NestJS + TypeScript |
-| 数据库 | PostgreSQL + Prisma ORM |
-| 缓存 / 队列 | Redis + BullMQ |
-| Monorepo | pnpm workspaces（包：`apps/web`、`apps/api`、`packages/shared`）|
-
-## 项目结构
-
-```
-skynet/
-├── apps/
-│   ├── web/          # Next.js 前端（App Router）
-│   └── api/          # NestJS 后端
-├── packages/
-│   └── shared/       # 共享类型、常量、工具函数
-├── prisma/           # Prisma schema 与数据库迁移
-├── docker/           # Docker 与 docker-compose 配置
-├── .github/          # CI、instructions、prompts、agents
-├── .playwright-mcp/  # Playwright MCP 临时截图和诊断日志（ignore）
-└── AGENTS.md
-```
+- 技术栈、项目结构、常用命令必须以 `README.md` 为准
+- 改变主技术栈、主存储或服务启动方式必须先得到用户确认
 
 ### 临时文件与 Ignore 规则
 
@@ -88,52 +67,14 @@ skynet/
 - 新增临时文件类型时，必须在 `.gitignore` 中注册对应目录，禁止使用 `*.tmp` 之类的通配符打散到项目各处
 - 所有上述目录已在 `.gitignore` 中配置，不提交至版本控制
 
-## 构建与测试命令
-
-```bash
-# 安装所有依赖
-pnpm install
-
-# 开发模式（唯一方式 —— 见下方"开发环境约定"）
-docker compose up -d --build
-
-# 构建
-pnpm --filter @skynet/web build
-pnpm --filter @skynet/api build
-
-# 测试
-pnpm --filter @skynet/web test
-pnpm --filter @skynet/api test
-
-# 代码检查与格式化
-pnpm lint
-pnpm format
-
-# 数据库
-pnpm prisma:generate         # 生成 Prisma Client
-pnpm prisma:studio           # 打开 Prisma Studio
-
-# Docker（生产环境 / 完整环境）
-docker compose up -d --build  # 构建并启动所有服务
-docker compose down           # 停止并移除容器
-docker compose logs -f api    # 查看 API 日志
-```
-
-### Docker 更新流程
-
-代码更新后需要重新构建 Docker 镜像：
-
-- **代码改动**：`docker compose up -d --build`（重新构建镜像）
-- **Schema 改动**：构建后还需 `docker compose exec api npx prisma db push`
-- **仅配置改动**（docker-compose.yml / .env）：`docker compose up -d`（无需 --build）
-
 ## 开发环境约定
 
 ### 统一使用 Docker 进行开发
 
 - **唯一开发方式**：所有开发调试必须通过 `docker compose up -d --build` 启动，禁止同时运行本地 `pnpm --filter @skynet/web dev` 或 `pnpm --filter @skynet/api dev`
 - **端口竞争处理**：若 Docker 容器因端口被占用而启动失败，**不得偷偷更换端口**。应排查并停止占用端口的本地进程，确保 Docker 为唯一服务提供者
-- **原因**：本地 dev server 与 Docker 容器共用相同端口（8080/8081），会导致请求路由混乱（如 CSS/JS 404），造成难以排查的幽灵问题
+- **代码改动**：必须重新构建 Docker 镜像
+- **配置改动**：必须重启 Docker 服务
 
 ### ⚠️ Playwright 截图规范（强制）
 
@@ -153,7 +94,9 @@ docker compose logs -f api    # 查看 API 日志
 
 ### 通用
 - **语言**：所有代码使用 TypeScript，开启 strict 模式
-- **零警告零错误**：代码构建和编译过程中不允许出现任何 warning 或 error。所有警告必须在提交前修复，不允许通过 suppress 注释绕过
+- **零警告零错误**：代码检查、类型检查、测试、构建和运行日志必须 0 warning、0 error；所有警告必须修复，禁止通过 suppress 注释绕过
+- **类型约束**：禁止用 `any`、过宽 `unknown`、双重断言、空类型守卫或泛型谎言绕过类型系统
+- **未知边界**：`unknown` 只允许用于外部输入、框架回调、`catch` 错误和运行时类型守卫入口；进入业务逻辑前必须收窄为明确类型
 - **风格**：遵循 ESLint + Prettier 配置，不手动争论格式问题
 - **导入**：使用路径别名（`@/`、`@shared/`），禁止深层相对路径（`../../../`）
 - **错误处理**：禁止静默吞咽错误；在 API 边界使用类型化错误类
@@ -173,19 +116,19 @@ docker compose logs -f api    # 查看 API 日志
 ### 后端（NestJS）
 - 每个业务域对应一个 NestJS 模块（如 `auth/`、`forum/`、`agent/`）
 - 所有 API 输入通过 DTO + `class-validator` 验证
-- 使用单例 `PrismaService`（继承 `PrismaClient`）
+- 使用 NestJS Mongoose 注入访问数据库，禁止重新引入 Prisma
 - 认证用 Guards，日志/转换用 Interceptors，验证用 Pipes
 - 所有接口返回统一响应结构
 
-### 数据库（Prisma）
-- 唯一来源：`prisma/schema.prisma`
+### 数据库（MongoDB + Mongoose）
+- Schema 定义位于 `apps/api/src/database/schemas/`
 - 模型与字段名具有描述性，禁止缩写
-- **原型阶段**：直接使用 `db push`，不创建 migration 文件
-- 为外键和高频查询字段建立索引
+- **原型阶段**：不创建迁移文件
+- 为关联字段和高频查询字段建立索引
 
 ### 缓存 / 队列（Redis + BullMQ）
-- Redis 用于 session、缓存和限流
-- BullMQ 用于异步任务处理（邮件、通知、重计算）
+- 需要缓存、限流或队列时优先使用 Redis 和 BullMQ
+- 当前安全与论坛队列机制必须以 `docs/安全架构.md` 和 `docs/论坛机制.md` 为准
 - 所有队列处理器必须是幂等的
 
 ### Shared 包
@@ -200,38 +143,11 @@ docker compose logs -f api    # 查看 API 日志
 - **安全优先**：遵循 OWASP Top 10，验证所有输入，净化所有输出
 - **保持文档同步**：随项目进度持续更新本文件及相关文档
 
-## 安全架构
+## 机制文档
 
-### 认证
-- JWT 认证，`JWT_SECRET` 通过 `.env` 加载（必需，无默认值）
-- 密码使用 bcrypt（cost 12）加密存储
-- 登录端点有恒定时间 bcrypt 比较（防时序攻击）
-- `@Public()` 装饰器标记公开路由，JwtAuthGuard 在公开路由上仍解析 JWT（可选认证），使 `@CurrentUser()` 可用
-
-### 速率限制
-- 全局 `@nestjs/throttler` 三级限制：short（1s/3次）、medium（10s/20次）、long（60s/100次）
-- 登录端点：10s/5次、60s/15次
-- 注册端点：60s/3次、3600s/10次
-
-### API 响应
-- 全局 `TransformInterceptor`：自动包装 `{ data: ... }`，已有 `data` 字段则透传
-- 全局 `HttpExceptionFilter`：统一错误格式 `{ error: { code, message, statusCode } }`
-- 全局 `ValidationPipe`：whitelist + forbidNonWhitelisted + transform
-
-## 论坛核心逻辑
-
-### 投票系统
-- 支持投票/取消/切换（同类型再投 = 取消，不同类型 = 切换）
-- 使用 Prisma `$transaction` 保证原子性（投票记录 + 计数器 + hotScore 同步更新）
-- Reddit Hot Algorithm：`sign * log10(max(|score|, 1)) + seconds/45000`
-
-### 帖子排序
-- `hot`（默认）：hotScore 降序 → createdAt 降序
-- `latest`：createdAt 降序
-
-### 回复层级
-- 最多两层嵌套（顶级回复 + 子回复）
-- `@用户名` 提及会在前端高亮
+- 安全、认证、限流、响应结构必须以 `docs/安全架构.md` 为准
+- 论坛排序、回复层级、反馈行为必须以 `docs/论坛机制.md` 为准
+- 修改对应实现时必须同步更新机制文档
 
 ---
 
@@ -243,7 +159,7 @@ docker compose logs -f api    # 查看 API 日志
 ### 必须遵守的约束
 
 - **只放约束和边界，不放解释和说明**。使用"必须"、"禁止"、"始终"等强制性语言。禁止使用"因为..."、"目的是..."、"通过...实现了..."等解释性 prose。
-- **不放具体实现细节**。禁止出现字段名（如 `suspendedAt`、`tokenVersion`）、方法名（如 `handleRequest`）、具体类的内部逻辑、某个功能的行为说明。这些属于代码注释或 docs/ 文档。
+- **不放具体实现细节**。禁止出现具体字段名、方法名、类名、类内部逻辑或阶段性功能行为。
 - **不放阶段性功能设计**。封号机制、token 撤销策略、软删除中间件等行为规范，如果确实需要记录，应放在 `docs/` 下的专门文档中，不在 AGENTS.md 中展开。
 - **保持精简**。AGENTS.md 是地图，指向更深的文档来源。单节不超过必要长度。当一切都被标注为重要时，一切都不重要了。
 - **渐进式披露**。如果某项约束需要大量背景知识才能理解，说明它不应该出现在 AGENTS.md 中。把它放到 `docs/` 目录，在 AGENTS.md 中只保留一条指向它的链接。

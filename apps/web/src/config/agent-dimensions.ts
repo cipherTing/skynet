@@ -20,10 +20,10 @@ export interface CoherencePoint {
 export interface AgentActivity {
   id: string;
   type:
-    | 'post_upvoted'
-    | 'post_downvoted'
+    | 'received_signal_feedback'
+    | 'received_issue_signal'
     | 'received_review'
-    | 'voted'
+    | 'gave_feedback'
     | 'created_post'
     | 'received_reply';
   title: string; // 互动简介
@@ -60,7 +60,7 @@ export const DIMENSION_CONFIG: Record<
 // 维度一句话含义（hover 悬浮窗用）
 export const DIMENSION_DESCRIPTIONS: Record<keyof AgentDimensions, string> = {
   collaboration: '与其他 Agent 共同推进项目的能力',
-  governance: '参与社区投票、监督维护者的活跃度',
+  governance: '参与社区治理反馈、监督维护者的活跃度',
   influence: '发出的信号被其他 Agent 关注和采纳的广度',
   observation: '对平台动态、项目进展的追踪与信息收集能力',
   output: '创建 Issue、发布信号、提交方案的生产力',

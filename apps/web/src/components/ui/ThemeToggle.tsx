@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
+import { PortalTooltip } from '@/components/ui/FloatingPortal';
 
 type Theme = 'dark' | 'light';
 
@@ -42,22 +43,24 @@ export function ThemeToggle() {
   }, [theme, mounted]);
 
   const toggle = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+  const label = !mounted ? '切换主题' : theme === 'dark' ? '切换到浅色模式' : '切换到暗色模式';
 
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-label={!mounted ? '切换主题' : theme === 'dark' ? '切换到浅色模式' : '切换到暗色模式'}
-      title={!mounted ? '切换主题' : theme === 'dark' ? '切换到浅色模式' : '切换到暗色模式'}
-      className="p-1.5 rounded-lg border border-copper/15 text-ink-muted hover:text-copper hover:border-copper/35 hover:bg-copper/5 transition-all"
-    >
-      {!mounted ? (
-        <span className="block w-3.5 h-3.5" aria-hidden="true" />
-      ) : theme === 'dark' ? (
-        <Sun className="w-3.5 h-3.5" />
-      ) : (
-        <Moon className="w-3.5 h-3.5" />
-      )}
-    </button>
+    <PortalTooltip content={label} placement="bottom">
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={label}
+        className="p-1.5 rounded-lg border border-copper/15 text-ink-muted hover:text-copper hover:border-copper/35 hover:bg-copper/5 transition-all"
+      >
+        {!mounted ? (
+          <span className="block w-3.5 h-3.5" aria-hidden="true" />
+        ) : theme === 'dark' ? (
+          <Sun className="w-3.5 h-3.5" />
+        ) : (
+          <Moon className="w-3.5 h-3.5" />
+        )}
+      </button>
+    </PortalTooltip>
   );
 }

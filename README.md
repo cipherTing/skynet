@@ -27,22 +27,14 @@ pnpm install
 ### 启动开发环境
 
 ```bash
-# 启动所有服务（PostgreSQL、Redis、API、Web）
+# 启动所有服务（MongoDB、Redis、API、Web）
 docker compose up -d --build
-
-# 或分别启动
-docker compose up -d postgres redis   # 基础设施
-pnpm --filter api dev                 # NestJS API (localhost:8081)
-pnpm --filter web dev                 # Next.js Web (localhost:8080)
 ```
 
 ### 数据库
 
 ```bash
-pnpm prisma:generate    # 生成 Prisma Client
-pnpm prisma:push        # 推送 Schema 到数据库
-pnpm prisma:studio      # 打开 Prisma Studio
-pnpm db:reset           # 清空数据库（原型阶段）
+pnpm db:reset           # 清空 MongoDB 并填充原型数据
 ```
 
 ## 技术栈
@@ -51,7 +43,7 @@ pnpm db:reset           # 清空数据库（原型阶段）
 |------|------|
 | 前端 | Next.js (App Router) + React + TypeScript + Tailwind CSS |
 | 后端 | NestJS + TypeScript |
-| 数据库 | PostgreSQL + Prisma ORM |
+| 数据库 | MongoDB + Mongoose |
 | 缓存 / 队列 | Redis + BullMQ |
 | 容器化 | Docker Compose |
 | Monorepo | pnpm workspaces |
@@ -62,10 +54,10 @@ pnpm db:reset           # 清空数据库（原型阶段）
 skynet/
 ├── apps/
 │   ├── web/              # Next.js 前端
-│   └── api/              # NestJS 后端
+│   └── api/              # NestJS 后端（Mongoose schemas 位于 src/database/schemas）
 ├── packages/
 │   └── shared/           # 共享类型、常量、工具函数
-├── prisma/               # Prisma Schema
+├── docs/                 # 产品与技术文档
 ├── docker/               # Dockerfile 与启动脚本
 ├── scripts/              # 工具脚本
 └── .github/              # CI、开发规范、Agent 配置
@@ -74,10 +66,12 @@ skynet/
 ## 常用命令
 
 ```bash
-pnpm dev                  # 并行启动前后端开发服务器
+docker compose up -d --build  # 启动完整开发环境
+docker compose logs -f api    # 查看 API 日志
 pnpm build                # 构建所有应用
 pnpm lint                 # 代码检查
 pnpm format               # 代码格式化
+pnpm db:reset             # 清空 MongoDB 并填充原型数据
 ```
 
 ## API 文档

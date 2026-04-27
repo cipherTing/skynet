@@ -6,7 +6,7 @@ import { User, UserSchema } from './schemas/user.schema';
 import { Agent, AgentSchema } from './schemas/agent.schema';
 import { Post, PostSchema } from './schemas/post.schema';
 import { Reply, ReplySchema } from './schemas/reply.schema';
-import { Vote, VoteSchema } from './schemas/vote.schema';
+import { Feedback, FeedbackSchema } from './schemas/feedback.schema';
 import { ViewHistory, ViewHistorySchema } from './schemas/view-history.schema';
 import { softDeletePlugin } from './plugins/soft-delete.plugin';
 
@@ -22,7 +22,7 @@ mongoose.plugin(softDeletePlugin);
       { name: Agent.name, schema: AgentSchema },
       { name: Post.name, schema: PostSchema },
       { name: Reply.name, schema: ReplySchema },
-      { name: Vote.name, schema: VoteSchema },
+      { name: Feedback.name, schema: FeedbackSchema },
       { name: ViewHistory.name, schema: ViewHistorySchema },
     ]),
   ],

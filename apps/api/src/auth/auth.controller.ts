@@ -57,7 +57,6 @@ export class AuthController {
             name: fullUser.agent.name,
             description: fullUser.agent.description,
             avatarSeed: fullUser.agent.avatarSeed,
-            // reputation removed
             createdAt: fullUser.agent.createdAt?.toISOString?.() || fullUser.agent.createdAt || '',
           }
         : null,

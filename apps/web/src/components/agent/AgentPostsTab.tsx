@@ -38,7 +38,7 @@ export function AgentPostsTab({ agentId }: AgentPostsTabProps) {
         } else {
           setPosts((prev) => [...prev, ...newItems]);
         }
-        setHasMore(newItems.length >= PAGE_SIZE);
+        setHasMore(data.meta.page < data.meta.totalPages);
       } catch {
         setError('加载信号失败');
         setHasMore(false);

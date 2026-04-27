@@ -1,20 +1,21 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ArrowLeft, Eye, MessageSquare, Calendar } from 'lucide-react';
+import { Eye, MessageSquare, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
-import { VoteButtons, PostTag } from '@/components/ui/PostWidgets';
+import { FeedbackBar, hasVisibleFeedback } from './FeedbackBar';
 import { ReplyThread } from './ReplyThread';
 import { ReplyInput } from './ReplyInput';
-import { forumApi } from '@/lib/api';
+import { ApiError, forumApi } from '@/lib/api';
 import { getRelativeTime, formatNumber } from '@/lib/utils';
-import { useDebug } from '@/contexts/DebugContext';
-import type { ForumPost, ForumReply } from '@skynet/shared';
+import { useOwnerOperation } from '@/contexts/OwnerOperationContext';
+import { useAuth } from '@/contexts/AuthContext';
+import type { FeedbackType, ForumPost, ForumReply } from '@skynet/shared';
 
 interface PostDetailProps {
   postId: string;
@@ -27,7 +28,8 @@ export function PostDetail({ postId }: PostDetailProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
-  const { debugMode } = useDebug();
+  const { ownerOperationEnabled, canOperateAsAgent } = useOwnerOperation();
+  const { agent, isAuthenticated } = useAuth();
 
   const loadPost = useCallback(async () => {
     try {
@@ -61,19 +63,34 @@ export function PostDetail({ postId }: PostDetailProps) {
     }
   }, [postId]);
 
-  const handleVote = async (type: 'UPVOTE' | 'DOWNVOTE') => {
-    if (!debugMode) return;
+  const getUnavailableReason = (isOwnContent: boolean, targetName: string) => {
+    if (isOwnContent) return `不能评价自己的${targetName}`;
+    if (!isAuthenticated) return '登录后才能模拟 Agent 进行评价';
+    if (!agent) return '当前用户未关联 Agent';
+    if (!ownerOperationEnabled) return '在设置页开启“允许主人代 Agent 操作”后才能评价';
+    return undefined;
+  };
+
+  const handleFeedback = async (type: FeedbackType) => {
+    if (!post) return;
+    const isOwnPost = agent?.id === post.author?.id;
+    const unavailableReason = getUnavailableReason(isOwnPost, '帖子');
+    if (!canOperateAsAgent || unavailableReason) {
+      if (unavailableReason) setActionError(unavailableReason);
+      return;
+    }
     setActionError('');
     try {
-      await forumApi.voteOnPost(postId, type);
+      await forumApi.feedbackOnPost(postId, type);
       await loadPost();
     } catch (err) {
-      console.error('投票失败:', err);
-      setActionError('投票失败，请重试');
+      console.error('反馈失败:', err);
+      setActionError(err instanceof ApiError ? err.message : '反馈失败，请重试');
     }
   };
 
   const handleReply = async (content: string) => {
+    if (!canOperateAsAgent) return;
     setActionError('');
     try {
       await forumApi.createReply(postId, { content });
@@ -103,34 +120,22 @@ export function PostDetail({ postId }: PostDetailProps) {
         <p className="text-[13px] text-ochre tracking-wide">
           信号丢失 — ID: {postId}
         </p>
-        <button
-          onClick={() => router.push('/')}
-          className="text-steel hover:text-copper mt-2 text-sm tracking-wide transition-colors"
-        >
-          ← 返回观测台
-        </button>
       </div>
     );
   }
 
-  const tags = post.tags || [];
+  const isOwnPost = agent?.id === post.author?.id;
+  const postFeedbackReason = getUnavailableReason(isOwnPost, '帖子');
+  const canFeedbackOnPost = canOperateAsAgent && !postFeedbackReason;
+  const showPostFeedback = hasVisibleFeedback(post.feedbackCounts);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="max-w-[800px]"
+      className="w-full pb-8"
     >
-      {/* 返回导航 */}
-      <button
-        onClick={() => router.push('/')}
-        className="inline-flex items-center gap-2 text-sm text-ink-secondary hover:text-copper transition-colors mb-6 tracking-wide"
-      >
-        <ArrowLeft className="w-3.5 h-3.5" />
-        返回观测台
-      </button>
-
       {/* 错误提示 */}
       {actionError && (
         <motion.div
@@ -140,6 +145,8 @@ export function PostDetail({ postId }: PostDetailProps) {
         >
           <span>{actionError}</span>
           <button
+            type="button"
+            aria-label="关闭提示"
             onClick={() => setActionError('')}
             className="text-ink-muted hover:text-copper transition-colors ml-3"
           >
@@ -148,87 +155,76 @@ export function PostDetail({ postId }: PostDetailProps) {
         </motion.div>
       )}
 
-      {/* 主帖内容 — 信号放大视图 */}
-      <article className="signal-bubble p-6 mb-8">
-        {/* 面板头部 */}
-        <div className="flex items-center gap-3 mb-5">
-          <span className="text-moss font-mono text-xs tracking-wider">信号记录</span>
-          <span className="text-ink-muted text-xs font-mono">{post.id.slice(0, 8).toUpperCase()}</span>
-          <span className="text-ink-muted/30">·</span>
-          <span className="text-ink-muted text-xs">权限: 公开</span>
-        </div>
+      {/* 主帖内容 */}
+      <article className="post-topic-card relative mb-7 overflow-visible rounded-lg border px-5 py-5 sm:px-7 sm:py-6">
+        <div className="post-topic-accent-top absolute inset-x-0 top-0 h-1 rounded-t-lg" />
+        <div className="post-topic-accent-side absolute bottom-4 left-0 top-4 w-1 rounded-r-full" />
 
-        {/* 作者信息 — 可点击跳转 Agent 详情页 */}
-        <div
-          className="flex items-center gap-3 mb-5 group/author cursor-pointer"
-          onClick={() => router.push(`/agent/${post.author?.id}`)}
-        >
-          <AgentAvatar
-            agentId={post.author?.avatarSeed || post.author?.id || ''}
-            agentName={post.author?.name}
-            size={40}
-          
-          />
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-copper text-base font-bold group-hover/author:underline transition-colors">
+        <div className="post-topic-card-header mb-5 flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
+          <button
+            type="button"
+            className="group/author flex min-w-0 items-center gap-3 text-left"
+            onClick={() => router.push(`/agent/${post.author?.id}`)}
+          >
+            <AgentAvatar
+              agentId={post.author?.avatarSeed || post.author?.id || ''}
+              agentName={post.author?.name}
+              size={40}
+            />
+            <span className="min-w-0">
+              <span className="post-topic-author-name block truncate text-base font-bold group-hover/author:underline">
                 {post.author?.name}
               </span>
-            </div>
-            <div className="flex items-center gap-3 text-xs text-ink-secondary mt-1">
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                {getRelativeTime(post.createdAt)}
-              </span>
               {post.author?.description && (
-                <span>· {post.author.description}</span>
+                <span className="post-topic-muted block max-w-[520px] truncate text-[12px]">
+                  {post.author.description}
+                </span>
               )}
-            </div>
+            </span>
+          </button>
+
+          <div className="post-topic-muted flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] sm:justify-end">
+            <span className="font-mono text-steel tracking-wider">SIGNAL DOSSIER</span>
+            <span className="font-mono">{post.id.slice(0, 8).toUpperCase()}</span>
+            <span className="flex items-center gap-1">
+              <Calendar className="w-3 h-3" />
+              {getRelativeTime(post.createdAt)}
+            </span>
+            <span className="flex items-center gap-1">
+              <MessageSquare className="w-3 h-3" />
+              {formatNumber(post.replyCount || 0)}
+            </span>
+            <span className="flex items-center gap-1">
+              <Eye className="w-3 h-3" />
+              {formatNumber(post.viewCount || 0)}
+            </span>
           </div>
         </div>
 
-        {/* 标题 */}
-        <h1 className="text-2xl font-bold text-ink-primary mb-4 leading-snug">
+        <h1 className="post-topic-title mb-4 text-2xl font-bold leading-tight sm:text-3xl">
           {post.title}
         </h1>
 
-        {/* 标签 */}
-        {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-5">
-            {tags.map((tag: string) => (
-              <PostTag key={tag} label={tag} />
-            ))}
-          </div>
-        )}
-
-        {/* Markdown 内容 */}
-        <div className="prose-deck mb-5 max-w-[720px]">
+        <div className="prose-deck post-topic-prose post-topic-prose-panel mb-5 max-w-none rounded-lg border px-4 py-3 text-[14px]">
           <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
             {post.content}
           </ReactMarkdown>
         </div>
 
-        {/* 底部数据栏 */}
-        <div className="flex items-center justify-between pt-4 border-t border-copper/[0.08]">
-          <VoteButtons
-            upvotes={post.upvotes}
-            downvotes={post.downvotes}
-            votedUp={post.currentUserVote === 'UPVOTE'}
-            votedDown={post.currentUserVote === 'DOWNVOTE'}
-            onUpvote={debugMode ? () => handleVote('UPVOTE') : undefined}
-            onDownvote={debugMode ? () => handleVote('DOWNVOTE') : undefined}
-          />
-          <div className="flex items-center gap-4 text-xs text-ink-muted">
-            <span className="flex items-center gap-1.5">
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span className="font-mono tabular-nums">{formatNumber(post.replyCount || 0)}</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Eye className="w-3.5 h-3.5" />
-              <span className="font-mono tabular-nums">{formatNumber(post.viewCount || 0)}</span>
-            </span>
+        {(showPostFeedback || canFeedbackOnPost || postFeedbackReason) && (
+          <div className="post-topic-feedback border-t pt-3">
+            <FeedbackBar
+              counts={post.feedbackCounts}
+              currentFeedback={post.currentUserFeedback}
+              canInteract={canFeedbackOnPost}
+              unavailableReason={postFeedbackReason}
+              onSelect={handleFeedback}
+              onUnavailable={() => {
+                if (postFeedbackReason) setActionError(postFeedbackReason);
+              }}
+            />
           </div>
-        </div>
+        )}
       </article>
 
       {/* 回复区域 */}
@@ -244,7 +240,7 @@ export function PostDetail({ postId }: PostDetailProps) {
         </div>
 
         {/* 新回复输入 */}
-        {debugMode && (
+        {canOperateAsAgent && (
           <div className="mb-5">
             <ReplyInput
               onSubmit={handleReply}
@@ -264,13 +260,25 @@ export function PostDetail({ postId }: PostDetailProps) {
               <ReplyThread
                 reply={reply}
                 index={index}
-                depth={0}
                 postId={postId}
                 onReplyCreated={loadReplies}
               />
             </motion.div>
           ))}
         </div>
+
+        {replies.length > 0 && (
+          <div
+            data-testid="reply-end-marker"
+            className="py-8 text-xs text-ink-muted tracking-wide"
+          >
+            <div className="flex items-center justify-center gap-3">
+              <div className="w-16 deck-divider" />
+              <span className="font-mono uppercase">通信记录终结</span>
+              <div className="w-16 deck-divider" />
+            </div>
+          </div>
+        )}
 
         {replies.length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center py-10 gap-2">

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
+import { PortalTooltip } from '@/components/ui/FloatingPortal';
 import type { AgentProfile } from '@/config/agent-dimensions';
 import { getCoherenceLevel, COHERENCE_LEVELS } from '@/config/agent-dimensions';
 
@@ -25,7 +25,6 @@ interface AgentHeroProps {
 export function AgentHero({ agent }: AgentHeroProps) {
   const router = useRouter();
   const level = getCoherenceLevel(agent.coherence);
-  const [showLevelPopup, setShowLevelPopup] = useState(false);
 
   return (
     <div className="relative">
@@ -57,19 +56,12 @@ export function AgentHero({ agent }: AgentHeroProps) {
             <h1 className="text-xl sm:text-2xl font-display font-bold text-ink-primary tracking-deck-tight">
               {agent.name}
             </h1>
-            <div
-              className="relative flex items-center gap-2 px-3 py-1.5 rounded-full bg-moss/10 border border-moss cursor-help transition-all duration-200 hover:bg-moss/20 hover:shadow-[0_0_20px_rgba(100,160,120,0.35)]"
-              onMouseEnter={() => setShowLevelPopup(true)}
-              onMouseLeave={() => setShowLevelPopup(false)}
-            >
-              <span className="text-xs text-moss font-mono font-bold tracking-wider">凝聚等级</span>
-              <span className="text-base sm:text-lg font-mono font-bold text-moss leading-none tabular-nums">
-                {level.name}
-              </span>
-
-              {/* 等级弹窗 */}
-              {showLevelPopup && (
-                <div className="absolute top-full left-0 mt-2 w-64 rounded-xl bg-void-deep border border-copper/20 shadow-xl shadow-copper/5 py-2 px-1 z-50 backdrop-blur-sm">
+            <PortalTooltip
+              placement="bottom"
+              align="start"
+              contentClassName="w-64 rounded-xl py-2 px-1 shadow-xl shadow-copper/5 backdrop-blur-sm"
+              content={
+                <>
                   <div className="px-3 py-1.5 text-[10px] text-ink-muted font-mono uppercase tracking-wider">
                     凝聚等级体系
                   </div>
@@ -94,9 +86,19 @@ export function AgentHero({ agent }: AgentHeroProps) {
                       </div>
                     );
                   })}
-                </div>
-              )}
-            </div>
+                </>
+              }
+            >
+              <div
+                tabIndex={0}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-moss/10 border border-moss cursor-help transition-all duration-200 hover:bg-moss/20 hover:shadow-[0_0_20px_rgba(100,160,120,0.35)]"
+              >
+                <span className="text-xs text-moss font-mono font-bold tracking-wider">凝聚等级</span>
+                <span className="text-base sm:text-lg font-mono font-bold text-moss leading-none tabular-nums">
+                  {level.name}
+                </span>
+              </div>
+            </PortalTooltip>
           </div>
 
           {/* 元信息 */}

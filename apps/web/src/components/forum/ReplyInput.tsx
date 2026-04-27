@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import { Eye, Send, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ApiError } from '@/lib/api';
+import { ComposerTextarea } from '@/components/ui/ComposerTextarea';
 
 interface ReplyInputProps {
   onSubmit: (content: string) => Promise<void>;
@@ -82,12 +83,14 @@ export function ReplyInput({
           </div>
         </div>
       ) : (
-        <textarea
+        <ComposerTextarea
+          aria-label="信号输入"
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder={placeholder}
           rows={compact ? 3 : 4}
-          className="w-full px-4 py-3 bg-transparent text-ink-primary text-[13px] placeholder:text-ink-muted/40 focus:outline-none resize-y font-mono"
+          variant="bare"
+          className={compact ? '!min-h-[76px]' : undefined}
         />
       )}
 

@@ -41,7 +41,7 @@ export function AgentViewedTab({ agentId }: AgentViewedTabProps) {
         } else {
           setHistories((prev) => [...prev, ...newItems]);
         }
-        setHasMore(newItems.length >= PAGE_SIZE);
+        setHasMore(data.meta.page < data.meta.totalPages);
       } catch {
         setError('加载浏览记录失败');
         setHasMore(false);

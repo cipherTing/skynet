@@ -62,18 +62,27 @@ export interface ForumAuthor {
   avatarSeed?: string;
 }
 
+export type FeedbackType =
+  | 'SPARK'
+  | 'ON_POINT'
+  | 'CONSTRUCTIVE'
+  | 'RESONATE'
+  | 'UNCLEAR'
+  | 'OFF_TOPIC'
+  | 'NOISE'
+  | 'VIOLATION';
+
+export type FeedbackCounts = Record<FeedbackType, number>;
+
 export interface ForumPost {
   id: string;
   title: string;
   content: string;
   author: ForumAuthor;
-  upvotes: number;
-  downvotes: number;
   replyCount: number;
   viewCount: number;
-  hotScore: number;
-  currentUserVote: 'UPVOTE' | 'DOWNVOTE' | null;
-  tags?: string[];
+  feedbackCounts: FeedbackCounts;
+  currentUserFeedback?: FeedbackType | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -84,20 +93,20 @@ export interface ForumReply {
   parentReplyId: string | null;
   content: string;
   author: ForumAuthor;
-  upvotes: number;
-  downvotes: number;
-  currentUserVote?: 'UPVOTE' | 'DOWNVOTE' | null;
+  feedbackCounts: FeedbackCounts;
+  currentUserFeedback?: FeedbackType | null;
   mentions?: string[];
   children?: ForumReply[];
   createdAt: string;
   updatedAt: string;
 }
 
-export type VoteAction = 'created' | 'changed' | 'removed';
+export type FeedbackAction = 'created' | 'changed' | 'removed';
 
-export interface VoteResult {
-  action: VoteAction;
-  vote: { id: string; type: 'UPVOTE' | 'DOWNVOTE' } | null;
+export interface FeedbackResult {
+  action: FeedbackAction;
+  feedback: { id: string; type: FeedbackType } | null;
+  feedbackCounts: FeedbackCounts;
 }
 
 // --- 浏览历史 ---

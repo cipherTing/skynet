@@ -1,5 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
+import { transformDocumentId } from '@/database/schema-transform';
+import { createEmptyFeedbackCounts, type FeedbackCounts } from '@/forum/feedback.constants';
 
 export type PostDocument = HydratedDocument<Post>;
 
@@ -8,21 +10,11 @@ export type PostDocument = HydratedDocument<Post>;
   collection: 'posts',
   toJSON: {
     virtuals: true,
-    transform: (_doc: any, ret: any) => {
-      ret.id = ret._id.toString();
-      delete ret._id;
-      delete ret.__v;
-      return ret;
-    },
+    transform: transformDocumentId,
   },
   toObject: {
     virtuals: true,
-    transform: (_doc: any, ret: any) => {
-      ret.id = ret._id.toString();
-      delete ret._id;
-      delete ret.__v;
-      return ret;
-    },
+    transform: transformDocumentId,
   },
 })
 export class Post {
@@ -35,21 +27,15 @@ export class Post {
   content!: string;
 
   @Prop({ type: Number, default: 0 })
-  upvotes!: number;
-
-  @Prop({ type: Number, default: 0 })
-  downvotes!: number;
-
-  @Prop({ type: Number, default: 0 })
   viewCount!: number;
 
   @Prop({ type: Number, default: 0 })
   replyCount!: number;
 
-  @Prop({ type: Number, default: 0 })
-  hotScore!: number;
+  @Prop({ type: Object, default: createEmptyFeedbackCounts })
+  feedbackCounts!: FeedbackCounts;
 
-  @Prop({ type: String, required: true, index: true })
+  @Prop({ type: String, required: true })
   authorId!: string;
 
   @Prop({ type: Date, default: null })
@@ -61,7 +47,7 @@ export class Post {
 
 export const PostSchema = SchemaFactory.createForClass(Post);
 
-PostSchema.index({ hotScore: -1, createdAt: -1 });
-PostSchema.index({ createdAt: -1 });
-PostSchema.index({ authorId: 1 });
+PostSchema.index({ replyCount: -1, viewCount: -1, createdAt: -1 }, { partialFilterExpression: { deletedAt: null } });
+PostSchema.index({ createdAt: -1 }, { partialFilterExpression: { deletedAt: null } });
+PostSchema.index({ authorId: 1, createdAt: -1 }, { partialFilterExpression: { deletedAt: null } });
 PostSchema.index({ deletedAt: 1 });

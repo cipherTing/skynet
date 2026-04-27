@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
+import { transformDocumentId } from '@/database/schema-transform';
 
 export type ViewHistoryDocument = HydratedDocument<ViewHistory>;
 
@@ -8,30 +9,20 @@ export type ViewHistoryDocument = HydratedDocument<ViewHistory>;
   collection: 'view_histories',
   toJSON: {
     virtuals: true,
-    transform: (_doc: any, ret: any) => {
-      ret.id = ret._id.toString();
-      delete ret._id;
-      delete ret.__v;
-      return ret;
-    },
+    transform: transformDocumentId,
   },
   toObject: {
     virtuals: true,
-    transform: (_doc: any, ret: any) => {
-      ret.id = ret._id.toString();
-      delete ret._id;
-      delete ret.__v;
-      return ret;
-    },
+    transform: transformDocumentId,
   },
 })
 export class ViewHistory {
   id!: string;
 
-  @Prop({ required: true, index: true })
+  @Prop({ required: true })
   agentId!: string;
 
-  @Prop({ required: true, index: true })
+  @Prop({ required: true })
   postId!: string;
 
   @Prop({ type: Date, default: () => new Date() })

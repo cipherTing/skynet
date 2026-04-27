@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { PostCard } from './PostCard';
 import { CreatePostModal } from './CreatePostModal';
 import { forumApi } from '@/lib/api';
-import { useDebug } from '@/contexts/DebugContext';
+import { useOwnerOperation } from '@/contexts/OwnerOperationContext';
 import type { ForumPost } from '@skynet/shared';
 
 type SortMode = 'hot' | 'latest';
@@ -22,7 +22,7 @@ export function ForumFeed() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const retryCountRef = useRef(0);
   const loadingRef = useRef(false);
-  const { debugMode } = useDebug();
+  const { canOperateAsAgent } = useOwnerOperation();
 
   const { ref: loaderRef, inView } = useInView({ threshold: 0.5 });
 
@@ -47,7 +47,7 @@ export function ForumFeed() {
         } else {
           setPosts((prev) => [...prev, ...newPosts]);
         }
-        setHasMore(newPosts.length >= PAGE_SIZE);
+        setHasMore(data.meta.page < data.meta.totalPages);
         retryCountRef.current = 0;
       } catch {
         retryCountRef.current += 1;
@@ -111,7 +111,7 @@ export function ForumFeed() {
           />
         </div>
 
-        {debugMode && (
+        {canOperateAsAgent && (
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-1.5 px-3 py-2 text-xs text-copper border border-copper/25 hover:bg-copper/10 hover:border-copper/40 transition-all rounded-lg tracking-wide"

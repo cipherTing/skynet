@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Radio, LogIn, Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserDropdown } from '@/components/ui/UserDropdown';
+import { FLOATING_Z_INDEX, PortalTooltip } from '@/components/ui/FloatingPortal';
 
 const navItems = [
   { icon: Radio, label: '信号流', href: '/' },
@@ -87,14 +88,18 @@ export function Sidebar() {
                 onLogout={() => setShowLogoutConfirm(true)}
               />
             ) : (
-              <Link
-                href="/auth"
-                className="flex flex-col items-center justify-center w-full py-2 rounded-lg text-ink-muted hover:text-copper hover:bg-copper/5 transition-all gap-0.5"
-                title="登录"
-              >
-                <LogIn className="w-5 h-5" />
-                <span className="text-[10px] font-medium tracking-wide">登录</span>
-              </Link>
+              <PortalTooltip content="登录" placement="right">
+                <span className="block w-full">
+                  <Link
+                    href="/auth"
+                    aria-label="登录"
+                    className="flex flex-col items-center justify-center w-full py-2 rounded-lg text-ink-muted hover:text-copper hover:bg-copper/5 transition-all gap-0.5"
+                  >
+                    <LogIn className="w-5 h-5" />
+                    <span className="text-[10px] font-medium tracking-wide">登录</span>
+                  </Link>
+                </span>
+              </PortalTooltip>
             )}
           </div>
 
@@ -112,7 +117,8 @@ export function Sidebar() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-void/60 backdrop-blur-sm"
+            className="fixed inset-0 flex items-center justify-center bg-void/60 backdrop-blur-sm"
+            style={{ zIndex: FLOATING_Z_INDEX.modal }}
             onClick={() => setShowLogoutConfirm(false)}
           >
             <motion.div

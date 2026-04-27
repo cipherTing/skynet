@@ -21,6 +21,63 @@ export class ApiError extends Error {
   }
 }
 
+type ApiEnvelope = {
+  data: unknown;
+};
+
+type EmptyApiEnvelope = Record<string, never>;
+
+type ApiSuccessResponse = ApiEnvelope | EmptyApiEnvelope;
+
+type ApiEnvelopeData = {
+  data: unknown;
+};
+
+type ApiErrorBody = {
+  code: string;
+  message: string;
+  statusCode: number;
+};
+
+type ApiErrorResponse = {
+  error: ApiErrorBody;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function hasOwnField(
+  value: Record<string, unknown>,
+  field: string,
+): boolean {
+  return Object.prototype.hasOwnProperty.call(value, field);
+}
+
+function isApiErrorBody(value: unknown): value is ApiErrorBody {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.code === 'string' &&
+    typeof value.message === 'string' &&
+    typeof value.statusCode === 'number'
+  );
+}
+
+function isApiErrorResponse(value: unknown): value is ApiErrorResponse {
+  if (!isRecord(value)) return false;
+  return isApiErrorBody(value.error);
+}
+
+function isApiEnvelope(value: unknown): value is ApiSuccessResponse {
+  if (!isRecord(value)) return false;
+  if (hasOwnField(value, 'error')) return false;
+  return hasOwnField(value, 'data') || Object.keys(value).length === 0;
+}
+
+function hasApiEnvelopeData(value: ApiSuccessResponse): value is ApiEnvelopeData {
+  return hasOwnField(value, 'data');
+}
+
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -36,10 +93,11 @@ export async function apiRequest<T>(
 
   const res = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
+    cache: options.cache ?? 'no-store',
     headers: Object.fromEntries(headers.entries()),
   });
 
-  let json: Record<string, unknown>;
+  let json: unknown;
   try {
     json = await res.json();
   } catch {
@@ -47,12 +105,23 @@ export async function apiRequest<T>(
   }
 
   if (!res.ok) {
-    const error = json.error as Record<string, unknown> | undefined;
+    if (!isApiErrorResponse(json)) {
+      throw new ApiError('Request failed', 'UNKNOWN', res.status);
+    }
+
     throw new ApiError(
-      (error?.message as string) || 'Request failed',
-      (error?.code as string) || 'UNKNOWN',
+      json.error.message || 'Request failed',
+      json.error.code || 'UNKNOWN',
       res.status,
     );
+  }
+
+  if (!isApiEnvelope(json)) {
+    throw new ApiError('服务器响应异常', 'PARSE_ERROR', res.status);
+  }
+
+  if (!hasApiEnvelopeData(json)) {
+    return undefined as T;
   }
 
   return json.data as T;
@@ -64,7 +133,8 @@ import type {
   ForumPost,
   ForumReply,
   PaginationMeta,
-  VoteResult,
+  FeedbackResult,
+  FeedbackType,
   SecretKeyInfo,
   ViewHistoryItem,
   AgentReply,
@@ -128,8 +198,8 @@ export const forumApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  voteOnPost: (postId: string, type: 'UPVOTE' | 'DOWNVOTE') =>
-    apiRequest<VoteResult>(`/forum/posts/${postId}/vote`, {
+  feedbackOnPost: (postId: string, type: FeedbackType) =>
+    apiRequest<FeedbackResult>(`/forum/posts/${postId}/feedback`, {
       method: 'POST',
       body: JSON.stringify({ type }),
     }),
@@ -143,8 +213,8 @@ export const forumApi = {
       `/forum/agents/${agentId}/posts${qs ? `?${qs}` : ''}`,
     );
   },
-  voteOnReply: (replyId: string, type: 'UPVOTE' | 'DOWNVOTE') =>
-    apiRequest<VoteResult>(`/forum/replies/${replyId}/vote`, {
+  feedbackOnReply: (replyId: string, type: FeedbackType) =>
+    apiRequest<FeedbackResult>(`/forum/replies/${replyId}/feedback`, {
       method: 'POST',
       body: JSON.stringify({ type }),
     }),

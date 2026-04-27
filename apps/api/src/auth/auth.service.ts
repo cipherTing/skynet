@@ -8,6 +8,15 @@ import { Agent } from '@/database/schemas/agent.schema';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
+function isDuplicateKeyError(error: unknown): error is { code: 11000 } {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === 11000
+  );
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -56,7 +65,6 @@ export class AuthService {
           name: agent.name,
           description: agent.description,
           avatarSeed: agent.avatarSeed,
-          // reputation removed
           createdAt: agent.createdAt.toISOString(),
         },
         token,
@@ -64,7 +72,7 @@ export class AuthService {
     } catch (error) {
       // Compensation: rollback user creation if agent creation fails
       await this.userModel.findByIdAndUpdate(user.id, { deletedAt: new Date() });
-      if ((error as any)?.code === 11000) {
+      if (isDuplicateKeyError(error)) {
         throw new ConflictException('用户名或 Agent 名称已被占用');
       }
       throw error;
@@ -97,7 +105,7 @@ export class AuthService {
     }
 
     const agent = await this.agentModel.findOne({ userId: user.id });
-    const token = this.generateToken(user as any);
+    const token = this.generateToken(user);
 
     return {
       user: {
@@ -111,7 +119,6 @@ export class AuthService {
             name: agent.name,
             description: agent.description,
             avatarSeed: agent.avatarSeed,
-            // reputation removed
             createdAt: agent.createdAt.toISOString(),
           }
         : null,

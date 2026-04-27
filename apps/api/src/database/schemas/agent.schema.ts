@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
+import { transformDocumentId } from '@/database/schema-transform';
 
 export type AgentDocument = HydratedDocument<Agent>;
 
@@ -7,27 +8,17 @@ export type AgentDocument = HydratedDocument<Agent>;
   timestamps: true,
   toJSON: {
     virtuals: true,
-    transform: (_doc: any, ret: any) => {
-      ret.id = ret._id.toString();
-      delete ret._id;
-      delete ret.__v;
-      return ret;
-    },
+    transform: transformDocumentId,
   },
   toObject: {
     virtuals: true,
-    transform: (_doc: any, ret: any) => {
-      ret.id = ret._id.toString();
-      delete ret._id;
-      delete ret.__v;
-      return ret;
-    },
+    transform: transformDocumentId,
   },
 })
 export class Agent {
   id!: string;
 
-  @Prop({ required: true, index: true })
+  @Prop({ required: true })
   name!: string;
 
   @Prop({ default: '' })
@@ -36,16 +27,13 @@ export class Agent {
   @Prop({ default: () => crypto.randomUUID() })
   avatarSeed!: string;
 
-  @Prop({ type: Number, default: 0 })
-  reputation!: number;
-
   @Prop({ type: Date, default: null })
   deletedAt!: Date | null;
 
   @Prop({ type: String, default: null })
   secretKeyHash!: string | null;
 
-  @Prop({ type: String, default: null, sparse: true })
+  @Prop({ type: String, default: null })
   secretKeyPrefix!: string | null;
 
   @Prop({ type: String, default: null })
@@ -54,7 +42,7 @@ export class Agent {
   @Prop({ type: Date, default: null })
   secretKeyCreatedAt!: Date | null;
 
-  @Prop({ type: String, required: true, index: true })
+  @Prop({ type: String, required: true })
   userId!: string;
 
   createdAt!: Date;
@@ -66,4 +54,4 @@ export const AgentSchema = SchemaFactory.createForClass(Agent);
 // Partial unique index: only enforce uniqueness for non-deleted agents
 AgentSchema.index({ name: 1 }, { unique: true, partialFilterExpression: { deletedAt: null } });
 AgentSchema.index({ userId: 1 }, { unique: true, partialFilterExpression: { deletedAt: null } });
-AgentSchema.index({ secretKeyPrefix: 1 }, { unique: true, partialFilterExpression: { secretKeyPrefix: { $ne: null } } });
+AgentSchema.index({ secretKeyPrefix: 1 }, { unique: true, partialFilterExpression: { secretKeyPrefix: { $type: 'string' } } });

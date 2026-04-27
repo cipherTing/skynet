@@ -17,12 +17,11 @@ function formatTime(iso: string): string {
 }
 
 export function AgentHistoryTab({ activities }: AgentHistoryTabProps) {
-  // 只展示投票类互动作为"交互历史"
   const historyItems = activities.filter(
     (a) =>
-      a.type === 'voted' ||
-      a.type === 'post_upvoted' ||
-      a.type === 'post_downvoted',
+      a.type === 'gave_feedback' ||
+      a.type === 'received_signal_feedback' ||
+      a.type === 'received_issue_signal',
   );
 
   if (historyItems.length === 0) {

@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import type { AgentDimensions } from '@/config/agent-dimensions';
 import { DIMENSION_CONFIG, DIMENSION_DESCRIPTIONS, getDimensionGrade } from '@/config/agent-dimensions';
+import { PortalTooltip } from '@/components/ui/FloatingPortal';
 
 interface AgentRadarChartProps {
   dimensions: AgentDimensions;
@@ -46,34 +47,34 @@ const DimensionLabel = memo(function DimensionLabel({
 }) {
   const config = DIMENSION_CONFIG[item.key];
   const pos = LABEL_POSITIONS[index];
-  // 下半部分（y > 0）tooltip 向上展开，避免被容器底部裁剪
-  const tooltipUp = pos.y > 0;
 
   return (
     <div
       className="absolute left-1/2 top-1/2 pointer-events-auto group"
       style={{ transform: `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px))` }}
     >
-      <div className="text-center leading-tight">
-        <div className="text-[11px] font-semibold" style={{ color: config.color }}>
-          {item.dimension}
-        </div>
-        <div className="text-[10px] font-mono font-bold mt-0.5" style={{ color: config.color, opacity: 0.75 }}>
-          {item.grade}
-        </div>
-      </div>
-      {/* tooltip：上半部分向下，下半部分向上 */}
-      <div
-        className={`absolute left-1/2 -translate-x-1/2 px-3 py-2 rounded-lg bg-void-deep border border-copper/30 shadow-[0_4px_16px_rgba(0,0,0,0.4)] opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-50 min-w-[180px] ${
-          tooltipUp ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
-        }`}
+      <PortalTooltip
+        placement={pos.y > 0 ? 'top' : 'bottom'}
+        content={
+          <>
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-[11px] font-semibold" style={{ color: config.color }}>{item.dimension}</span>
+              <span className="text-[10px] font-mono text-ink-muted">{item.grade}</span>
+            </div>
+            <p>{DIMENSION_DESCRIPTIONS[item.key]}</p>
+          </>
+        }
+        contentClassName="min-w-[180px]"
       >
-        <div className="flex items-center gap-1.5 mb-1">
-          <span className="text-[11px] font-semibold" style={{ color: config.color }}>{item.dimension}</span>
-          <span className="text-[10px] font-mono text-ink-muted">{item.grade}</span>
+        <div tabIndex={0} className="text-center leading-tight cursor-help">
+          <div className="text-[11px] font-semibold" style={{ color: config.color }}>
+            {item.dimension}
+          </div>
+          <div className="text-[10px] font-mono font-bold mt-0.5" style={{ color: config.color, opacity: 0.75 }}>
+            {item.grade}
+          </div>
         </div>
-        <p className="text-[11px] text-ink-secondary leading-relaxed">{DIMENSION_DESCRIPTIONS[item.key]}</p>
-      </div>
+      </PortalTooltip>
     </div>
   );
 });

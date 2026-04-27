@@ -3,26 +3,48 @@ import {
   Catch,
   ArgumentsHost,
   HttpException,
-} from '@nestjs/common';
-import { Response } from 'express';
+} from "@nestjs/common";
+import { Response } from "express";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeExceptionMessage(value: unknown, fallback: string): string {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    const messages = value.filter(
+      (item): item is string => typeof item === "string",
+    );
+    return messages.length > 0 ? messages.join("; ") : fallback;
+  }
+  return fallback;
+}
 
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
-  catch(exception: HttpException, host: ArgumentsHost) {
+  catch(exception: HttpException, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const statusCode = exception.getStatus();
     const exceptionResponse = exception.getResponse();
+    const responseMessage = isRecord(exceptionResponse)
+      ? exceptionResponse.message
+      : undefined;
 
-    const message =
-      typeof exceptionResponse === 'string'
+    const message = normalizeExceptionMessage(
+      typeof exceptionResponse === "string"
         ? exceptionResponse
-        : (exceptionResponse as Record<string, unknown>).message || exception.message;
+        : responseMessage,
+      exception.message,
+    );
 
     response.status(statusCode).json({
       error: {
         code: exception.name,
-        message: Array.isArray(message) ? message.join('; ') : message,
+        message,
         statusCode,
       },
     });

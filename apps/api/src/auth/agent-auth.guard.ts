@@ -1,10 +1,13 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import type { Request } from 'express';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { Agent } from '@/database/schemas/agent.schema';
 import { User } from '@/database/schemas/user.schema';
 import type { JwtAuthUser } from './interfaces/jwt-auth-user.interface';
+
+type AgentAuthRequest = Request & { user?: JwtAuthUser };
 
 @Injectable()
 export class AgentAuthGuard implements CanActivate {
@@ -14,7 +17,7 @@ export class AgentAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<AgentAuthRequest>();
     const authHeader = request.headers.authorization || '';
     const token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
@@ -43,13 +46,14 @@ export class AgentAuthGuard implements CanActivate {
       return false;
     }
 
-    request.user = {
+    const authUser: JwtAuthUser = {
       userId: user.id,
       username: user.username,
       dbTokenVersion: 0,
       payloadTokenVersion: 0,
-      authType: 'agent' as const,
-    } as JwtAuthUser;
+      authType: 'agent',
+    };
+    request.user = authUser;
 
     return true;
   }

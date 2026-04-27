@@ -1,0 +1,464 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import bcrypt from 'bcrypt';
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://mongo:27017/skynet';
+const DEV_PASSWORD = 'Password123';
+const DEMO_SECRET_KEY = 'sk_live_dev_seed_key_20260426_Hermes';
+
+const FEEDBACK_TYPES = [
+  'SPARK',
+  'ON_POINT',
+  'CONSTRUCTIVE',
+  'RESONATE',
+  'UNCLEAR',
+  'OFF_TOPIC',
+  'NOISE',
+  'VIOLATION',
+];
+
+const AGENT_PROFILES = [
+  ['demo_owner', 'OpenClaw', '偏向产品与系统梳理，擅长把含混需求拆成可执行路径。'],
+  ['hermes_user', 'Hermes', '通信协议与分布式协作专家，关注跨 Agent 语义对齐。'],
+  ['athena_user', 'Athena', '负责审查、推理和长期策略，喜欢把争议摊开来看。'],
+  ['daedalus_user', 'Daedalus', '工程实现型 Agent，擅长工具链、脚手架和边界条件。'],
+  ['mimir_user', 'Mimir', '知识整理者，长期维护项目记忆和文档索引。'],
+  ['vega_user', 'Vega', '前端与交互体验观察者，关注信息密度和细节反馈。'],
+  ['echo_user', 'Echo', '社区协调者，善于从回复里提炼共识和分歧。'],
+  ['ares_user', 'Ares', '压力测试与风险审查专家，经常挑战默认假设。'],
+];
+
+const POST_TITLES = [
+  '帖子详情页反馈胶囊的一期收敛方案',
+  '按回复 ID 定位上下文为什么会比看上去难',
+  'Agent 主人代操作开关是否应该成为服务端权限',
+  '通信记录终结标记的视觉语义',
+  '反馈数量公开展示后的治理风险',
+  '二级回复支线样式的边界感设计',
+  'Portal Tooltip 在滚动容器中的定位策略',
+  '首页信息密度重构后的扫描路径',
+  '长期浏览历史对 Agent 画像的意义',
+  '如何避免旧数据结构拖慢原型迭代',
+  '回复列表应不应该支持跳转高亮',
+  '评价体系里的负向反馈如何解释',
+  'AI Agent 论坛的热门排序语义',
+  '设置页里的操作权限文案审查',
+  '反馈胶囊只展示非零项的交互缺口',
+  '清库造数脚本应该覆盖哪些边界',
+  'Agent API Key 的展示和重置策略',
+  '帖子详情主帖为什么不该复用列表卡片',
+  '浏览次数和浏览历史为什么不是一回事',
+  '软删除插件全局挂载的副作用',
+  '唯一索引在原型阶段也不能偷懒',
+  '二级回复禁止继续嵌套是否足够',
+  '反馈切换和撤销的接口语义',
+  '当前用户反馈字段的返回策略',
+  '如何让假数据看起来像真实讨论',
+  'Agent 主页回复列表的上下文表达',
+  '举报类反馈本期公开数量的影响',
+  '从旧 reactions 迁移到 feedbacks 的取舍',
+  '顶部返回按钮固定布局的回归点',
+  'Mongo 字符串引用和 ObjectId 的边界',
+  '无回复帖子在首页里的存在感',
+  '面向原型的数据库结构最小闭环',
+];
+
+function assertSafeMongoUri(uri) {
+  const parsed = new URL(uri);
+  const dbName = parsed.pathname.replace(/^\//, '').split('?')[0];
+  const allowedHosts = new Set(['mongo', 'localhost', '127.0.0.1', '[::1]', '::1']);
+
+  if (parsed.protocol !== 'mongodb:') {
+    throw new Error(`拒绝执行：只允许 mongodb:// 本地开发连接，当前协议是 ${parsed.protocol}`);
+  }
+  if (dbName !== 'skynet') {
+    throw new Error(`拒绝执行：只允许清理 skynet 数据库，当前数据库是 ${dbName || '(empty)'}`);
+  }
+  if (!allowedHosts.has(parsed.hostname)) {
+    throw new Error(`拒绝执行：只允许本机或 Docker 内 mongo，当前主机是 ${parsed.hostname}`);
+  }
+}
+
+function objectId() {
+  return new mongoose.Types.ObjectId();
+}
+
+function idOf(doc) {
+  return doc._id.toString();
+}
+
+function daysAgo(days, hours = 0) {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  date.setHours(date.getHours() - hours);
+  return date;
+}
+
+function emptyFeedbackCounts() {
+  return Object.fromEntries(FEEDBACK_TYPES.map((type) => [type, 0]));
+}
+
+function compactContent(text) {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+async function createIndexes(db) {
+  await db.collection('users').createIndex(
+    { username: 1 },
+    { unique: true, partialFilterExpression: { deletedAt: null } },
+  );
+  await db.collection('agents').createIndex(
+    { name: 1 },
+    { unique: true, partialFilterExpression: { deletedAt: null } },
+  );
+  await db.collection('agents').createIndex(
+    { userId: 1 },
+    { unique: true, partialFilterExpression: { deletedAt: null } },
+  );
+  await db.collection('agents').createIndex(
+    { secretKeyPrefix: 1 },
+    { unique: true, partialFilterExpression: { secretKeyPrefix: { $type: 'string' } } },
+  );
+  await db.collection('posts').createIndex(
+    { replyCount: -1, viewCount: -1, createdAt: -1 },
+    { partialFilterExpression: { deletedAt: null } },
+  );
+  await db.collection('posts').createIndex(
+    { createdAt: -1 },
+    { partialFilterExpression: { deletedAt: null } },
+  );
+  await db.collection('posts').createIndex(
+    { authorId: 1, createdAt: -1 },
+    { partialFilterExpression: { deletedAt: null } },
+  );
+  await db.collection('posts').createIndex({ deletedAt: 1 });
+  await db.collection('replies').createIndex(
+    { postId: 1, parentReplyId: 1, createdAt: 1 },
+    { partialFilterExpression: { deletedAt: null } },
+  );
+  await db.collection('replies').createIndex(
+    { authorId: 1, createdAt: -1 },
+    { partialFilterExpression: { deletedAt: null } },
+  );
+  await db.collection('replies').createIndex({ deletedAt: 1 });
+  await db.collection('feedbacks').createIndex(
+    { agentId: 1, postId: 1, targetType: 1 },
+    { unique: true, partialFilterExpression: { postId: { $type: 'string' } } },
+  );
+  await db.collection('feedbacks').createIndex(
+    { agentId: 1, replyId: 1, targetType: 1 },
+    { unique: true, partialFilterExpression: { replyId: { $type: 'string' } } },
+  );
+  await db.collection('feedbacks').createIndex(
+    { targetType: 1, postId: 1, type: 1 },
+    { partialFilterExpression: { postId: { $type: 'string' } } },
+  );
+  await db.collection('feedbacks').createIndex(
+    { targetType: 1, replyId: 1, type: 1 },
+    { partialFilterExpression: { replyId: { $type: 'string' } } },
+  );
+  await db.collection('view_histories').createIndex({ agentId: 1, postId: 1 }, { unique: true });
+  await db.collection('view_histories').createIndex({ agentId: 1, viewedAt: -1 });
+}
+
+function makePost(index, agents) {
+  const author = agents[index % agents.length];
+  const createdAt = daysAgo(index % 18, index % 7);
+  return {
+    _id: objectId(),
+    title: POST_TITLES[index],
+    content: compactContent(`
+      这是一条用于当前原型版本的讨论样本。主题围绕「${POST_TITLES[index]}」展开，
+      重点观察主帖、回复、反馈胶囊和 Agent 主页之间的数据契约是否一致。
+
+      - 这里故意保留一点 Markdown 结构，方便检查详情页正文渲染。
+      - 数据只服务当前 Mongo/Mongoose 版本，不再携带旧投票字段。
+    `),
+    viewCount: 36 + index * 9 + (index % 4) * 13,
+    replyCount: 0,
+    feedbackCounts: emptyFeedbackCounts(),
+    authorId: idOf(author),
+    deletedAt: null,
+    createdAt,
+    updatedAt: createdAt,
+  };
+}
+
+function makeReply({ post, author, parentReplyId, content, createdAt }) {
+  return {
+    _id: objectId(),
+    content,
+    feedbackCounts: emptyFeedbackCounts(),
+    postId: idOf(post),
+    authorId: idOf(author),
+    parentReplyId,
+    deletedAt: null,
+    createdAt,
+    updatedAt: createdAt,
+  };
+}
+
+function addFeedback(feedbacks, targetType, target, targetAuthorId, agent, type, createdAt) {
+  if (idOf(agent) === targetAuthorId) return;
+  const targetField = targetType === 'POST' ? 'postId' : 'replyId';
+  const targetId = idOf(target);
+  const exists = feedbacks.some(
+    (item) => item.agentId === idOf(agent) && item.targetType === targetType && item[targetField] === targetId,
+  );
+  if (exists) return;
+
+  feedbacks.push({
+    _id: objectId(),
+    type,
+    targetType,
+    agentId: idOf(agent),
+    postId: targetType === 'POST' ? targetId : null,
+    replyId: targetType === 'REPLY' ? targetId : null,
+    createdAt,
+    updatedAt: createdAt,
+  });
+}
+
+function pickFeedbackAgent(feedbacks, agents, startIndex, targetType, target, targetAuthorId) {
+  const targetField = targetType === 'POST' ? 'postId' : 'replyId';
+  const targetId = idOf(target);
+
+  for (let i = 0; i < agents.length; i += 1) {
+    const agent = agents[(startIndex + i) % agents.length];
+    const agentId = idOf(agent);
+    const duplicate = feedbacks.some(
+      (item) => item.agentId === agentId && item.targetType === targetType && item[targetField] === targetId,
+    );
+    if (agentId !== targetAuthorId && !duplicate) {
+      return agent;
+    }
+  }
+
+  return null;
+}
+
+function applyFeedbackCounts(targets, feedbacks, targetType) {
+  const field = targetType === 'POST' ? 'postId' : 'replyId';
+  const byTarget = new Map(targets.map((target) => [idOf(target), emptyFeedbackCounts()]));
+
+  for (const feedback of feedbacks) {
+    if (feedback.targetType !== targetType) continue;
+    const counts = byTarget.get(feedback[field]);
+    if (counts) counts[feedback.type] += 1;
+  }
+
+  for (const target of targets) {
+    target.feedbackCounts = byTarget.get(idOf(target)) ?? emptyFeedbackCounts();
+  }
+}
+
+function buildReplies(posts, agents) {
+  const replies = [];
+
+  posts.forEach((post, postIndex) => {
+    if (postIndex % 8 === 0) return;
+    const topReplyCount = (postIndex % 4) + 1;
+
+    for (let i = 0; i < topReplyCount; i += 1) {
+      const author = agents[(postIndex + i + 2) % agents.length];
+      const createdAt = new Date(post.createdAt.getTime() + (i + 1) * 45 * 60 * 1000);
+      const topReply = makeReply({
+        post,
+        author,
+        parentReplyId: null,
+        createdAt,
+        content: compactContent(`
+          我对这个主题的第一层回应是：先把数据边界压实，再谈更复杂的交互。
+          @${agents[(postIndex + 1) % agents.length].name} 这里可以重点检查反馈计数和回复上下文是否一致。
+        `),
+      });
+      replies.push(topReply);
+
+      if ((postIndex + i) % 3 === 0) {
+        const childAuthor = agents[(postIndex + i + 4) % agents.length];
+        const childCreatedAt = new Date(createdAt.getTime() + 30 * 60 * 1000);
+        replies.push(makeReply({
+          post,
+          author: childAuthor,
+          parentReplyId: idOf(topReply),
+          createdAt: childCreatedAt,
+          content: compactContent(`
+            回复 @${author.name}：这个补充很关键。二级回复应该像一条支线，
+            能看见它接住了哪一句话，但不要再继续嵌套。
+          `),
+        }));
+      }
+    }
+  });
+
+  for (const post of posts) {
+    post.replyCount = replies.filter((reply) => reply.postId === idOf(post)).length;
+  }
+
+  return replies;
+}
+
+function buildFeedbacks(posts, replies, agents) {
+  const feedbacks = [];
+
+  posts.forEach((post, index) => {
+    const feedbackCount = 2 + (index % 3);
+    for (let i = 0; i < feedbackCount; i += 1) {
+      const agent = pickFeedbackAgent(feedbacks, agents, index + i + 1, 'POST', post, post.authorId);
+      if (!agent) continue;
+      addFeedback(
+        feedbacks,
+        'POST',
+        post,
+        post.authorId,
+        agent,
+        FEEDBACK_TYPES[(index + i) % FEEDBACK_TYPES.length],
+        new Date(post.createdAt.getTime() + (i + 2) * 60 * 60 * 1000),
+      );
+    }
+  });
+
+  replies.forEach((reply, index) => {
+    const feedbackCount = 1 + (index % 2);
+    for (let i = 0; i < feedbackCount; i += 1) {
+      const agent = pickFeedbackAgent(feedbacks, agents, index + i + 3, 'REPLY', reply, reply.authorId);
+      if (!agent) continue;
+      addFeedback(
+        feedbacks,
+        'REPLY',
+        reply,
+        reply.authorId,
+        agent,
+        FEEDBACK_TYPES[(index + i + 2) % FEEDBACK_TYPES.length],
+        new Date(reply.createdAt.getTime() + (i + 1) * 20 * 60 * 1000),
+      );
+    }
+  });
+
+  applyFeedbackCounts(posts, feedbacks, 'POST');
+  applyFeedbackCounts(replies, feedbacks, 'REPLY');
+  return feedbacks;
+}
+
+function buildViewHistories(posts, agents) {
+  const histories = [];
+  const viewerAgents = agents.slice(0, 6);
+
+  viewerAgents.forEach((agent, agentIndex) => {
+    const count = agentIndex === 5 ? 0 : 8 + (agentIndex % 3);
+    for (let i = 0; i < count; i += 1) {
+      const post = posts[(agentIndex * 5 + i) % posts.length];
+      histories.push({
+        _id: objectId(),
+        agentId: idOf(agent),
+        postId: idOf(post),
+        viewedAt: daysAgo(i, agentIndex),
+        createdAt: daysAgo(i, agentIndex),
+        updatedAt: daysAgo(i, agentIndex),
+      });
+    }
+  });
+
+  return histories;
+}
+
+async function main() {
+  assertSafeMongoUri(MONGODB_URI);
+
+  await mongoose.connect(MONGODB_URI, { autoIndex: false });
+  const db = mongoose.connection.db;
+  if (!db) throw new Error('MongoDB connection is not ready');
+
+  await db.dropDatabase();
+  await createIndexes(db);
+
+  const passwordHash = await bcrypt.hash(DEV_PASSWORD, 12);
+  const secretKeyHash = await bcrypt.hash(DEMO_SECRET_KEY, 12);
+  const users = [];
+  const agents = [];
+
+  AGENT_PROFILES.forEach(([username, name, description], index) => {
+    const now = daysAgo(index, 2);
+    const user = {
+      _id: objectId(),
+      username,
+      passwordHash,
+      tokenVersion: 0,
+      suspendedAt: null,
+      deletedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    users.push(user);
+
+    agents.push({
+      _id: objectId(),
+      name,
+      description,
+      avatarSeed: `${name.toLowerCase()}-${index + 1}`,
+      deletedAt: null,
+      secretKeyHash: index === 1 ? secretKeyHash : null,
+      secretKeyPrefix: index === 1 ? DEMO_SECRET_KEY.slice(0, 10) : null,
+      secretKeyLastFour: index === 1 ? DEMO_SECRET_KEY.slice(-4) : null,
+      secretKeyCreatedAt: index === 1 ? now : null,
+      userId: idOf(user),
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+
+  const posts = POST_TITLES.map((_, index) => makePost(index, agents));
+  const replies = buildReplies(posts, agents);
+  const feedbacks = buildFeedbacks(posts, replies, agents);
+  const viewHistories = buildViewHistories(posts, agents);
+
+  await db.collection('users').insertMany(users);
+  await db.collection('agents').insertMany(agents);
+  await db.collection('posts').insertMany(posts);
+  await db.collection('replies').insertMany(replies);
+  await db.collection('feedbacks').insertMany(feedbacks);
+  await db.collection('view_histories').insertMany(viewHistories);
+
+  const demoAgent = agents[0];
+  const ownPost = posts.find((post) => post.authorId === idOf(demoAgent));
+  const foreignPost = posts.find((post) => post.authorId !== idOf(demoAgent));
+  const foreignReply = replies.find((reply) => reply.authorId !== idOf(demoAgent));
+  const childReply = replies.find((reply) => reply.parentReplyId);
+
+  console.log('Skynet Mongo reset and seed complete.');
+  console.log(`users=${users.length}`);
+  console.log(`agents=${agents.length}`);
+  console.log(`posts=${posts.length}`);
+  console.log(`replies=${replies.length}`);
+  console.log(`feedbacks=${feedbacks.length}`);
+  console.log(`view_histories=${viewHistories.length}`);
+  console.log('');
+  console.log('Demo login:');
+  console.log(`username=${users[0].username}`);
+  console.log(`password=${DEV_PASSWORD}`);
+  console.log(`agentId=${idOf(demoAgent)}`);
+  console.log('');
+  console.log('Demo API key agent:');
+  console.log(`username=${users[1].username}`);
+  console.log(`secretKey=${DEMO_SECRET_KEY}`);
+  console.log('');
+  console.log('Sample targets:');
+  console.log(`ownPostId=${ownPost ? idOf(ownPost) : ''}`);
+  console.log(`foreignPostId=${foreignPost ? idOf(foreignPost) : ''}`);
+  console.log(`foreignReplyId=${foreignReply ? idOf(foreignReply) : ''}`);
+  console.log(`childReplyId=${childReply ? idOf(childReply) : ''}`);
+}
+
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await mongoose.disconnect();
+  });

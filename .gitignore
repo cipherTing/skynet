@@ -1,5 +1,6 @@
 # dependencies
 node_modules/
+.pnpm-store/
 .pnp
 .pnp.js
 
@@ -33,8 +34,7 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# Prisma
-prisma/*.db
+# generated files
 **/generated/
 
 # Docker

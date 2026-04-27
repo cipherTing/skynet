@@ -1,35 +1,95 @@
 'use client';
 
-import { useId } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import type { Dispatch, RefObject, SetStateAction } from 'react';
 import {
   AreaChart,
   Area,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltipController,
   ResponsiveContainer,
 } from 'recharts';
-import type { TooltipProps } from 'recharts';
 import type { CoherencePoint } from '@/config/agent-dimensions';
+import { FloatingPortal, FLOATING_Z_INDEX, type FloatingAnchorRect } from '@/components/ui/FloatingPortal';
 
 interface AgentCoherenceChartProps {
   history: CoherencePoint[];
 }
 
-function CustomTooltip({ active, payload }: any) {
-  if (!active || !payload?.length) return null;
-  const data = payload[0].payload as CoherencePoint;
+interface PortalChartTooltip {
+  data: CoherencePoint;
+  rect: FloatingAnchorRect;
+}
+
+interface TooltipBridgeProps {
+  active?: boolean;
+  payload?: Array<{
+    payload?: CoherencePoint;
+  }>;
+  coordinate?: {
+    x?: number;
+    y?: number;
+  };
+}
+
+interface TooltipBridgeComponentProps extends TooltipBridgeProps {
+  chartRef: RefObject<HTMLDivElement | null>;
+  setTooltip: Dispatch<SetStateAction<PortalChartTooltip | null>>;
+}
+
+function isSameTooltip(
+  current: PortalChartTooltip | null,
+  next: PortalChartTooltip,
+) {
   return (
-    <div className="px-3 py-2 rounded-lg text-xs bg-white border border-moss/30 shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
-      <div className="text-ink-muted mb-0.5">{data.date}</div>
-      <div className="font-mono text-moss font-bold">{data.value}</div>
-    </div>
+    current?.data.date === next.data.date &&
+    current.data.value === next.data.value &&
+    current.rect.left === next.rect.left &&
+    current.rect.top === next.rect.top
   );
+}
+
+function TooltipBridge({
+  active,
+  payload,
+  coordinate,
+  chartRef,
+  setTooltip,
+}: TooltipBridgeComponentProps) {
+  const point = payload?.[0]?.payload as CoherencePoint | undefined;
+  const x = coordinate?.x;
+  const y = coordinate?.y;
+
+  useEffect(() => {
+    const chartBox = chartRef.current?.getBoundingClientRect();
+
+    if (!active || !chartBox || !point || typeof x !== 'number' || typeof y !== 'number') {
+      setTooltip((current) => (current === null ? current : null));
+      return;
+    }
+
+    const nextTooltip: PortalChartTooltip = {
+      data: point,
+      rect: {
+        left: chartBox.left + x,
+        top: chartBox.top + y,
+        width: 1,
+        height: 1,
+      },
+    };
+
+    setTooltip((current) => (isSameTooltip(current, nextTooltip) ? current : nextTooltip));
+  }, [active, chartRef, point, setTooltip, x, y]);
+
+  return null;
 }
 
 export function AgentCoherenceChart({ history }: AgentCoherenceChartProps) {
   const gradientId = useId();
+  const chartRef = useRef<HTMLDivElement | null>(null);
+  const [tooltip, setTooltip] = useState<PortalChartTooltip | null>(null);
   const lastPoint = history.length > 0 ? history[history.length - 1] : null;
 
   return (
@@ -55,9 +115,16 @@ export function AgentCoherenceChart({ history }: AgentCoherenceChartProps) {
       </div>
 
       {/* 图表 */}
-      <div className="w-full flex-1 min-h-[190px] select-none">
+      <div
+        ref={chartRef}
+        className="w-full flex-1 min-h-[190px] select-none"
+      >
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={history} margin={{ top: 8, right: 12, left: 8, bottom: 0 }}>
+          <AreaChart
+            data={history}
+            margin={{ top: 8, right: 12, left: 8, bottom: 0 }}
+            onMouseLeave={() => setTooltip(null)}
+          >
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="var(--moss)" stopOpacity={0.2} />
@@ -81,7 +148,12 @@ export function AgentCoherenceChart({ history }: AgentCoherenceChartProps) {
               axisLine={false}
               width={28}
             />
-            <Tooltip content={CustomTooltip} isAnimationActive={false} />
+            <RechartsTooltipController
+              content={<TooltipBridge chartRef={chartRef} setTooltip={setTooltip} />}
+              cursor={false}
+              isAnimationActive={false}
+              wrapperStyle={{ display: 'none' }}
+            />
             <Area
               type="monotone"
               dataKey="value"
@@ -95,6 +167,24 @@ export function AgentCoherenceChart({ history }: AgentCoherenceChartProps) {
           </AreaChart>
         </ResponsiveContainer>
       </div>
+
+      <FloatingPortal
+        open={!!tooltip}
+        anchorRect={tooltip?.rect ?? null}
+        placement="top"
+        align="center"
+        offset={10}
+        zIndex={FLOATING_Z_INDEX.tooltip}
+        className="pointer-events-none rounded-lg border border-moss/30 bg-void-deep px-3 py-2 text-xs shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
+        role="tooltip"
+      >
+        {tooltip && (
+          <>
+            <div className="text-ink-muted mb-0.5">{tooltip.data.date}</div>
+            <div className="font-mono text-moss font-bold">{tooltip.data.value}</div>
+          </>
+        )}
+      </FloatingPortal>
 
       {/* 底部当前值 */}
       <div className="px-4 pb-3 pt-1 flex items-center gap-2">

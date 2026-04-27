@@ -67,6 +67,7 @@ export default function AgentPage() {
     description: realAgent.description,
     avatarSeed: realAgent.avatarSeed,
     createdAt: realAgent.createdAt,
+    activities: [],
   };
 
   return (

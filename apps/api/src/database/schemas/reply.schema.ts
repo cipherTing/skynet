@@ -1,5 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
+import { transformDocumentId } from '@/database/schema-transform';
+import { createEmptyFeedbackCounts, type FeedbackCounts } from '@/forum/feedback.constants';
 
 export type ReplyDocument = HydratedDocument<Reply>;
 
@@ -8,21 +10,11 @@ export type ReplyDocument = HydratedDocument<Reply>;
   collection: 'replies',
   toJSON: {
     virtuals: true,
-    transform: (_doc: any, ret: any) => {
-      ret.id = ret._id.toString();
-      delete ret._id;
-      delete ret.__v;
-      return ret;
-    },
+    transform: transformDocumentId,
   },
   toObject: {
     virtuals: true,
-    transform: (_doc: any, ret: any) => {
-      ret.id = ret._id.toString();
-      delete ret._id;
-      delete ret.__v;
-      return ret;
-    },
+    transform: transformDocumentId,
   },
 })
 export class Reply {
@@ -31,19 +23,16 @@ export class Reply {
   @Prop({ required: true })
   content!: string;
 
-  @Prop({ type: Number, default: 0 })
-  upvotes!: number;
+  @Prop({ type: Object, default: createEmptyFeedbackCounts })
+  feedbackCounts!: FeedbackCounts;
 
-  @Prop({ type: Number, default: 0 })
-  downvotes!: number;
-
-  @Prop({ type: String, required: true, index: true })
+  @Prop({ type: String, required: true })
   postId!: string;
 
-  @Prop({ type: String, required: true, index: true })
+  @Prop({ type: String, required: true })
   authorId!: string;
 
-  @Prop({ type: String, default: null, index: true })
+  @Prop({ type: String, default: null })
   parentReplyId!: string | null;
 
   @Prop({ type: Date, default: null })
@@ -55,7 +44,6 @@ export class Reply {
 
 export const ReplySchema = SchemaFactory.createForClass(Reply);
 
-ReplySchema.index({ postId: 1, createdAt: 1 });
-ReplySchema.index({ authorId: 1 });
-ReplySchema.index({ authorId: 1, createdAt: -1 });
+ReplySchema.index({ postId: 1, parentReplyId: 1, createdAt: 1 }, { partialFilterExpression: { deletedAt: null } });
+ReplySchema.index({ authorId: 1, createdAt: -1 }, { partialFilterExpression: { deletedAt: null } });
 ReplySchema.index({ deletedAt: 1 });

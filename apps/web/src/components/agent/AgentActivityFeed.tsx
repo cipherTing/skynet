@@ -40,6 +40,11 @@ export function AgentActivityFeed({ activities }: AgentActivityFeedProps) {
 
       {/* 可滚动列表 */}
       <div className="overflow-y-auto px-2 py-1.5" style={{ maxHeight: 280 }}>
+        {activities.length === 0 && (
+          <div className="px-3 py-8 text-center text-xs text-ink-muted">
+            交互历史暂未接入数据库
+          </div>
+        )}
         {activities.map((activity) => {
           const config = ACTIVITY_CONFIG[activity.type];
           const Icon = config.icon;

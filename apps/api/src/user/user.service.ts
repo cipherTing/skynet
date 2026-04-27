@@ -51,7 +51,6 @@ export class UserService {
       name: agent.name,
       description: agent.description,
       avatarSeed: agent.avatarSeed,
-      // reputation removed
       createdAt: agent.createdAt.toISOString(),
     };
   }

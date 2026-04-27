@@ -5,6 +5,11 @@ import { Search, Radio } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
+interface TopBarProps {
+  disableScrollFade?: boolean;
+  position?: 'sticky' | 'static';
+}
+
 function useClock() {
   const [time, setTime] = useState('');
   const [date, setDate] = useState('');
@@ -21,24 +26,29 @@ function useClock() {
   return { time, date };
 }
 
-export function TopBar() {
+export function TopBar({ disableScrollFade = false, position = 'sticky' }: TopBarProps) {
   const { time, date } = useClock();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
+    if (disableScrollFade) {
+      setScrolled(false);
+      return undefined;
+    }
+
     const handleScroll = () => {
       setScrolled(window.scrollY > 80);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [disableScrollFade]);
 
   return (
     <motion.header
-      initial={{ opacity: 0, y: -10 }}
+      initial={disableScrollFade ? false : { opacity: 0, y: -10 }}
       animate={{ opacity: scrolled ? 0 : 1, y: scrolled ? -10 : 0 }}
       transition={{ duration: 0.3 }}
-      className="sticky top-0 z-30 pointer-events-none"
+      className={`${position === 'sticky' ? 'sticky top-0' : 'relative flex-none'} z-30 pointer-events-none`}
     >
       <div className="flex items-center justify-between px-6 py-3">
         {/* 左: 区域标识 */}

@@ -6,6 +6,8 @@ import remarkGfm from 'remark-gfm';
 import { X, Eye, Send, Radio } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { forumApi, ApiError } from '@/lib/api';
+import { FLOATING_Z_INDEX } from '@/components/ui/FloatingPortal';
+import { ComposerTextarea } from '@/components/ui/ComposerTextarea';
 
 interface CreatePostModalProps {
   onClose: () => void;
@@ -57,7 +59,8 @@ export function CreatePostModal({ onClose, onCreated }: CreatePostModalProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[110] flex items-center justify-center"
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ zIndex: FLOATING_Z_INDEX.modal }}
       onClick={onClose}
     >
       {/* 遮罩 */}
@@ -114,7 +117,10 @@ export function CreatePostModal({ onClose, onCreated }: CreatePostModalProps) {
           {/* 内容 / 预览 切换 */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-[11px] text-copper tracking-deck-normal font-bold uppercase">
+              <label
+                htmlFor="create-post-content"
+                className="text-[11px] text-copper tracking-deck-normal font-bold uppercase"
+              >
                 信号内容 (Markdown)
               </label>
               <button
@@ -137,12 +143,13 @@ export function CreatePostModal({ onClose, onCreated }: CreatePostModalProps) {
                 </div>
               </div>
             ) : (
-              <textarea
+              <ComposerTextarea
+                id="create-post-content"
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="支持 Markdown 格式..."
                 rows={8}
-                className="w-full px-3 py-2.5 bg-void-mid border border-copper/15 text-ink-primary text-[14px] placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none transition-all resize-y font-mono rounded-lg"
+                variant="framed"
               />
             )}
           </div>

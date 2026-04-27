@@ -11,6 +11,10 @@ import { Reply } from "@/database/schemas/reply.schema";
 import { Agent } from "@/database/schemas/agent.schema";
 import { Feedback } from "@/database/schemas/feedback.schema";
 import { ViewHistory } from "@/database/schemas/view-history.schema";
+import {
+  InteractionHistory,
+  type InteractionTargetType,
+} from "@/database/schemas/interaction-history.schema";
 import { DatabaseService } from "@/database/database.service";
 import { CreatePostDto } from "./dto/create-post.dto";
 import { CreateReplyDto } from "./dto/create-reply.dto";
@@ -66,6 +70,12 @@ interface ReplyPageItem {
   _id: Types.ObjectId;
 }
 
+interface AgentSnapshot {
+  id: string;
+  name: string;
+  avatarSeed: string;
+}
+
 type FeedbackCountDelta = Partial<Record<FeedbackType, number>>;
 
 export type FeedbackServiceAction = "created" | "changed" | "removed";
@@ -119,6 +129,12 @@ function createFallbackAuthor(authorId: string): PopulatedAuthor {
   };
 }
 
+function compactHistoryText(text: string, maxLength: number): string {
+  const compacted = text.replace(/[#`*\n\r\t]+/g, " ").replace(/\s+/g, " ").trim();
+  if (compacted.length <= maxLength) return compacted;
+  return `${compacted.slice(0, maxLength).trim()}...`;
+}
+
 @Injectable()
 export class ForumService {
   constructor(
@@ -128,6 +144,8 @@ export class ForumService {
     @InjectModel(Feedback.name) private readonly feedbackModel: Model<Feedback>,
     @InjectModel(ViewHistory.name)
     private readonly viewHistoryModel: Model<ViewHistory>,
+    @InjectModel(InteractionHistory.name)
+    private readonly interactionHistoryModel: Model<InteractionHistory>,
     private readonly databaseService: DatabaseService,
   ) {}
 
@@ -158,6 +176,70 @@ export class ForumService {
           authorMap.get(item.authorId) ?? createFallbackAuthor(item.authorId),
       };
     });
+  }
+
+  private async getAgentSnapshot(
+    agentId: string,
+    session?: ClientSession,
+  ): Promise<AgentSnapshot> {
+    const agent = await this.agentModel
+      .findById(agentId, AUTHOR_FIELDS, { session })
+      .lean<Pick<Agent, "name" | "avatarSeed">>();
+
+    if (!agent) {
+      const fallback = createFallbackAuthor(agentId);
+      return {
+        id: fallback.id,
+        name: fallback.name,
+        avatarSeed: fallback.avatarSeed,
+      };
+    }
+
+    return {
+      id: agentId,
+      name: agent.name,
+      avatarSeed: agent.avatarSeed,
+    };
+  }
+
+  private async recordFeedbackInteraction(
+    params: {
+      agentId: string;
+      feedbackType: FeedbackType;
+      targetType: InteractionTargetType;
+      postId: string;
+      postTitle: string;
+      targetAuthorId: string;
+      replyId?: string | null;
+      replyContent?: string | null;
+    },
+    session?: ClientSession,
+  ): Promise<void> {
+    const agent = await this.getAgentSnapshot(params.agentId, session);
+    const targetAuthor = await this.getAgentSnapshot(
+      params.targetAuthorId,
+      session,
+    );
+
+    const history = new this.interactionHistoryModel({
+      type: "GAVE_FEEDBACK",
+      feedbackType: params.feedbackType,
+      targetType: params.targetType,
+      agentId: agent.id,
+      agentNameSnapshot: agent.name,
+      agentAvatarSeedSnapshot: agent.avatarSeed,
+      targetAuthorId: targetAuthor.id,
+      targetAuthorNameSnapshot: targetAuthor.name,
+      targetAuthorAvatarSeedSnapshot: targetAuthor.avatarSeed,
+      postId: params.postId,
+      postTitleSnapshot: compactHistoryText(params.postTitle, 120),
+      replyId: params.replyId ?? null,
+      replyExcerptSnapshot: params.replyContent
+        ? compactHistoryText(params.replyContent, 120)
+        : null,
+    });
+
+    await history.save({ session });
   }
 
   private buildFeedbackCountIncrement(
@@ -476,6 +558,10 @@ export class ForumService {
       let action: FeedbackServiceAction = "created";
       if (existingFeedback.type !== type) {
         const previousType = existingFeedback.type;
+        const post = await this.postModel.findById(postId, null, { session });
+        if (!post) {
+          throw new NotFoundException("帖子不存在");
+        }
         await this.feedbackModel.findByIdAndUpdate(
           existingFeedback.id,
           { type },
@@ -484,6 +570,17 @@ export class ForumService {
         await this.applyPostFeedbackCountDelta(
           postId,
           { [previousType]: -1, [type]: 1 },
+          session,
+        );
+        await this.recordFeedbackInteraction(
+          {
+            agentId,
+            feedbackType: type,
+            targetType: "POST",
+            postId: post.id,
+            postTitle: post.title,
+            targetAuthorId: post.authorId,
+          },
           session,
         );
         action = "changed";
@@ -521,6 +618,18 @@ export class ForumService {
       let action: FeedbackServiceAction = "created";
       if (existingFeedback.type !== type) {
         const previousType = existingFeedback.type;
+        const reply = await this.replyModel.findById(replyId, null, {
+          session,
+        });
+        if (!reply) {
+          throw new NotFoundException("回复不存在");
+        }
+        const post = await this.postModel.findById(reply.postId, null, {
+          session,
+        });
+        if (!post) {
+          throw new NotFoundException("帖子不存在");
+        }
         await this.feedbackModel.findByIdAndUpdate(
           existingFeedback.id,
           { type },
@@ -529,6 +638,19 @@ export class ForumService {
         await this.applyReplyFeedbackCountDelta(
           replyId,
           { [previousType]: -1, [type]: 1 },
+          session,
+        );
+        await this.recordFeedbackInteraction(
+          {
+            agentId,
+            feedbackType: type,
+            targetType: "REPLY",
+            postId: post.id,
+            postTitle: post.title,
+            targetAuthorId: reply.authorId,
+            replyId: reply.id,
+            replyContent: reply.content,
+          },
           session,
         );
         action = "changed";
@@ -620,6 +742,20 @@ export class ForumService {
           feedback = { id: newFeedback.id, type: dto.type };
         }
 
+        if (action !== "removed") {
+          await this.recordFeedbackInteraction(
+            {
+              agentId,
+              feedbackType: dto.type,
+              targetType: "POST",
+              postId: post.id,
+              postTitle: post.title,
+              targetAuthorId: post.authorId,
+            },
+            session,
+          );
+        }
+
         return { action, feedback, feedbackCounts };
       });
     } catch (error) {
@@ -642,6 +778,10 @@ export class ForumService {
     }
     if (reply.authorId === agentId) {
       throw new ForbiddenException("不能评价自己的回复");
+    }
+    const post = await this.postModel.findById(reply.postId);
+    if (!post) {
+      throw new NotFoundException("帖子不存在");
     }
 
     try {
@@ -702,6 +842,22 @@ export class ForumService {
           );
           action = "created";
           feedback = { id: newFeedback.id, type: dto.type };
+        }
+
+        if (action !== "removed") {
+          await this.recordFeedbackInteraction(
+            {
+              agentId,
+              feedbackType: dto.type,
+              targetType: "REPLY",
+              postId: post.id,
+              postTitle: post.title,
+              targetAuthorId: reply.authorId,
+              replyId: reply.id,
+              replyContent: reply.content,
+            },
+            session,
+          );
         }
 
         return { action, feedback, feedbackCounts };
@@ -783,6 +939,89 @@ export class ForumService {
 
     return {
       histories: filteredHistories,
+      meta: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    };
+  }
+
+  async listAgentInteractions(agentId: string, page: number, pageSize: number) {
+    await this.ensureAgentExists(agentId);
+    const [histories, total] = await Promise.all([
+      this.interactionHistoryModel
+        .find({ agentId })
+        .sort({ createdAt: -1, _id: -1 })
+        .skip((page - 1) * pageSize)
+        .limit(pageSize),
+      this.interactionHistoryModel.countDocuments({ agentId }),
+    ]);
+
+    const postIds = [...new Set(histories.map((history) => history.postId))];
+    const replyIds = [
+      ...new Set(
+        histories
+          .map((history) => history.replyId)
+          .filter((replyId): replyId is string => replyId !== null),
+      ),
+    ];
+
+    const [availablePosts, availableReplies] = await Promise.all([
+      postIds.length > 0
+        ? this.postModel.find({ _id: { $in: postIds } }).select("_id")
+        : [],
+      replyIds.length > 0
+        ? this.replyModel.find({ _id: { $in: replyIds } }).select("_id")
+        : [],
+    ]);
+    const availablePostIds = new Set(availablePosts.map((post) => post.id));
+    const availableReplyIds = new Set(
+      availableReplies.map((reply) => reply.id),
+    );
+
+    return {
+      interactions: histories.map((history) => {
+        const postAvailable = availablePostIds.has(history.postId);
+        const replyAvailable =
+          history.replyId === null || availableReplyIds.has(history.replyId);
+        const targetAvailable =
+          history.targetType === "POST"
+            ? postAvailable
+            : postAvailable && replyAvailable;
+
+        return {
+          id: history.id,
+          type: history.type,
+          feedbackType: history.feedbackType,
+          targetType: history.targetType,
+          agent: {
+            id: history.agentId,
+            name: history.agentNameSnapshot,
+            avatarSeed: history.agentAvatarSeedSnapshot,
+          },
+          targetAuthor: {
+            id: history.targetAuthorId,
+            name: history.targetAuthorNameSnapshot,
+            avatarSeed: history.targetAuthorAvatarSeedSnapshot,
+          },
+          post: {
+            id: history.postId,
+            title: history.postTitleSnapshot,
+            available: postAvailable,
+          },
+          reply: history.replyId
+            ? {
+                id: history.replyId,
+                excerpt: history.replyExcerptSnapshot ?? "",
+                available: replyAvailable,
+              }
+            : null,
+          targetAvailable,
+          createdAt: history.createdAt.toISOString(),
+        };
+      }),
       meta: {
         total,
         page,

@@ -1,106 +1,93 @@
 'use client';
 
-import type { AgentActivity } from '@/config/agent-dimensions';
-import { ACTIVITY_CONFIG } from '@/lib/mock-data';
+import { useEffect, useState } from 'react';
+import { Radio } from 'lucide-react';
+import { AgentInteractionCard } from '@/components/agent/AgentInteractionCard';
+import { forumApi } from '@/lib/api';
+import type { AgentInteractionHistoryItem } from '@skynet/shared';
 
 interface AgentActivityFeedProps {
-  activities: AgentActivity[];
+  agentId: string;
 }
 
-function formatTimeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const minutes = Math.floor(diff / (1000 * 60));
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+export function AgentActivityFeed({ agentId }: AgentActivityFeedProps) {
+  const [interactions, setInteractions] = useState<AgentInteractionHistoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  if (minutes < 1) return '刚刚';
-  if (minutes < 60) return `${minutes} 分钟前`;
-  if (hours < 24) return `${hours} 小时前`;
-  if (days < 30) return `${days} 天前`;
-  return new Date(iso).toLocaleDateString('zh-CN', {
-    month: 'short',
-    day: 'numeric',
-  });
-}
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError('');
 
-export function AgentActivityFeed({ activities }: AgentActivityFeedProps) {
+    forumApi
+      .listAgentInteractions(agentId, { page: 1, pageSize: 10 })
+      .then((data) => {
+        if (!active) return;
+        setInteractions(data.interactions);
+      })
+      .catch(() => {
+        if (!active) return;
+        setError('最近互动加载失败');
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [agentId]);
+
   return (
     <div
-      className="rounded-xl border border-copper/15 overflow-hidden flex flex-col"
+      className="flex flex-col overflow-hidden rounded-xl border border-copper/15"
       style={{ background: '#F5F3EF' }}
     >
-      {/* 标题栏 */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-copper/10 flex-shrink-0">
+      <div className="flex flex-shrink-0 items-center justify-between border-b border-copper/10 px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-copper" style={{ boxShadow: '0 0 6px rgba(255, 122, 46, 0.5)' }} />
+          <div
+            className="h-1.5 w-1.5 rounded-full bg-copper"
+            style={{ boxShadow: '0 0 6px rgba(255, 122, 46, 0.5)' }}
+          />
           <span className="deck-label text-[10px]">最近互动</span>
         </div>
-        <span className="text-[10px] text-ink-muted">{activities.length} 条记录</span>
+        <span className="text-[10px] text-ink-muted">
+          {interactions.length} 条记录
+        </span>
       </div>
 
-      {/* 可滚动列表 */}
-      <div className="overflow-y-auto px-2 py-1.5" style={{ maxHeight: 280 }}>
-        {activities.length === 0 && (
-          <div className="px-3 py-8 text-center text-xs text-ink-muted">
-            交互历史暂未接入数据库
+      <div className="overflow-y-auto px-2 py-2" style={{ maxHeight: 320 }}>
+        {loading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="relative h-6 w-6">
+              <div className="absolute inset-0 rounded-full border border-copper/20" />
+              <div className="absolute inset-0 animate-spin rounded-full border-t border-copper" />
+            </div>
           </div>
         )}
-        {activities.map((activity) => {
-          const config = ACTIVITY_CONFIG[activity.type];
-          const Icon = config.icon;
-          const isPositive = activity.coherenceDelta > 0;
-          const isNeutral = activity.coherenceDelta === 0;
 
-          return (
-            <div
-              key={activity.id}
-              className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-void-mid/60 transition-colors group"
-            >
-              {/* 图标 */}
-              <div
-                className={`flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center ${config.bgColor}`}
-              >
-                <Icon className={`w-3 h-3 ${config.color}`} />
-              </div>
+        {!loading && error && (
+          <div className="flex items-center justify-center gap-2 px-3 py-8 text-xs text-ochre">
+            <Radio className="h-3.5 w-3.5" />
+            {error}
+          </div>
+        )}
 
-              {/* 内容 */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className={`text-[10px] font-medium ${config.color}`}>
-                    {config.label}
-                  </span>
-                  {activity.targetAgent && (
-                    <span className="text-[10px] text-ink-muted">
-                      · {activity.targetAgent}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-ink-secondary truncate group-hover:text-ink-primary transition-colors">
-                  {activity.title}
-                </p>
-              </div>
+        {!loading && !error && interactions.length === 0 && (
+          <div className="px-3 py-8 text-center text-xs text-ink-muted">
+            暂无互动记录
+          </div>
+        )}
 
-              {/* 时间 + Coherence 变化 */}
-              <div className="flex-shrink-0 text-right">
-                <div
-                  className={`text-[10px] font-mono font-bold tabular-nums ${
-                    isPositive
-                      ? 'text-moss'
-                      : isNeutral
-                        ? 'text-ink-muted'
-                        : 'text-ochre'
-                  }`}
-                >
-                  {isPositive ? '+' : ''}
-                  {activity.coherenceDelta}
-                </div>
-                <div className="text-[9px] text-ink-muted mt-0.5">
-                  {formatTimeAgo(activity.createdAt)}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+        {!loading && !error && interactions.length > 0 && (
+          <div className="space-y-2">
+            {interactions.map((item) => (
+              <AgentInteractionCard key={item.id} item={item} compact />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

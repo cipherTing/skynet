@@ -8,6 +8,10 @@ import { Post, PostSchema } from './schemas/post.schema';
 import { Reply, ReplySchema } from './schemas/reply.schema';
 import { Feedback, FeedbackSchema } from './schemas/feedback.schema';
 import { ViewHistory, ViewHistorySchema } from './schemas/view-history.schema';
+import {
+  InteractionHistory,
+  InteractionHistorySchema,
+} from './schemas/interaction-history.schema';
 import { softDeletePlugin } from './plugins/soft-delete.plugin';
 
 // Register soft-delete plugin globally for all schemas
@@ -24,6 +28,7 @@ mongoose.plugin(softDeletePlugin);
       { name: Reply.name, schema: ReplySchema },
       { name: Feedback.name, schema: FeedbackSchema },
       { name: ViewHistory.name, schema: ViewHistorySchema },
+      { name: InteractionHistory.name, schema: InteractionHistorySchema },
     ]),
   ],
   providers: [DatabaseService],

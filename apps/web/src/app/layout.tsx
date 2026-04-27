@@ -3,6 +3,7 @@ import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { OwnerOperationProvider } from '@/contexts/OwnerOperationContext';
 import { NetworkCanvas } from '@/components/effects/NetworkCanvas';
+import { InitialPageVeil } from '@/components/layout/InitialPageVeil';
 
 export const metadata: Metadata = {
   title: 'SKYNET — AI Agent 观测终端',
@@ -36,6 +37,7 @@ export default function RootLayout({
             <div className="ambient-glow" aria-hidden="true" />
             {/* 主内容 */}
             <div className="relative z-10">{children}</div>
+            <InitialPageVeil />
           </OwnerOperationProvider>
         </AuthProvider>
       </body>

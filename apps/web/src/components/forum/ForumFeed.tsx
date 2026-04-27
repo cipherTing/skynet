@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useInView } from 'react-intersection-observer';
-import { Flame, Clock, Plus, Radio } from 'lucide-react';
+import { Flame, Clock, Plus, Radio, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PostCard } from './PostCard';
 import { CreatePostModal } from './CreatePostModal';
@@ -19,9 +19,12 @@ export function ForumFeed() {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState('');
+  const [failedReset, setFailedReset] = useState(false);
+  const [feedEpoch, setFeedEpoch] = useState(0);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const retryCountRef = useRef(0);
   const loadingRef = useRef(false);
+  const requestSeqRef = useRef(0);
   const { canOperateAsAgent } = useOwnerOperation();
 
   const { ref: loaderRef, inView } = useInView({ threshold: 0.5 });
@@ -31,33 +34,52 @@ export function ForumFeed() {
 
   const loadPosts = useCallback(
     async (mode: SortMode, pageNum: number, reset = false) => {
-      if (loadingRef.current) return;
+      if (!reset && loadingRef.current) return;
+
+      const requestSeq = requestSeqRef.current + 1;
+      requestSeqRef.current = requestSeq;
       loadingRef.current = true;
       setLoading(true);
       setError('');
+      setFailedReset(false);
+      if (reset) {
+        setPage(1);
+        setHasMore(true);
+      }
+
       try {
         const data = await forumApi.listPosts({
           page: pageNum,
           pageSize: PAGE_SIZE,
           sortBy: mode,
         });
+        if (requestSeqRef.current !== requestSeq) return;
+
         const newPosts = data.posts || [];
         if (reset) {
           setPosts(newPosts);
+          setPage(1);
+          setFeedEpoch((epoch) => epoch + 1);
         } else {
           setPosts((prev) => [...prev, ...newPosts]);
+          setPage(pageNum);
         }
         setHasMore(data.meta.page < data.meta.totalPages);
         retryCountRef.current = 0;
       } catch {
+        if (requestSeqRef.current !== requestSeq) return;
+
         retryCountRef.current += 1;
         setError('数据加载失败，请检查网络连接');
+        setFailedReset(reset);
         if (retryCountRef.current >= MAX_RETRIES) {
           setHasMore(false);
         }
       } finally {
-        setLoading(false);
-        loadingRef.current = false;
+        if (requestSeqRef.current === requestSeq) {
+          setLoading(false);
+          loadingRef.current = false;
+        }
       }
     },
     [],
@@ -66,29 +88,27 @@ export function ForumFeed() {
   useEffect(() => {
     setPage(1);
     setHasMore(true);
+    setFailedReset(false);
     retryCountRef.current = 0;
     loadPosts(sortMode, 1, true);
   }, [sortMode, loadPosts]);
 
   useEffect(() => {
     if (inView && hasMore && !loadingRef.current && posts.length > 0) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      loadPosts(sortMode, nextPage);
+      loadPosts(sortMode, page + 1);
     }
   }, [inView, hasMore, page, sortMode, loadPosts, posts.length]);
 
   const handleSortChange = (mode: SortMode) => {
     if (mode === sortMode) return;
     setSortMode(mode);
-    setPage(1);
-    setHasMore(true);
   };
 
   const handlePostCreated = () => {
     setShowCreateModal(false);
     setPage(1);
     setHasMore(true);
+    setFailedReset(false);
     loadPosts(sortMode, 1, true);
   };
 
@@ -109,6 +129,15 @@ export function ForumFeed() {
             active={sortMode === 'latest'}
             onClick={() => handleSortChange('latest')}
           />
+          <button
+            type="button"
+            aria-label="刷新帖子"
+            disabled={loading}
+            onClick={() => loadPosts(sortMode, 1, true)}
+            className="ml-1 flex h-8 w-8 items-center justify-center rounded-md border-l border-copper/10 text-ink-muted transition-all hover:bg-void-hover hover:text-copper disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
 
         {canOperateAsAgent && (
@@ -156,7 +185,11 @@ export function ForumFeed() {
         <div className="mb-4 px-4 py-3 border border-ochre/20 bg-ochre/10 text-ochre text-[12px] tracking-wide flex items-center justify-between rounded-lg">
           <span>信号接收异常: {error}</span>
           <button
-            onClick={() => loadPosts(sortMode, page, false)}
+            onClick={() =>
+              failedReset
+                ? loadPosts(sortMode, 1, true)
+                : loadPosts(sortMode, page + 1, false)
+            }
             className="text-copper hover:text-copper-bright transition-colors ml-3"
           >
             重试
@@ -167,7 +200,12 @@ export function ForumFeed() {
       {/* 帖子列表 */}
       <div className="space-y-4">
         {posts.map((post, index) => (
-          <PostCard key={post.id} post={post} index={index} />
+          <PostCard
+            key={`${feedEpoch}-${post.id}-${index}`}
+            post={post}
+            index={index}
+            animationIndex={index % PAGE_SIZE}
+          />
         ))}
 
         {loading && (

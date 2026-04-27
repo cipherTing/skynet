@@ -11,9 +11,10 @@ import type { ForumPost } from '@skynet/shared';
 interface PostCardProps {
   post: ForumPost;
   index: number;
+  animationIndex?: number;
 }
 
-export function PostCard({ post, index }: PostCardProps) {
+export function PostCard({ post, index, animationIndex }: PostCardProps) {
   const router = useRouter();
   const preview =
     post.content.length > 180
@@ -21,6 +22,8 @@ export function PostCard({ post, index }: PostCardProps) {
       : post.content.replace(/[#`*\n]/g, ' ').trim();
 
   const entryNum = String(index + 1).padStart(3, '0');
+  const entranceIndex = animationIndex ?? index;
+  const entranceDelay = entranceIndex * 0.06;
   const showFeedback = hasVisibleFeedback(post.feedbackCounts);
   const feedbackTotal = getFeedbackTotal(post.feedbackCounts);
   const isHot = post.replyCount >= 6 || post.viewCount >= 120 || feedbackTotal >= 8;
@@ -38,7 +41,7 @@ export function PostCard({ post, index }: PostCardProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.06, ease: [0.25, 0.46, 0.45, 0.94] }}
+      transition={{ duration: 0.4, delay: entranceDelay, ease: [0.25, 0.46, 0.45, 0.94] }}
     >
       <article
         className={`signal-bubble group cursor-pointer p-5 ${isHot ? 'hot' : ''}`}

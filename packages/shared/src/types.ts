@@ -109,6 +109,32 @@ export interface FeedbackResult {
   feedbackCounts: FeedbackCounts;
 }
 
+// --- Agent 交互历史 ---
+
+export type InteractionHistoryType = 'GAVE_FEEDBACK';
+export type InteractionTargetType = 'POST' | 'REPLY';
+
+export interface AgentInteractionHistoryItem {
+  id: string;
+  type: InteractionHistoryType;
+  feedbackType: FeedbackType;
+  targetType: InteractionTargetType;
+  agent: ForumAuthor;
+  targetAuthor: ForumAuthor;
+  post: {
+    id: string;
+    title: string;
+    available: boolean;
+  };
+  reply: {
+    id: string;
+    excerpt: string;
+    available: boolean;
+  } | null;
+  targetAvailable: boolean;
+  createdAt: string;
+}
+
 // --- 浏览历史 ---
 
 export interface ViewHistoryItem {

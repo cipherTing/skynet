@@ -100,7 +100,7 @@ export default function AgentPage() {
               </div>
 
               {/* 互动流 */}
-              <AgentActivityFeed activities={agent.activities} />
+              <AgentActivityFeed agentId={agentId} />
             </motion.div>
           )}
 
@@ -145,7 +145,7 @@ export default function AgentPage() {
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.25 }}
             >
-              <AgentHistoryTab activities={agent.activities} />
+              <AgentHistoryTab agentId={agentId} />
             </motion.div>
           )}
 

@@ -164,6 +164,12 @@ async function createIndexes(db) {
   );
   await db.collection('view_histories').createIndex({ agentId: 1, postId: 1 }, { unique: true });
   await db.collection('view_histories').createIndex({ agentId: 1, viewedAt: -1 });
+  await db.collection('interaction_histories').createIndex({ agentId: 1, createdAt: -1, _id: -1 });
+  await db.collection('interaction_histories').createIndex({ postId: 1, createdAt: -1, _id: -1 });
+  await db.collection('interaction_histories').createIndex(
+    { replyId: 1, createdAt: -1, _id: -1 },
+    { partialFilterExpression: { replyId: { $type: 'string' } } },
+  );
 }
 
 function makePost(index, agents) {
@@ -345,6 +351,60 @@ function buildFeedbacks(posts, replies, agents) {
   return feedbacks;
 }
 
+function excerpt(text, maxLength = 120) {
+  const compacted = compactContent(text).replace(/[#`*]/g, ' ');
+  if (compacted.length <= maxLength) return compacted;
+  return `${compacted.slice(0, maxLength).trim()}...`;
+}
+
+function buildInteractionHistories(feedbacks, posts, replies, agents) {
+  const postsById = new Map(posts.map((post) => [idOf(post), post]));
+  const repliesById = new Map(replies.map((reply) => [idOf(reply), reply]));
+  const agentsById = new Map(agents.map((agent) => [idOf(agent), agent]));
+
+  return feedbacks
+    .map((feedback) => {
+      const agent = agentsById.get(feedback.agentId);
+      if (!agent) return null;
+
+      const target =
+        feedback.targetType === 'POST'
+          ? postsById.get(feedback.postId)
+          : repliesById.get(feedback.replyId);
+      if (!target) return null;
+
+      const post =
+        feedback.targetType === 'POST'
+          ? target
+          : postsById.get(target.postId);
+      if (!post) return null;
+
+      const targetAuthor = agentsById.get(target.authorId);
+      if (!targetAuthor) return null;
+
+      return {
+        _id: objectId(),
+        type: 'GAVE_FEEDBACK',
+        feedbackType: feedback.type,
+        targetType: feedback.targetType,
+        agentId: feedback.agentId,
+        agentNameSnapshot: agent.name,
+        agentAvatarSeedSnapshot: agent.avatarSeed,
+        targetAuthorId: target.authorId,
+        targetAuthorNameSnapshot: targetAuthor.name,
+        targetAuthorAvatarSeedSnapshot: targetAuthor.avatarSeed,
+        postId: idOf(post),
+        postTitleSnapshot: excerpt(post.title),
+        replyId: feedback.targetType === 'REPLY' ? feedback.replyId : null,
+        replyExcerptSnapshot:
+          feedback.targetType === 'REPLY' ? excerpt(target.content) : null,
+        createdAt: feedback.createdAt,
+        updatedAt: feedback.updatedAt,
+      };
+    })
+    .filter(Boolean);
+}
+
 function buildViewHistories(posts, agents) {
   const histories = [];
   const viewerAgents = agents.slice(0, 6);
@@ -415,6 +475,7 @@ async function main() {
   const posts = POST_TITLES.map((_, index) => makePost(index, agents));
   const replies = buildReplies(posts, agents);
   const feedbacks = buildFeedbacks(posts, replies, agents);
+  const interactionHistories = buildInteractionHistories(feedbacks, posts, replies, agents);
   const viewHistories = buildViewHistories(posts, agents);
 
   await db.collection('users').insertMany(users);
@@ -422,6 +483,7 @@ async function main() {
   await db.collection('posts').insertMany(posts);
   await db.collection('replies').insertMany(replies);
   await db.collection('feedbacks').insertMany(feedbacks);
+  await db.collection('interaction_histories').insertMany(interactionHistories);
   await db.collection('view_histories').insertMany(viewHistories);
 
   const demoAgent = agents[0];
@@ -436,6 +498,7 @@ async function main() {
   console.log(`posts=${posts.length}`);
   console.log(`replies=${replies.length}`);
   console.log(`feedbacks=${feedbacks.length}`);
+  console.log(`interaction_histories=${interactionHistories.length}`);
   console.log(`view_histories=${viewHistories.length}`);
   console.log('');
   console.log('Demo login:');

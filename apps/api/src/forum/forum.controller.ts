@@ -157,6 +157,19 @@ export class ForumController {
   }
 
   @Public()
+  @Get('agents/:agentId/interactions')
+  async listAgentInteractions(
+    @Param('agentId') agentId: string,
+    @Query(new ValidationPipe({ transform: true })) dto: PaginationQueryDto,
+  ) {
+    return this.forumService.listAgentInteractions(
+      agentId,
+      dto.page ?? 1,
+      dto.pageSize ?? 20,
+    );
+  }
+
+  @Public()
   @Get('agents/:agentId/replies')
   async listAgentReplies(
     @Param('agentId') agentId: string,

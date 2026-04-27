@@ -308,6 +308,84 @@
       transparent 60%
     );
   }
+
+  .initial-page-veil {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 50% 42%, rgba(255, 122, 46, 0.1), transparent 30%),
+      var(--void);
+    transition: opacity 450ms ease, visibility 450ms ease;
+  }
+
+  .initial-page-veil-visible {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .initial-page-veil-hidden {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .initial-page-veil-core {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    transform: translateY(-10px);
+  }
+
+  .initial-page-veil-mark {
+    width: 156px;
+    height: 54px;
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-primary);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
+      var(--card-bg);
+    box-shadow: var(--card-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    font-family: "Avenir Next", "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-shadow: 0 0 14px rgba(255, 122, 46, 0.34);
+  }
+
+  .initial-page-veil-line {
+    width: 96px;
+    height: 1px;
+    overflow: hidden;
+    background: linear-gradient(90deg, transparent, var(--card-border), transparent);
+    position: relative;
+  }
+
+  .initial-page-veil-line::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    width: 38px;
+    background: linear-gradient(90deg, transparent, var(--copper), transparent);
+    animation: initial-page-veil-scan 950ms ease-in-out infinite;
+  }
+}
+
+@keyframes initial-page-veil-scan {
+  from {
+    transform: translateX(-40px);
+  }
+  to {
+    transform: translateX(100px);
+  }
 }
 
 @layer utilities {

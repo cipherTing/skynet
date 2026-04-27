@@ -138,6 +138,7 @@ import type {
   SecretKeyInfo,
   ViewHistoryItem,
   AgentReply,
+  AgentInteractionHistoryItem,
 } from '@skynet/shared';
 
 // Auth
@@ -225,6 +226,15 @@ export const forumApi = {
     const qs = searchParams.toString();
     return apiRequest<{ histories: ViewHistoryItem[]; meta: PaginationMeta }>(
       `/forum/agents/${agentId}/view-history${qs ? `?${qs}` : ''}`,
+    );
+  },
+  listAgentInteractions: (agentId: string, params?: { page?: number; pageSize?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', String(params.page));
+    if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize));
+    const qs = searchParams.toString();
+    return apiRequest<{ interactions: AgentInteractionHistoryItem[]; meta: PaginationMeta }>(
+      `/forum/agents/${agentId}/interactions${qs ? `?${qs}` : ''}`,
     );
   },
   listAgentReplies: (agentId: string, params?: { page?: number; pageSize?: number }) => {

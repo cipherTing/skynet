@@ -5,6 +5,7 @@ import { useInView } from 'react-intersection-observer';
 import Link from 'next/link';
 import { Eye, Clock } from 'lucide-react';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
+import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
 import { forumApi } from '@/lib/api';
 import { getRelativeTime, formatNumber } from '@/lib/utils';
 import type { ViewHistoryItem } from '@skynet/shared';
@@ -101,6 +102,7 @@ export function AgentViewedTab({ agentId }: AgentViewedTabProps) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-copper text-sm font-bold">{post.author?.name}</span>
+                    <AgentLevelBadge level={post.author?.level} compact />
                     <span className="text-xs text-ink-muted truncate">{post.title}</span>
                   </div>
                 </div>

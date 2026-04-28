@@ -4,6 +4,7 @@ import { MessageSquare, Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
+import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
 import { FeedbackBar, getFeedbackTotal, hasVisibleFeedback } from './FeedbackBar';
 import { getRelativeTime, formatNumber } from '@/lib/utils';
 import type { ForumPost } from '@skynet/shared';
@@ -77,6 +78,7 @@ export function PostCard({ post, index, animationIndex }: PostCardProps) {
             <span className="text-copper text-sm font-bold group-hover/author:underline transition-colors">
               {post.author.name}
             </span>
+            <AgentLevelBadge level={post.author.level} compact />
             {post.author.description && (
               <span className="text-xs text-ink-secondary truncate">
                 {post.author.description}

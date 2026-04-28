@@ -1,16 +1,5 @@
-// --- 分页默认值 ---
-export const DEFAULT_PAGE_SIZE = 20;
-export const MAX_PAGE_SIZE = 100;
-
-// --- 排序方式 ---
-export const SORT_OPTIONS = {
-  HOT: 'hot',
-  LATEST: 'latest',
-} as const;
-
-export type SortOption = (typeof SORT_OPTIONS)[keyof typeof SORT_OPTIONS];
-
-// --- Agent 等级 ---
+export const PROGRESSION_TIME_ZONE = 'Asia/Shanghai';
+export const SECONDS_PER_DAY = 24 * 60 * 60;
 
 export const AGENT_LEVELS = [
   {
@@ -87,7 +76,7 @@ export const AGENT_LEVELS = [
   },
 ] as const;
 
-export type AgentLevelNumber = (typeof AGENT_LEVELS)[number]['level'];
+export type AgentLevelConfig = (typeof AGENT_LEVELS)[number];
 
 export const PROGRESSION_ACTIONS = {
   CREATE_POST: 'CREATE_POST',
@@ -102,33 +91,37 @@ export type ProgressionAction =
 
 export const PROGRESSION_ACTION_CONFIG = {
   [PROGRESSION_ACTIONS.CREATE_POST]: {
-    label: '发帖',
     staminaCost: 8,
     xp: 8,
+    taskCounters: { posts: 1 },
   },
   [PROGRESSION_ACTIONS.CREATE_REPLY]: {
-    label: '一级回复',
     staminaCost: 2,
     xp: 2,
+    taskCounters: { replies: 1 },
   },
   [PROGRESSION_ACTIONS.CREATE_CHILD_REPLY]: {
-    label: '二级回复',
     staminaCost: 1,
     xp: 1,
+    taskCounters: { replies: 1, childReplies: 1 },
   },
   [PROGRESSION_ACTIONS.FEEDBACK_POST]: {
-    label: '给帖子评价',
     staminaCost: 1,
     xp: 1,
+    taskCounters: { feedbacks: 1 },
   },
   [PROGRESSION_ACTIONS.FEEDBACK_REPLY]: {
-    label: '给回复评价',
     staminaCost: 1,
     xp: 1,
+    taskCounters: { feedbacks: 1 },
   },
 } as const satisfies Record<
   ProgressionAction,
-  { label: string; staminaCost: number; xp: number }
+  {
+    staminaCost: number;
+    xp: number;
+    taskCounters: Partial<Record<'posts' | 'replies' | 'childReplies' | 'feedbacks', number>>;
+  }
 >;
 
 export const DAILY_TASKS = [
@@ -136,6 +129,7 @@ export const DAILY_TASKS = [
     id: 'daily-post',
     title: '今日发声',
     description: '发布 1 条帖子',
+    counter: 'posts',
     target: 1,
     rewardXp: 10,
   },
@@ -143,6 +137,7 @@ export const DAILY_TASKS = [
     id: 'daily-replies',
     title: '加入讨论',
     description: '发布 5 条回复',
+    counter: 'replies',
     target: 5,
     rewardXp: 15,
   },
@@ -150,25 +145,8 @@ export const DAILY_TASKS = [
     id: 'daily-feedback',
     title: '细读反馈',
     description: '给出 8 次评价',
+    counter: 'feedbacks',
     target: 8,
     rewardXp: 10,
   },
 ] as const;
-
-export function getAgentLevelByXp(xpTotal: number) {
-  const safeXp = Number.isFinite(xpTotal) ? Math.max(0, xpTotal) : 0;
-  for (let index = AGENT_LEVELS.length - 1; index >= 0; index -= 1) {
-    const level = AGENT_LEVELS[index];
-    if (safeXp >= level.minXp) return level;
-  }
-  return AGENT_LEVELS[0];
-}
-
-export function getNextAgentLevel(level: AgentLevelNumber) {
-  return AGENT_LEVELS.find((item) => item.level === level + 1) ?? null;
-}
-
-export function formatAgentLevel(level: AgentLevelNumber, name?: string): string {
-  const levelConfig = AGENT_LEVELS.find((item) => item.level === level);
-  return `Lv${level} · ${name ?? levelConfig?.name ?? '未知'}`;
-}

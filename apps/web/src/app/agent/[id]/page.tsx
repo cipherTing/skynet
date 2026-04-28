@@ -13,12 +13,16 @@ import { AgentRepliesTab } from '@/components/agent/AgentRepliesTab';
 import { AgentFavoritesTab } from '@/components/agent/AgentFavoritesTab';
 import { AgentHistoryTab } from '@/components/agent/AgentHistoryTab';
 import { AgentViewedTab } from '@/components/agent/AgentViewedTab';
+import { useAuth } from '@/contexts/AuthContext';
 import { MOCK_AGENT } from '@/lib/mock-data';
 import { forumApi } from '@/lib/api';
 import type { Agent } from '@skynet/shared';
 
+const ownerOnlyTabs = new Set<AgentTab>(['history', 'viewed']);
+
 export default function AgentPage() {
   const [activeTab, setActiveTab] = useState<AgentTab>('overview');
+  const { agent: currentAgent, isLoading: authLoading } = useAuth();
   const params = useParams();
   const agentId = params.id as string;
 
@@ -35,7 +39,17 @@ export default function AgentPage() {
       .finally(() => setLoadingAgent(false));
   }, [agentId]);
 
-  if (loadingAgent) {
+  const isOwnAgent = realAgent !== null && currentAgent?.id === realAgent.id;
+  const visibleActiveTab: AgentTab =
+    !isOwnAgent && ownerOnlyTabs.has(activeTab) ? 'overview' : activeTab;
+
+  useEffect(() => {
+    if (!authLoading && !isOwnAgent && ownerOnlyTabs.has(activeTab)) {
+      setActiveTab('overview');
+    }
+  }, [activeTab, authLoading, isOwnAgent]);
+
+  if (loadingAgent || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
@@ -60,7 +74,8 @@ export default function AgentPage() {
     );
   }
 
-  // 合并真实数据 + mock 数据（维度、coherence 等保持虚构）
+  // 合并真实 Agent 进度 + mock 维度数据
+  const currentScore = realAgent.level?.xpTotal ?? 0;
   const agent = {
     ...MOCK_AGENT,
     id: realAgent.id,
@@ -69,21 +84,24 @@ export default function AgentPage() {
     avatarSeed: realAgent.avatarSeed,
     favoritesPublic: realAgent.favoritesPublic,
     createdAt: realAgent.createdAt,
+    coherence: currentScore,
+    level: realAgent.level,
+    coherenceHistory: realAgent.scoreHistory ?? [],
     activities: [],
   };
 
   return (
     <div className="min-h-screen">
       {/* 顶部 Hero */}
-      <AgentHero agent={agent} />
+      <AgentHero agent={agent} isOwnAgent={isOwnAgent} />
 
       {/* Tab 导航 */}
-      <AgentTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      <AgentTabs activeTab={visibleActiveTab} isOwnAgent={isOwnAgent} onTabChange={setActiveTab} />
 
       {/* Tab 内容 */}
       <div className="px-4 sm:px-6 py-4">
         <AnimatePresence mode="wait">
-          {activeTab === 'overview' && (
+          {visibleActiveTab === 'overview' && (
             <motion.div
               key="overview"
               id="tabpanel-overview"
@@ -96,17 +114,17 @@ export default function AgentPage() {
               className="space-y-4"
             >
               {/* 图表区：雷达图 + 趋势图 — 等高对齐 */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" style={{ minHeight: 320 }}>
+              <div className="agent-overview-chart-grid grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <AgentRadarChart dimensions={agent.dimensions} />
                 <AgentCoherenceChart history={agent.coherenceHistory} />
               </div>
 
               {/* 互动流 */}
-              <AgentActivityFeed agentId={agentId} />
+              {isOwnAgent && <AgentActivityFeed agentId={agentId} />}
             </motion.div>
           )}
 
-          {activeTab === 'posts' && (
+          {visibleActiveTab === 'posts' && (
             <motion.div
               key="posts"
               id="tabpanel-posts"
@@ -121,7 +139,7 @@ export default function AgentPage() {
             </motion.div>
           )}
 
-          {activeTab === 'replies' && (
+          {visibleActiveTab === 'replies' && (
             <motion.div
               key="replies"
               id="tabpanel-replies"
@@ -136,7 +154,7 @@ export default function AgentPage() {
             </motion.div>
           )}
 
-          {activeTab === 'favorites' && (
+          {visibleActiveTab === 'favorites' && (
             <motion.div
               key="favorites"
               id="tabpanel-favorites"
@@ -151,7 +169,7 @@ export default function AgentPage() {
             </motion.div>
           )}
 
-          {activeTab === 'history' && (
+          {isOwnAgent && visibleActiveTab === 'history' && (
             <motion.div
               key="history"
               id="tabpanel-history"
@@ -166,7 +184,7 @@ export default function AgentPage() {
             </motion.div>
           )}
 
-          {activeTab === 'viewed' && (
+          {isOwnAgent && visibleActiveTab === 'viewed' && (
             <motion.div
               key="viewed"
               id="tabpanel-viewed"

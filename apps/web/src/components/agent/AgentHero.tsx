@@ -1,11 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, BadgeCheck } from 'lucide-react';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
 import { PortalTooltip } from '@/components/ui/FloatingPortal';
+import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
 import type { AgentProfile } from '@/config/agent-dimensions';
-import { getCoherenceLevel, COHERENCE_LEVELS } from '@/config/agent-dimensions';
+import { AGENT_LEVELS } from '@skynet/shared';
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -20,19 +21,27 @@ function daysSince(iso: string): number {
 
 interface AgentHeroProps {
   agent: AgentProfile;
+  isOwnAgent: boolean;
 }
 
-export function AgentHero({ agent }: AgentHeroProps) {
+export function AgentHero({ agent, isOwnAgent }: AgentHeroProps) {
   const router = useRouter();
-  const level = getCoherenceLevel(agent.coherence);
+  const level = agent.level;
+  const nextLevelXp = level?.nextLevelXp ?? null;
+  const xpToNext =
+    level && nextLevelXp !== null
+      ? Math.max(0, nextLevelXp - level.xpTotal)
+      : null;
+  let nextLevelHint = '下一级精确进度仅本人可见';
+  if (isOwnAgent) {
+    nextLevelHint =
+      xpToNext === null ? '已达到当前版本最高等级' : `距离下一等级还差 ${xpToNext} XP`;
+  }
 
   return (
     <div className="relative">
       {/* 背景光晕 */}
-      <div
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse 800px 300px at 20% 0%, var(--copper), transparent)' }}
-      />
+      <div className="agent-hero-glow absolute inset-0 opacity-[0.03] pointer-events-none" />
 
       {/* 返回按钮 */}
       <button
@@ -56,46 +65,76 @@ export function AgentHero({ agent }: AgentHeroProps) {
             <h1 className="text-xl sm:text-2xl font-display font-bold text-ink-primary tracking-deck-tight">
               {agent.name}
             </h1>
+            {isOwnAgent && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-copper/25 bg-copper/10 px-2.5 py-1 text-[11px] font-bold text-copper">
+                <BadgeCheck className="h-3.5 w-3.5" />
+                我的 Agent
+              </span>
+            )}
             <PortalTooltip
               placement="bottom"
               align="start"
-              contentClassName="w-64 rounded-xl py-2 px-1 shadow-xl shadow-copper/5 backdrop-blur-sm"
+              contentClassName="w-80 rounded-xl py-2 px-1 shadow-xl shadow-copper/5 backdrop-blur-sm"
               content={
-                <>
-                  <div className="px-3 py-1.5 text-[10px] text-ink-muted font-mono uppercase tracking-wider">
-                    凝聚等级体系
+                <div className="space-y-2">
+                  <div className="mx-1 rounded-lg border border-moss/25 bg-moss/10 px-3 py-2">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-ink-muted">
+                      当前凝聚等级
+                    </div>
+                    <div className="mt-1 flex items-baseline gap-2">
+                      <span className="text-sm font-mono font-bold text-moss">
+                        {level ? `Lv${level.level} · ${level.name}` : '未激活'}
+                      </span>
+                      <span className="text-[11px] text-ink-muted">
+                        凝聚分数 {level?.xpTotal ?? 0}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-[11px] leading-relaxed text-ink-secondary">
+                      {nextLevelHint}
+                    </div>
                   </div>
                   <div className="deck-divider mx-2" />
-                  {COHERENCE_LEVELS.map((l) => {
-                    const isCurrent = l.name === level.name;
-                    return (
-                      <div
-                        key={l.code}
-                        className={`flex flex-col px-3 py-2 mx-1 rounded-lg transition-colors ${
-                          isCurrent
-                            ? 'bg-moss/15 border border-moss/40'
-                            : 'hover:bg-void-hover'
-                        }`}
-                      >
-                        <span className={`text-xs ${isCurrent ? 'font-bold text-moss' : 'text-ink-secondary'}`}>
-                          {l.name}
-                        </span>
-                        <span className="text-[10px] text-ink-muted mt-0.5 leading-relaxed">
-                          {l.description}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </>
+                  <div className="max-h-64 overflow-y-auto px-1">
+                    {AGENT_LEVELS.map((item) => {
+                      const isCurrent = level?.level === item.level;
+                      return (
+                        <div
+                          key={item.level}
+                          className={`mx-1 rounded-lg border px-3 py-2 transition-colors ${
+                            isCurrent
+                              ? 'border-moss/40 bg-moss/15'
+                              : 'border-transparent hover:bg-void-hover'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <span
+                              className={`text-xs font-bold ${
+                                isCurrent ? 'text-moss' : 'text-ink-secondary'
+                              }`}
+                            >
+                              Lv{item.level} · {item.name}
+                            </span>
+                            <span className="font-mono text-[10px] text-ink-muted">
+                              {item.minXp} XP
+                            </span>
+                          </div>
+                          <div className="mt-1 text-[10px] leading-relaxed text-ink-muted">
+                            {item.unlocks.join(' / ')}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               }
             >
               <div
                 tabIndex={0}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-moss/10 border border-moss cursor-help transition-all duration-200 hover:bg-moss/20 hover:shadow-[0_0_20px_rgba(100,160,120,0.35)]"
+                className="flex cursor-help items-center gap-2 rounded-full border border-moss bg-moss/10 px-3 py-1.5 transition-all duration-200 hover:bg-moss/20 hover:shadow-[0_0_20px_rgba(100,160,120,0.35)]"
               >
-                <span className="text-xs text-moss font-mono font-bold tracking-wider">凝聚等级</span>
-                <span className="text-base sm:text-lg font-mono font-bold text-moss leading-none tabular-nums">
-                  {level.name}
+                <AgentLevelBadge level={level} showTooltip={false} />
+                <span className="text-xs font-mono font-bold tracking-wider text-moss">
+                  凝聚分数 {level?.xpTotal ?? 0}
                 </span>
               </div>
             </PortalTooltip>

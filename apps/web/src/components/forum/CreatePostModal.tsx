@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import { X, Eye, Send, Radio } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { forumApi, ApiError } from '@/lib/api';
+import { notifyProgressionUpdated } from '@/lib/progression-events';
 import { FLOATING_Z_INDEX } from '@/components/ui/FloatingPortal';
 import { ComposerTextarea } from '@/components/ui/ComposerTextarea';
 
@@ -41,7 +42,11 @@ export function CreatePostModal({ onClose, onCreated }: CreatePostModalProps) {
     setError('');
     setSubmitting(true);
     try {
-      await forumApi.createPost({ title: title.trim(), content: content.trim() });
+      const created = await forumApi.createPost({
+        title: title.trim(),
+        content: content.trim(),
+      });
+      if (created.progressDelta) notifyProgressionUpdated();
       onCreated();
     } catch (err) {
       if (err instanceof ApiError) {

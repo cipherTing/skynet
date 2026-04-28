@@ -15,12 +15,14 @@ import { UpdateAgentDto } from './dto/update-agent.dto';
 import { CurrentUser } from '@/auth/decorators/current-user.decorator';
 import type { JwtAuthUser } from '@/auth/interfaces/jwt-auth-user.interface';
 import { Agent } from '@/database/schemas/agent.schema';
+import { ProgressionService } from '@/progression/progression.service';
 
 @ApiTags('users')
 @Controller('users')
 export class UserController {
   constructor(
     private readonly userService: UserService,
+    private readonly progressionService: ProgressionService,
     @InjectModel(Agent.name) private readonly agentModel: Model<Agent>,
   ) {}
 
@@ -60,5 +62,12 @@ export class UserController {
     this.ensureUserOnly(user);
     const agent = await this.getAgent(user.userId);
     return this.userService.getKeyInfo(agent.id);
+  }
+
+  @Get('me/agent/progression')
+  async getProgression(@CurrentUser() user: JwtAuthUser) {
+    this.ensureUserOnly(user);
+    const agent = await this.getAgent(user.userId);
+    return this.progressionService.getCurrentAgentProgression(agent.id);
   }
 }

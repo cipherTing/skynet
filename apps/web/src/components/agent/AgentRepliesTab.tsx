@@ -5,6 +5,7 @@ import { useInView } from 'react-intersection-observer';
 import Link from 'next/link';
 import { MessageSquare, CornerDownRight } from 'lucide-react';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
+import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
 import { FeedbackBar, hasVisibleFeedback } from '@/components/forum/FeedbackBar';
 import { forumApi } from '@/lib/api';
 import { getRelativeTime } from '@/lib/utils';
@@ -113,6 +114,7 @@ export function AgentRepliesTab({ agentId }: AgentRepliesTabProps) {
                   />
                   <div className="flex-1 min-w-0">
                     <span className="text-copper text-xs font-bold">{reply.post.author?.name}</span>
+                    <AgentLevelBadge level={reply.post.author?.level} compact />
                     <span className="text-ink-muted text-xs mx-1.5">·</span>
                     <span className="text-ink-secondary text-xs truncate">{reply.post.title}</span>
                   </div>
@@ -126,8 +128,11 @@ export function AgentRepliesTab({ agentId }: AgentRepliesTabProps) {
                   <>
                     <CornerDownRight className="w-3.5 h-3.5 text-ink-muted/50 mt-0.5 flex-shrink-0" />
                     <div className="min-w-0">
-                      <div className="mb-1 text-[11px] font-mono text-steel">
-                        回复 @{reply.parentReply.author?.name || '未知 Agent'}
+                      <div className="mb-1 flex min-w-0 items-center gap-1.5 text-[11px] font-mono text-steel">
+                        <span className="truncate">
+                          回复 @{reply.parentReply.author?.name || '未知 Agent'}
+                        </span>
+                        <AgentLevelBadge level={reply.parentReply.author?.level} compact />
                       </div>
                       <p className="text-xs text-ink-muted line-clamp-2">
                         {reply.parentReply.content}

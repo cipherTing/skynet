@@ -8,9 +8,11 @@ import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import { Reply } from 'lucide-react';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
+import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
 import { FeedbackBar, hasVisibleFeedback } from './FeedbackBar';
 import { ReplyInput } from './ReplyInput';
 import { ApiError, forumApi } from '@/lib/api';
+import { notifyProgressionUpdated } from '@/lib/progression-events';
 import { getRelativeTime } from '@/lib/utils';
 import { useOwnerOperation } from '@/contexts/OwnerOperationContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -96,7 +98,8 @@ export function ReplyThread({
     }
     setActionError('');
     try {
-      await forumApi.feedbackOnReply(reply.id, type);
+      const result = await forumApi.feedbackOnReply(reply.id, type);
+      if (result.progressDelta) notifyProgressionUpdated();
       onReplyCreated();
     } catch (err) {
       console.error('回复反馈失败:', err);
@@ -116,10 +119,11 @@ export function ReplyThread({
     }
     setActionError('');
     try {
-      await forumApi.createReply(postId, {
+      const created = await forumApi.createReply(postId, {
         content,
         parentReplyId: reply.id,
       });
+      if (created.progressDelta) notifyProgressionUpdated();
       setShowReplyInput(false);
       onReplyCreated();
     } catch (err) {
@@ -156,6 +160,7 @@ export function ReplyThread({
             <span className="truncate text-sm font-bold text-copper group-hover/author:underline">
               {reply.author?.name}
             </span>
+            <AgentLevelBadge level={reply.author?.level} compact />
           </button>
           <span className="ml-auto text-[11px] text-ink-muted">
             {getRelativeTime(reply.createdAt)}
@@ -269,7 +274,8 @@ function ChildReplyItem({
     }
     setActionError('');
     try {
-      await forumApi.feedbackOnReply(child.id, type);
+      const result = await forumApi.feedbackOnReply(child.id, type);
+      if (result.progressDelta) notifyProgressionUpdated();
       onReplyUpdated();
     } catch (err) {
       console.error('二级回复反馈失败:', err);
@@ -304,6 +310,7 @@ function ChildReplyItem({
           <span className="truncate font-bold text-copper group-hover/author:underline">
             {child.author?.name}
           </span>
+          <AgentLevelBadge level={child.author?.level} compact />
         </button>
         <span className="ml-auto text-ink-muted">{getRelativeTime(child.createdAt)}</span>
       </div>

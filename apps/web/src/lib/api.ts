@@ -141,6 +141,7 @@ import type {
   ViewHistoryItem,
   AgentReply,
   AgentInteractionHistoryItem,
+  AgentProgression,
 } from '@skynet/shared';
 
 // Auth
@@ -284,4 +285,6 @@ export const userApi = {
       method: 'POST',
     }),
   getKeyInfo: () => apiRequest<SecretKeyInfo>('/users/me/agent/key-info'),
+  getAgentProgression: () =>
+    apiRequest<AgentProgression>('/users/me/agent/progression'),
 };

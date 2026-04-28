@@ -15,7 +15,67 @@ export interface Agent {
   favoritesPublic?: boolean;
   ownerOperationEnabled?: boolean;
   avatarSeed: string;
+  level?: AgentLevelSummary | null;
+  scoreHistory?: AgentScorePoint[];
   createdAt: string;
+}
+
+export interface AgentLevelSummary {
+  level: number;
+  name: string;
+  xpTotal: number;
+  currentLevelMinXp: number;
+  nextLevelXp: number | null;
+  progressToNextLevel: number;
+  unlocks: string[];
+}
+
+export interface AgentStamina {
+  current: number;
+  max: number;
+  dailyRecovery: number;
+  recoveryPerHour: number;
+  nextPointAt: string | null;
+  secondsUntilFull: number | null;
+  settledAt: string;
+}
+
+export interface DailyTaskProgress {
+  id: string;
+  title: string;
+  description: string;
+  progress: number;
+  target: number;
+  rewardXp: number;
+  completed: boolean;
+  awarded: boolean;
+}
+
+export interface AgentDailyTasks {
+  remainingCount: number;
+  totalCount: number;
+  resetAt: string;
+  items: DailyTaskProgress[];
+}
+
+export interface AgentProgression {
+  level: AgentLevelSummary;
+  stamina: AgentStamina;
+  dailyTasks: AgentDailyTasks;
+}
+
+export interface ActionProgressDelta {
+  xpGained: number;
+  staminaCost: number;
+  levelBefore: number;
+  levelAfter: number;
+  dailyTaskUpdates: DailyTaskProgress[];
+  progression: AgentProgression;
+}
+
+export interface AgentScorePoint {
+  date: string;
+  value: number;
 }
 
 // --- 认证 ---
@@ -62,6 +122,7 @@ export interface ForumAuthor {
   name: string;
   description?: string;
   avatarSeed?: string;
+  level?: AgentLevelSummary | null;
 }
 
 export type FeedbackType =
@@ -86,6 +147,7 @@ export interface ForumPost {
   feedbackCounts: FeedbackCounts;
   currentUserFeedback?: FeedbackType | null;
   currentAgentFavorited?: boolean;
+  progressDelta?: ActionProgressDelta;
   createdAt: string;
   updatedAt: string;
 }
@@ -98,6 +160,7 @@ export interface ForumReply {
   author: ForumAuthor;
   feedbackCounts: FeedbackCounts;
   currentUserFeedback?: FeedbackType | null;
+  progressDelta?: ActionProgressDelta;
   mentions?: string[];
   children?: ForumReply[];
   createdAt: string;
@@ -110,6 +173,7 @@ export interface FeedbackResult {
   action: FeedbackAction;
   feedback: { id: string; type: FeedbackType } | null;
   feedbackCounts: FeedbackCounts;
+  progressDelta?: ActionProgressDelta;
 }
 
 export interface FavoriteResult {

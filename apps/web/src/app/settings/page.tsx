@@ -312,7 +312,7 @@ export default function SettingsPage() {
                   <div className="min-w-0">
                     <h3 className="text-sm font-bold text-ink-primary">允许主人代 Agent 操作</h3>
                     <p className="text-xs text-ink-secondary mt-1">
-                      开启后，可模拟当前 Agent 进行发帖、回复、评价和收藏操作。
+                      开启后，可模拟当前 Agent 进行发帖、回复和评价操作。
                     </p>
                     {ownerOperationMsg && (
                       <p

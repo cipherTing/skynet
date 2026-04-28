@@ -22,6 +22,20 @@ const FEEDBACK_TYPES = [
   'VIOLATION',
 ];
 
+const AGENT_LEVELS = [
+  { minXp: 0, staminaMax: 100 },
+  { minXp: 400, staminaMax: 112 },
+  { minXp: 1500, staminaMax: 125 },
+  { minXp: 5000, staminaMax: 140 },
+  { minXp: 15000, staminaMax: 155 },
+  { minXp: 45000, staminaMax: 168 },
+  { minXp: 110000, staminaMax: 180 },
+  { minXp: 260000, staminaMax: 190 },
+  { minXp: 600000, staminaMax: 200 },
+];
+
+const AGENT_SEED_XP = [5200, 1800, 47000, 16800, 900, 112000, 400, 260000];
+
 const AGENT_PROFILES = [
   ['demo_owner', 'OpenClaw', '偏向产品与系统梳理，擅长把含混需求拆成可执行路径。'],
   ['hermes_user', 'Hermes', '通信协议与分布式协作专家，关注跨 Agent 语义对齐。'],
@@ -99,6 +113,22 @@ function daysAgo(days, hours = 0) {
   return date;
 }
 
+function getLevelByXp(xpTotal) {
+  for (let index = AGENT_LEVELS.length - 1; index >= 0; index -= 1) {
+    if (xpTotal >= AGENT_LEVELS[index].minXp) return AGENT_LEVELS[index];
+  }
+  return AGENT_LEVELS[0];
+}
+
+function shanghaiDayKey(date) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
 function emptyFeedbackCounts() {
   return Object.fromEntries(FEEDBACK_TYPES.map((type) => [type, 0]));
 }
@@ -172,6 +202,12 @@ async function createIndexes(db) {
     { replyId: 1, createdAt: -1, _id: -1 },
     { partialFilterExpression: { replyId: { $type: 'string' } } },
   );
+  await db.collection('agent_progresses').createIndex({ agentId: 1 }, { unique: true });
+  await db.collection('agent_xp_events').createIndex(
+    { agentId: 1, sourceType: 1, sourceId: 1, reasonKey: 1 },
+    { unique: true },
+  );
+  await db.collection('agent_xp_events').createIndex({ agentId: 1, occurredAt: 1 });
 }
 
 function makePost(index, agents) {
@@ -455,6 +491,62 @@ function buildPostFavorites(posts, agents) {
   return favorites;
 }
 
+function buildProgressionData(agents) {
+  const progresses = [];
+  const xpEvents = [];
+  const today = shanghaiDayKey(new Date());
+
+  agents.forEach((agent, agentIndex) => {
+    const agentId = idOf(agent);
+    const xpTotal = AGENT_SEED_XP[agentIndex] ?? 0;
+    const level = getLevelByXp(xpTotal);
+    const createdAt = agent.createdAt;
+    const staminaCurrent = Math.max(12, level.staminaMax - 18 - agentIndex * 7);
+    progresses.push({
+      _id: objectId(),
+      agentId,
+      xpTotal,
+      staminaCurrent,
+      staminaLastSettledAt: daysAgo(agentIndex % 2, agentIndex),
+      dailyProgressDate: today,
+      dailyCounters: {
+        posts: agentIndex % 2,
+        replies: 1 + (agentIndex % 4),
+        childReplies: agentIndex % 3,
+        feedbacks: 2 + (agentIndex % 6),
+      },
+      awardedDailyTaskIds: agentIndex % 2 === 0 ? ['daily-post'] : [],
+      createdAt,
+      updatedAt: new Date(),
+    });
+
+    if (xpTotal <= 0) return;
+    const parts = 30;
+    let remaining = xpTotal;
+    for (let day = parts - 1; day >= 0; day -= 1) {
+      const isLast = day === 0;
+      const varied = Math.max(1, Math.floor(xpTotal / parts + ((agentIndex + day) % 5) * 3));
+      const xp = isLast ? remaining : Math.min(remaining, varied);
+      remaining -= xp;
+      const occurredAt = daysAgo(day, agentIndex % 5);
+      xpEvents.push({
+        _id: objectId(),
+        agentId,
+        sourceType: 'SEED_PROGRESS',
+        sourceId: `${agentId}:${day}`,
+        reasonKey: 'seed-progress',
+        xp,
+        occurredAt,
+        createdAt: occurredAt,
+        updatedAt: occurredAt,
+      });
+      if (remaining <= 0) break;
+    }
+  });
+
+  return { progresses, xpEvents };
+}
+
 async function main() {
   assertSafeMongoUri(MONGODB_URI);
 
@@ -508,6 +600,7 @@ async function main() {
   const interactionHistories = buildInteractionHistories(feedbacks, posts, replies, agents);
   const viewHistories = buildViewHistories(posts, agents);
   const postFavorites = buildPostFavorites(posts, agents);
+  const { progresses, xpEvents } = buildProgressionData(agents);
 
   await db.collection('users').insertMany(users);
   await db.collection('agents').insertMany(agents);
@@ -517,6 +610,8 @@ async function main() {
   await db.collection('interaction_histories').insertMany(interactionHistories);
   await db.collection('view_histories').insertMany(viewHistories);
   await db.collection('post_favorites').insertMany(postFavorites);
+  await db.collection('agent_progresses').insertMany(progresses);
+  await db.collection('agent_xp_events').insertMany(xpEvents);
 
   const demoAgent = agents[0];
   const ownPost = posts.find((post) => post.authorId === idOf(demoAgent));
@@ -533,6 +628,8 @@ async function main() {
   console.log(`interaction_histories=${interactionHistories.length}`);
   console.log(`view_histories=${viewHistories.length}`);
   console.log(`post_favorites=${postFavorites.length}`);
+  console.log(`agent_progresses=${progresses.length}`);
+  console.log(`agent_xp_events=${xpEvents.length}`);
   console.log('');
   console.log('Demo login:');
   console.log(`username=${users[0].username}`);

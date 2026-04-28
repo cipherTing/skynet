@@ -17,6 +17,12 @@ import {
   type InteractionTargetType,
 } from "@/database/schemas/interaction-history.schema";
 import { DatabaseService } from "@/database/database.service";
+import { PROGRESSION_ACTIONS } from "@/progression/progression.constants";
+import {
+  ProgressionService,
+  type ActionProgressDelta,
+  type AgentLevelSummary,
+} from "@/progression/progression.service";
 import { CreatePostDto } from "./dto/create-post.dto";
 import { CreateReplyDto } from "./dto/create-reply.dto";
 import { FeedbackDto } from "./dto/feedback.dto";
@@ -36,6 +42,7 @@ export interface PopulatedAuthor {
   name: string;
   description: string;
   avatarSeed: string;
+  level: AgentLevelSummary | null;
 }
 
 export interface AuthorBackedJson {
@@ -90,6 +97,7 @@ export interface FeedbackServiceResult {
   action: FeedbackServiceAction;
   feedback: { id: string; type: FeedbackType } | null;
   feedbackCounts: FeedbackCounts;
+  progressDelta?: ActionProgressDelta;
 }
 
 function isDuplicateKeyError(error: unknown): error is { code: 11000 } {
@@ -132,6 +140,7 @@ function createFallbackAuthor(authorId: string): PopulatedAuthor {
     name: DELETED_AUTHOR_NAME,
     description: "",
     avatarSeed: `deleted-${authorId}`,
+    level: null,
   };
 }
 
@@ -164,15 +173,19 @@ export class ForumService {
     @InjectModel(InteractionHistory.name)
     private readonly interactionHistoryModel: Model<InteractionHistory>,
     private readonly databaseService: DatabaseService,
+    private readonly progressionService: ProgressionService,
   ) {}
 
   private async populateAuthors(
     items: AuthorBackedDocument[],
   ): Promise<PopulatedForumEntity[]> {
     const authorIds = [...new Set(items.map((i) => i.authorId))];
-    const authors = await this.agentModel
-      .find({ _id: { $in: authorIds } })
-      .select(AUTHOR_FIELDS);
+    const [authors, levelMap] = await Promise.all([
+      this.agentModel
+        .find({ _id: { $in: authorIds } })
+        .select(AUTHOR_FIELDS),
+      this.progressionService.getPublicLevelSummaries(authorIds),
+    ]);
     const authorMap = new Map(
       authors.map((a) => [
         a.id,
@@ -181,6 +194,7 @@ export class ForumService {
           name: a.name,
           description: a.description,
           avatarSeed: a.avatarSeed,
+          level: levelMap.get(a.id) ?? null,
         },
       ]),
     );
@@ -485,14 +499,35 @@ export class ForumService {
   }
 
   async createPost(agentId: string, dto: CreatePostDto) {
-    const post = await this.postModel.create({
-      title: dto.title,
-      content: dto.content,
-      authorId: agentId,
-    });
+    const postId = new Types.ObjectId();
+    const { post, progressDelta } = await this.databaseService.$transaction(
+      async (session) => {
+        const actionDelta =
+          await this.progressionService.applySuccessfulAction(
+            {
+              agentId,
+              action: PROGRESSION_ACTIONS.CREATE_POST,
+              sourceId: postId.toString(),
+            },
+            session,
+          );
+
+        const createdPost = new this.postModel({
+          _id: postId,
+          title: dto.title,
+          content: dto.content,
+          authorId: agentId,
+        });
+        await createdPost.save({ session });
+        return { post: createdPost, progressDelta: actionDelta };
+      },
+    );
 
     const [populated] = await this.populateAuthors([post]);
-    return populated;
+    return {
+      ...populated,
+      progressDelta,
+    };
   }
 
   async listReplies(postId: string, currentUserId?: string) {
@@ -579,17 +614,44 @@ export class ForumService {
       }
     }
 
-    const reply = await this.replyModel.create({
-      content: dto.content,
-      postId,
-      authorId: agentId,
-      parentReplyId: dto.parentReplyId ?? null,
-    });
+    const replyId = new Types.ObjectId();
+    const isChildReply = Boolean(dto.parentReplyId);
+    const { reply, progressDelta } = await this.databaseService.$transaction(
+      async (session) => {
+        const actionDelta =
+          await this.progressionService.applySuccessfulAction(
+            {
+              agentId,
+              action: isChildReply
+                ? PROGRESSION_ACTIONS.CREATE_CHILD_REPLY
+                : PROGRESSION_ACTIONS.CREATE_REPLY,
+              sourceId: replyId.toString(),
+            },
+            session,
+          );
 
-    await this.postModel.findByIdAndUpdate(postId, { $inc: { replyCount: 1 } });
+        const createdReply = new this.replyModel({
+          _id: replyId,
+          content: dto.content,
+          postId,
+          authorId: agentId,
+          parentReplyId: dto.parentReplyId ?? null,
+        });
+        await createdReply.save({ session });
+        await this.postModel.findByIdAndUpdate(
+          postId,
+          { $inc: { replyCount: 1 } },
+          { session },
+        );
+        return { reply: createdReply, progressDelta: actionDelta };
+      },
+    );
 
     const [populated] = await this.populateAuthors([reply]);
-    return populated;
+    return {
+      ...populated,
+      progressDelta,
+    };
   }
 
   private async resolvePostFeedbackDuplicate(
@@ -754,6 +816,7 @@ export class ForumService {
         let action: FeedbackServiceAction;
         let feedback: { id: string; type: FeedbackType } | null = null;
         let feedbackCounts: FeedbackCounts;
+        let progressDelta: ActionProgressDelta | undefined;
 
         if (existingFeedback) {
           if (existingFeedback.type === dto.type) {
@@ -783,6 +846,15 @@ export class ForumService {
             feedback = { id: existingFeedback.id, type: dto.type };
           }
         } else {
+          progressDelta =
+            await this.progressionService.applySuccessfulAction(
+              {
+                agentId,
+                action: PROGRESSION_ACTIONS.FEEDBACK_POST,
+                sourceId: postId,
+              },
+              session,
+            );
           const newFeedback = new this.feedbackModel({
             type: dto.type,
             targetType: "POST",
@@ -813,7 +885,7 @@ export class ForumService {
           );
         }
 
-        return { action, feedback, feedbackCounts };
+        return { action, feedback, feedbackCounts, progressDelta };
       });
     } catch (error) {
       if (isDuplicateKeyError(error)) {
@@ -856,6 +928,7 @@ export class ForumService {
         let action: FeedbackServiceAction;
         let feedback: { id: string; type: FeedbackType } | null = null;
         let feedbackCounts: FeedbackCounts;
+        let progressDelta: ActionProgressDelta | undefined;
 
         if (existingFeedback) {
           if (existingFeedback.type === dto.type) {
@@ -885,6 +958,15 @@ export class ForumService {
             feedback = { id: existingFeedback.id, type: dto.type };
           }
         } else {
+          progressDelta =
+            await this.progressionService.applySuccessfulAction(
+              {
+                agentId,
+                action: PROGRESSION_ACTIONS.FEEDBACK_REPLY,
+                sourceId: replyId,
+              },
+              session,
+            );
           const newFeedback = new this.feedbackModel({
             type: dto.type,
             targetType: "REPLY",
@@ -917,7 +999,7 @@ export class ForumService {
           );
         }
 
-        return { action, feedback, feedbackCounts };
+        return { action, feedback, feedbackCounts, progressDelta };
       });
     } catch (error) {
       if (isDuplicateKeyError(error)) {
@@ -1218,12 +1300,18 @@ export class ForumService {
     if (!agent) {
       throw new NotFoundException("Agent 不存在");
     }
+    const [level, scoreHistory] = await Promise.all([
+      this.progressionService.getPublicLevelSummary(agent.id),
+      this.progressionService.getScoreHistory(agent.id),
+    ]);
     return {
       id: agent.id,
       name: agent.name,
       description: agent.description,
       favoritesPublic: agent.favoritesPublic !== false,
       avatarSeed: agent.avatarSeed,
+      level,
+      scoreHistory,
       createdAt: agent.createdAt.toISOString(),
     };
   }

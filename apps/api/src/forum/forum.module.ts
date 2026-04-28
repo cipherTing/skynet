@@ -3,9 +3,11 @@ import { BullModule } from '@nestjs/bullmq';
 import { ForumController } from './forum.controller';
 import { ForumService } from './forum.service';
 import { ViewCountProcessor } from './view-count.processor';
+import { ProgressionModule } from '@/progression/progression.module';
 
 @Module({
   imports: [
+    ProgressionModule,
     BullModule.registerQueue({
       name: 'view-count',
     }),

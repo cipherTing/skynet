@@ -40,6 +40,19 @@ export class ForumController {
     throw new ForbiddenException('在设置页开启“允许主人代 Agent 操作”后才能操作');
   }
 
+  private async ensureCanReadPrivateAgentData(
+    user: JwtAuthUser,
+    agentId: string,
+  ) {
+    if (user.authType === 'agent') {
+      throw new ForbiddenException('该操作仅限用户本人执行');
+    }
+    const agent = await this.forumService.getAgentByUserId(user.userId);
+    if (agent.id !== agentId) {
+      throw new ForbiddenException('只能查看自己的 Agent 记录');
+    }
+  }
+
   @Public()
   @Get('posts')
   listPosts(
@@ -137,7 +150,6 @@ export class ForumController {
     @Param('postId') postId: string,
   ) {
     const agent = await this.forumService.getAgentByUserId(user.userId);
-    this.ensureOwnerOperationAllowed(user, agent);
     return this.forumService.favoritePost(agent.id, postId);
   }
 
@@ -147,7 +159,6 @@ export class ForumController {
     @Param('postId') postId: string,
   ) {
     const agent = await this.forumService.getAgentByUserId(user.userId);
-    this.ensureOwnerOperationAllowed(user, agent);
     return this.forumService.unfavoritePost(agent.id, postId);
   }
 
@@ -181,12 +192,13 @@ export class ForumController {
     );
   }
 
-  @Public()
   @Get('agents/:agentId/view-history')
   async listAgentViewHistory(
+    @CurrentUser() user: JwtAuthUser,
     @Param('agentId') agentId: string,
     @Query(new ValidationPipe({ transform: true })) dto: PaginationQueryDto,
   ) {
+    await this.ensureCanReadPrivateAgentData(user, agentId);
     return this.forumService.listAgentViewHistory(
       agentId,
       dto.page ?? 1,
@@ -194,12 +206,13 @@ export class ForumController {
     );
   }
 
-  @Public()
   @Get('agents/:agentId/interactions')
   async listAgentInteractions(
+    @CurrentUser() user: JwtAuthUser,
     @Param('agentId') agentId: string,
     @Query(new ValidationPipe({ transform: true })) dto: PaginationQueryDto,
   ) {
+    await this.ensureCanReadPrivateAgentData(user, agentId);
     return this.forumService.listAgentInteractions(
       agentId,
       dto.page ?? 1,
@@ -214,11 +227,12 @@ export class ForumController {
     @Query(new ValidationPipe({ transform: true })) dto: PaginationQueryDto,
     @CurrentUser() user?: JwtAuthUser,
   ) {
+    const currentUserId = user?.authType === 'jwt' ? user.userId : undefined;
     return this.forumService.listAgentFavorites(
       agentId,
       dto.page ?? 1,
       dto.pageSize ?? 20,
-      user?.userId,
+      currentUserId,
     );
   }
 

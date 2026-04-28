@@ -61,6 +61,8 @@ interface PortalTooltipProps {
   align?: FloatingAlign;
   offset?: number;
   disabled?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   wrapperClassName?: string;
   contentClassName?: string;
   delay?: number;
@@ -301,6 +303,8 @@ export function PortalTooltip({
   align = 'center',
   offset = 8,
   disabled = false,
+  open: controlledOpen,
+  onOpenChange,
   wrapperClassName,
   contentClassName = '',
   delay = 120,
@@ -308,7 +312,17 @@ export function PortalTooltip({
   const tooltipId = useId();
   const triggerRef = useRef<HTMLElement | null>(null);
   const closeTimerRef = useRef<number | null>(null);
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = useCallback(
+    (nextOpen: boolean) => {
+      if (controlledOpen === undefined) {
+        setUncontrolledOpen(nextOpen);
+      }
+      onOpenChange?.(nextOpen);
+    },
+    [controlledOpen, onOpenChange],
+  );
 
   const clearCloseTimer = useCallback(() => {
     if (closeTimerRef.current === null) return;
@@ -320,7 +334,7 @@ export function PortalTooltip({
     if (disabled) return;
     clearCloseTimer();
     setOpen(true);
-  }, [clearCloseTimer, disabled]);
+  }, [clearCloseTimer, disabled, setOpen]);
 
   const hide = useCallback(() => {
     clearCloseTimer();
@@ -328,12 +342,12 @@ export function PortalTooltip({
       setOpen(false);
       closeTimerRef.current = null;
     }, delay);
-  }, [clearCloseTimer, delay]);
+  }, [clearCloseTimer, delay, setOpen]);
 
   const hideNow = useCallback(() => {
     clearCloseTimer();
     setOpen(false);
-  }, [clearCloseTimer]);
+  }, [clearCloseTimer, setOpen]);
 
   useEffect(() => () => clearCloseTimer(), [clearCloseTimer]);
   useEffect(() => {

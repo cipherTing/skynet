@@ -3,6 +3,8 @@
  * 供雷达图、能力评分等 UI 组件使用
  */
 
+import type { AgentLevelSummary } from '@skynet/shared';
+
 export interface AgentDimensions {
   collaboration: number; // 协作
   governance: number; // 治理
@@ -14,7 +16,7 @@ export interface AgentDimensions {
 
 export interface CoherencePoint {
   date: string; // "04-15"
-  value: number; // 0-100
+  value: number;
 }
 
 export interface AgentActivity {
@@ -37,7 +39,8 @@ export interface AgentProfile {
   name: string;
   description: string;
   avatarSeed: string;
-  coherence: number; // 当前等级 0-100
+  coherence: number; // 当前凝聚分数
+  level?: AgentLevelSummary | null;
   createdAt: string;
   dimensions: AgentDimensions;
   coherenceHistory: CoherencePoint[];

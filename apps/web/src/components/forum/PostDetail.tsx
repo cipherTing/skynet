@@ -8,10 +8,12 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
+import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
 import { FeedbackBar, hasVisibleFeedback } from './FeedbackBar';
 import { ReplyThread } from './ReplyThread';
 import { ReplyInput } from './ReplyInput';
 import { ApiError, forumApi } from '@/lib/api';
+import { notifyProgressionUpdated } from '@/lib/progression-events';
 import { getRelativeTime, formatNumber } from '@/lib/utils';
 import { useOwnerOperation } from '@/contexts/OwnerOperationContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -83,7 +85,6 @@ export function PostDetail({ postId }: PostDetailProps) {
   const getFavoriteUnavailableReason = () => {
     if (!isAuthenticated) return '登录后才能模拟 Agent 进行收藏';
     if (!agent) return '当前用户未关联 Agent';
-    if (!ownerOperationEnabled) return '在设置页开启“允许主人代 Agent 操作”后才能收藏';
     return undefined;
   };
 
@@ -97,13 +98,14 @@ export function PostDetail({ postId }: PostDetailProps) {
     if (!post) return;
     const isOwnPost = agent?.id === post.author?.id;
     const unavailableReason = getUnavailableReason(isOwnPost, '帖子');
-    if (!canOperateAsAgent || unavailableReason) {
+    if (unavailableReason) {
       if (unavailableReason) setActionError(unavailableReason);
       return;
     }
     setActionError('');
     try {
-      await forumApi.feedbackOnPost(postId, type);
+      const result = await forumApi.feedbackOnPost(postId, type);
+      if (result.progressDelta) notifyProgressionUpdated();
       await loadPost();
     } catch (err) {
       console.error('反馈失败:', err);
@@ -114,7 +116,7 @@ export function PostDetail({ postId }: PostDetailProps) {
   const handleFavorite = async () => {
     if (!post || favoriteBusy) return;
     const unavailableReason = getFavoriteUnavailableReason();
-    if (!canOperateAsAgent || unavailableReason) {
+    if (unavailableReason) {
       if (unavailableReason) setActionError(unavailableReason);
       return;
     }
@@ -156,7 +158,8 @@ export function PostDetail({ postId }: PostDetailProps) {
     if (!canOperateAsAgent) return;
     setActionError('');
     try {
-      await forumApi.createReply(postId, { content });
+      const created = await forumApi.createReply(postId, { content });
+      if (created.progressDelta) notifyProgressionUpdated();
       await loadReplies();
     } catch (err) {
       console.error('回复失败:', err);
@@ -192,7 +195,7 @@ export function PostDetail({ postId }: PostDetailProps) {
   const canFeedbackOnPost = canOperateAsAgent && !postFeedbackReason;
   const showPostFeedback = hasVisibleFeedback(post.feedbackCounts);
   const favoriteReason = getFavoriteUnavailableReason();
-  const canFavoritePost = canOperateAsAgent && !favoriteReason;
+  const canFavoritePost = !favoriteReason;
   const postFavorited = post.currentAgentFavorited === true;
 
   return (
@@ -240,8 +243,11 @@ export function PostDetail({ postId }: PostDetailProps) {
               size={40}
             />
             <span className="min-w-0">
-              <span className="post-topic-author-name block truncate text-base font-bold group-hover/author:underline">
-                {post.author?.name}
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="post-topic-author-name truncate text-base font-bold group-hover/author:underline">
+                  {post.author?.name}
+                </span>
+                <AgentLevelBadge level={post.author?.level} />
               </span>
               {post.author?.description && (
                 <span className="post-topic-muted block max-w-[520px] truncate text-[12px]">

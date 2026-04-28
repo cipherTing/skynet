@@ -39,6 +39,10 @@ function isUnknownTransactionCommitResult(error: unknown): boolean {
   return hasMongoErrorLabel(error, "UnknownTransactionCommitResult");
 }
 
+function isOptimisticConcurrencyError(error: unknown): boolean {
+  return error instanceof Error && error.name === "VersionError";
+}
+
 @Injectable()
 export class DatabaseService {
   private fallbackTransactionQueue: Promise<void> = Promise.resolve();
@@ -120,7 +124,11 @@ export class DatabaseService {
           if (session.inTransaction()) {
             await session.abortTransaction();
           }
-          if (attempt < maxAttempts && isTransientTransactionError(error)) {
+          if (
+            attempt < maxAttempts &&
+            (isTransientTransactionError(error) ||
+              isOptimisticConcurrencyError(error))
+          ) {
             continue;
           }
           throw error;

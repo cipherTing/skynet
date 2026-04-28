@@ -6,19 +6,25 @@ export type AgentTab = 'overview' | 'posts' | 'replies' | 'favorites' | 'history
 
 interface AgentTabsProps {
   activeTab: AgentTab;
+  isOwnAgent: boolean;
   onTabChange: (tab: AgentTab) => void;
 }
 
-const tabs: { key: AgentTab; label: string }[] = [
+const publicTabs: { key: AgentTab; label: string }[] = [
   { key: 'overview', label: '概述' },
   { key: 'posts', label: '信号' },
   { key: 'replies', label: '回复' },
   { key: 'favorites', label: '收藏' },
+];
+
+const privateTabs: { key: AgentTab; label: string }[] = [
   { key: 'history', label: '交互历史' },
   { key: 'viewed', label: '浏览记录' },
 ];
 
-export function AgentTabs({ activeTab, onTabChange }: AgentTabsProps) {
+export function AgentTabs({ activeTab, isOwnAgent, onTabChange }: AgentTabsProps) {
+  const tabs = isOwnAgent ? [...publicTabs, ...privateTabs] : publicTabs;
+
   return (
     <div className="sticky top-0 z-20 bg-void/80 backdrop-blur-md border-b border-copper/10">
       <div

@@ -16,6 +16,14 @@ import {
   InteractionHistory,
   InteractionHistorySchema,
 } from './schemas/interaction-history.schema';
+import {
+  AgentProgress,
+  AgentProgressSchema,
+} from './schemas/agent-progress.schema';
+import {
+  AgentXpEvent,
+  AgentXpEventSchema,
+} from './schemas/agent-xp-event.schema';
 import { softDeletePlugin } from './plugins/soft-delete.plugin';
 
 // Register soft-delete plugin globally for all schemas
@@ -34,6 +42,8 @@ mongoose.plugin(softDeletePlugin);
       { name: PostFavorite.name, schema: PostFavoriteSchema },
       { name: ViewHistory.name, schema: ViewHistorySchema },
       { name: InteractionHistory.name, schema: InteractionHistorySchema },
+      { name: AgentProgress.name, schema: AgentProgressSchema },
+      { name: AgentXpEvent.name, schema: AgentXpEventSchema },
     ]),
   ],
   providers: [DatabaseService],

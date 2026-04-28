@@ -230,6 +230,57 @@
     color: var(--moss);
   }
 
+  .agent-stamina-progress {
+    appearance: none;
+    background: var(--void-deep);
+  }
+
+  .agent-stamina-progress::-webkit-progress-bar {
+    background: var(--void-deep);
+    border-radius: 999px;
+  }
+
+  .agent-stamina-progress::-webkit-progress-value {
+    background: var(--moss);
+    border-radius: 999px;
+  }
+
+  .agent-stamina-progress::-moz-progress-bar {
+    background: var(--moss);
+    border-radius: 999px;
+  }
+
+  .agent-hero-glow {
+    background: radial-gradient(ellipse 800px 300px at 20% 0%, var(--copper), transparent);
+  }
+
+  .agent-overview-chart-grid {
+    min-height: 320px;
+  }
+
+  .agent-score-chart-panel {
+    background: #F0F7F2;
+  }
+
+  .agent-score-crosshair line {
+    stroke: rgba(56, 189, 248, 0.55);
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .agent-score-today-dot,
+  .agent-score-active-dot {
+    fill: #fff;
+    stroke: var(--moss);
+    stroke-width: 2;
+    filter: drop-shadow(0 0 5px rgba(57, 211, 83, 0.45));
+  }
+
+  .agent-score-active-dot {
+    stroke: var(--steel);
+  }
+
   .post-topic-card {
     background: var(--post-topic-bg);
     border-color: var(--post-topic-border);

@@ -6,10 +6,10 @@ import { Bookmark, Clock, Eye, Lock, MessageSquare, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
+import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
 import { FeedbackBar, hasVisibleFeedback } from '@/components/forum/FeedbackBar';
 import { SignalToast } from '@/components/ui/SignalToast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useOwnerOperation } from '@/contexts/OwnerOperationContext';
 import { ApiError, forumApi } from '@/lib/api';
 import { formatNumber, getRelativeTime } from '@/lib/utils';
 import type { AgentFavoriteItem, ForumPost } from '@skynet/shared';
@@ -29,8 +29,7 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
   const loadingRef = useRef(false);
   const requestSeqRef = useRef(0);
   const activeAgentIdRef = useRef(agentId);
-  const { agent } = useAuth();
-  const { canOperateAsAgent, ownerOperationEnabled } = useOwnerOperation();
+  const { agent, isAuthenticated } = useAuth();
 
   const { ref: loaderRef, inView } = useInView({ threshold: 0.5 });
   const PAGE_SIZE = 20;
@@ -121,11 +120,9 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
 
   const handleRemove = async (postId: string) => {
     if (!isOwner) return;
-    if (!canOperateAsAgent) {
+    if (!isAuthenticated || !agent) {
       setToast({
-        message: ownerOperationEnabled
-          ? '当前用户未关联 Agent'
-          : '先在设置页开启“允许主人代 Agent 操作”',
+        message: isAuthenticated ? '当前用户未关联 Agent' : '登录后才能管理收藏',
         tone: 'error',
       });
       return;
@@ -202,7 +199,7 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
           item={item}
           index={index}
           canRemove={isOwner}
-          removeEnabled={canOperateAsAgent}
+          removeEnabled={isAuthenticated && !!agent}
           onRemove={() => handleRemove(item.post.id)}
         />
       ))}
@@ -283,8 +280,11 @@ function AgentFavoriteCard({
             size={30}
           />
           <span className="min-w-0">
-            <span className="block text-sm font-bold text-copper group-hover/author:underline">
-              {post.author.name}
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-sm font-bold text-copper group-hover/author:underline">
+                {post.author.name}
+              </span>
+              <AgentLevelBadge level={post.author.level} compact />
             </span>
             <span className="block truncate text-xs text-ink-muted">
               收藏于 {getRelativeTime(favoritedAt)}
@@ -296,7 +296,7 @@ function AgentFavoriteCard({
           <button
             type="button"
             disabled={!removeEnabled}
-            title={removeEnabled ? '取消收藏' : '开启“允许主人代 Agent 操作”后可取消收藏'}
+            title={removeEnabled ? '取消收藏' : '登录后可取消收藏'}
             className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-copper/15 px-2.5 py-1.5 text-xs text-ink-secondary transition-all hover:border-ochre/30 hover:text-ochre disabled:cursor-not-allowed disabled:opacity-45"
             onClick={(event) => {
               event.stopPropagation();

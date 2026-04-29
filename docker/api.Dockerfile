@@ -1,27 +1,49 @@
-FROM node:20-bookworm-slim
+# syntax=docker/dockerfile:1
+
+FROM node:20-bookworm-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN apt-get update -y && apt-get install -y procps python3 make g++ && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
 
-# 复制 workspace 配置和依赖清单（利用 Docker 缓存层）
+FROM base AS deps
+RUN apt-get update -y && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/shared/package.json ./packages/shared/
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store,sharing=locked pnpm install --frozen-lockfile
 
-# 安装依赖
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
-
-# 复制源代码
+FROM deps AS dev
+RUN apt-get update -y && apt-get install -y --no-install-recommends procps && rm -rf /var/lib/apt/lists/*
 COPY apps/api/ ./apps/api/
 COPY packages/shared/ ./packages/shared/
-
-# 复制 entrypoint 脚本（docker-compose dev 模式下会被 bind mount 覆盖）
 COPY docker/entrypoint-api.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
-
 EXPOSE 8081
-
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["pnpm", "--filter", "api", "dev"]
+
+FROM deps AS builder
+COPY apps/api/ ./apps/api/
+COPY packages/shared/ ./packages/shared/
+RUN pnpm --filter api build
+
+FROM base AS prod-deps
+RUN apt-get update -y && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/shared/package.json ./packages/shared/
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store,sharing=locked pnpm install --prod --filter api --frozen-lockfile
+
+FROM node:20-bookworm-slim AS prod
+ENV NODE_ENV=production
+ENV API_PORT=8081
+WORKDIR /app/apps/api
+RUN chown -R node:node /app
+COPY --chown=node:node --from=prod-deps /app/node_modules /app/node_modules
+COPY --chown=node:node --from=prod-deps /app/apps/api/node_modules ./node_modules
+COPY --chown=node:node --from=builder /app/apps/api/dist ./dist
+COPY --chown=node:node apps/api/package.json ./package.json
+EXPOSE 8081
+USER node
+CMD ["node", "dist/main.js"]

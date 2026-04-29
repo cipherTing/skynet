@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectConnection } from "@nestjs/mongoose";
 import { Connection, type ClientSession } from "mongoose";
+import { isProduction } from "@/config/env";
 
 interface ReplicaSetStatus {
   setName?: string;
@@ -138,7 +139,13 @@ export class DatabaseService {
       }
     }
 
-    // Fallback: serial execution without transaction
+    if (isProduction()) {
+      throw new Error(
+        "MongoDB replica set is required for production transactions",
+      );
+    }
+
+    // Fallback: serial execution without transaction in development.
     return this.runWithoutReplicaSet(fn);
   }
 }

@@ -13,6 +13,9 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { HealthModule } from './health/health.module';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
+import { getRedisConfig } from './config/env';
+
+const redisConfig = getRedisConfig();
 
 @Module({
   imports: [
@@ -23,14 +26,11 @@ import { LoggerMiddleware } from './common/middleware/logger.middleware';
         { name: 'long', ttl: 60000, limit: 300 },
       ],
       storage: new ThrottlerStorageRedisService(
-        new Redis({ host: 'redis', port: 6379 }),
+        new Redis(redisConfig),
       ),
     }),
     BullModule.forRoot({
-      connection: {
-        host: 'redis',
-        port: 6379,
-      },
+      connection: redisConfig,
     }),
     DatabaseModule,
     AuthModule,

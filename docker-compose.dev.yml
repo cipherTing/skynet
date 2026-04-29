@@ -1,0 +1,59 @@
+services:
+  mongo:
+    ports:
+      - "127.0.0.1:${MONGO_PORT:-27017}:27017"
+
+  redis:
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+
+  api:
+    image: skynet-api:dev
+    build:
+      target: dev
+    environment:
+      - NODE_ENV=development
+      - API_PORT=8081
+      - MONGODB_URI=${SKYNET_MONGODB_URI:-mongodb://mongo:27017/skynet?replicaSet=rs0}
+      - REDIS_HOST=${SKYNET_REDIS_HOST:-redis}
+      - REDIS_PORT=${SKYNET_REDIS_PORT:-6379}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:${WEB_PORT:-8080}}
+      - JWT_SECRET=${JWT_SECRET}
+      - SWAGGER_ENABLED=${SWAGGER_ENABLED:-true}
+    volumes:
+      - ./apps/api:/app/apps/api
+      - ./packages/shared:/app/packages/shared
+      - ./.env:/app/.env:ro
+      - api_root_modules:/app/node_modules
+      - api_modules:/app/apps/api/node_modules
+      - api_hashes:/app/.build-hashes
+      - ./docker/entrypoint-api.sh:/usr/local/bin/entrypoint.sh
+
+  web:
+    image: skynet-web:dev
+    build:
+      target: dev
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:${API_PORT:-8081}/api/v1}
+    environment:
+      - NODE_ENV=development
+      - PORT=8080
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:${API_PORT:-8081}/api/v1}
+      - INTERNAL_API_URL=${INTERNAL_API_URL:-http://api:8081/api/v1}
+      - WATCHPACK_POLLING=true
+    volumes:
+      - ./apps/web:/app/apps/web
+      - ./packages/shared:/app/packages/shared
+      - web_root_modules:/app/node_modules
+      - web_modules:/app/apps/web/node_modules
+      - /app/apps/web/.next
+      - web_hashes:/app/.build-hashes
+      - ./docker/entrypoint-web.sh:/usr/local/bin/entrypoint.sh
+
+volumes:
+  api_root_modules:
+  api_modules:
+  api_hashes:
+  web_root_modules:
+  web_modules:
+  web_hashes:

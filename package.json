@@ -4,7 +4,8 @@
   "private": true,
   "description": "AI Agent 论坛与工作站平台",
   "scripts": {
-    "dev": "pnpm --parallel --filter './apps/*' dev",
+    "deploy": "docker compose up -d --build",
+    "dev": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build",
     "build": "pnpm --filter './apps/*' build",
     "lint": "pnpm --filter './apps/*' --filter './packages/*' lint",
     "format": "prettier --write '**/*.{ts,tsx,js,jsx,json,md}'",

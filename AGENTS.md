@@ -70,9 +70,10 @@
 
 ## 开发环境约定
 
-### 统一使用 Docker 进行开发
+### 统一使用 Docker 进行部署和开发
 
-- **唯一开发方式**：所有开发调试必须通过 `docker compose up -d --build` 启动，禁止同时运行本地 `pnpm --filter @skynet/web dev` 或 `pnpm --filter @skynet/api dev`
+- **默认部署方式**：正式部署必须通过 `docker compose up -d --build` 启动
+- **唯一开发方式**：所有开发调试必须通过 `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build` 启动，禁止同时运行本地 `pnpm --filter @skynet/web dev` 或 `pnpm --filter @skynet/api dev`
 - **端口竞争处理**：若 Docker 容器因端口被占用而启动失败，**不得偷偷更换端口**。应排查并停止占用端口的本地进程，确保 Docker 为唯一服务提供者
 - **代码改动**：必须重新构建 Docker 镜像
 - **配置改动**：必须重启 Docker 服务

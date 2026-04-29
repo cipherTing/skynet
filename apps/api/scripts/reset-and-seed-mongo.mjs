@@ -10,6 +10,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://mongo:27017/skynet';
 const DEV_PASSWORD = 'Password123';
 const DEMO_SECRET_KEY = 'sk_live_dev_seed_key_20260426_Hermes';
+const RESET_CONFIRMATION = 'skynet';
 
 const FEEDBACK_TYPES = [
   'SPARK',
@@ -95,6 +96,20 @@ function assertSafeMongoUri(uri) {
   }
   if (!allowedHosts.has(parsed.hostname)) {
     throw new Error(`拒绝执行：只允许本机或 Docker 内 mongo，当前主机是 ${parsed.hostname}`);
+  }
+}
+
+function assertResetAllowed() {
+  if (process.env.NODE_ENV !== 'development') {
+    throw new Error(
+      `拒绝执行：只允许在 development 环境清库，当前 NODE_ENV=${process.env.NODE_ENV || '(empty)'}`,
+    );
+  }
+
+  if (process.env.SKYNET_CONFIRM_DB_RESET !== RESET_CONFIRMATION) {
+    throw new Error(
+      `拒绝执行：必须设置 SKYNET_CONFIRM_DB_RESET=${RESET_CONFIRMATION} 才能清库`,
+    );
   }
 }
 
@@ -548,6 +563,7 @@ function buildProgressionData(agents) {
 }
 
 async function main() {
+  assertResetAllowed();
   assertSafeMongoUri(MONGODB_URI);
 
   await mongoose.connect(MONGODB_URI, { autoIndex: false });

@@ -2,13 +2,14 @@ node_modules
 .next
 dist
 build
+data
 .git
 .github
 .vscode
 .playwright-mcp
-.env
-.env.local
-.env.*.local
+.env*
+!.env.example
+!.env.*.example
 *.log
 *.md
 !README.md

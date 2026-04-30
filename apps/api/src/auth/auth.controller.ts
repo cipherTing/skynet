@@ -1,12 +1,75 @@
-import { Controller, Post, Get, Body, ForbiddenException } from '@nestjs/common';
+import { Controller, Post, Get, Body, ForbiddenException, Req, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import type { CookieOptions, Request, Response } from 'express';
+import { isProduction } from '@/config/env';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { JwtAuthUser } from './interfaces/jwt-auth-user.interface';
+
+const REFRESH_COOKIE_NAME = 'skynet_refresh';
+const REFRESH_COOKIE_PATH = '/api/v1/auth';
+
+type BrowserAuthResult = {
+  user: {
+    id: string;
+    username: string;
+    createdAt: string;
+  };
+  agent: {
+    id: string;
+    name: string;
+    description: string;
+    favoritesPublic: boolean;
+    ownerOperationEnabled: boolean;
+    avatarSeed: string;
+    createdAt: string;
+  } | null;
+  token: string;
+  refreshToken: string;
+  refreshExpiresAt: Date;
+};
+
+function getRefreshCookieOptions(expires: Date): CookieOptions {
+  return {
+    httpOnly: true,
+    secure: isProduction(),
+    sameSite: 'lax',
+    path: REFRESH_COOKIE_PATH,
+    expires,
+  };
+}
+
+function getClearRefreshCookieOptions(): CookieOptions {
+  return {
+    httpOnly: true,
+    secure: isProduction(),
+    sameSite: 'lax',
+    path: REFRESH_COOKIE_PATH,
+  };
+}
+
+function readCookie(request: Request, name: string): string | null {
+  const cookieHeader = request.headers.cookie;
+  if (!cookieHeader) return null;
+
+  for (const cookie of cookieHeader.split(';')) {
+    const [rawName, ...rawValueParts] = cookie.trim().split('=');
+    if (rawName !== name) continue;
+
+    const rawValue = rawValueParts.join('=');
+    try {
+      return decodeURIComponent(rawValue);
+    } catch {
+      return rawValue;
+    }
+  }
+
+  return null;
+}
 
 @ApiTags('auth')
 @Controller('auth')
@@ -16,23 +79,34 @@ export class AuthController {
   @Public()
   @Post('register')
   @Throttle({ short: { ttl: 60000, limit: 3 }, medium: { ttl: 3600000, limit: 10 } })
-  async register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
+  async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) response: Response) {
+    const result = await this.authService.register(dto);
+    return this.createBrowserAuthResponse(response, result);
   }
 
   @Public()
   @Post('login')
   @Throttle({ short: { ttl: 10000, limit: 5 }, medium: { ttl: 60000, limit: 15 } })
-  async login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) response: Response) {
+    const result = await this.authService.login(dto);
+    return this.createBrowserAuthResponse(response, result);
+  }
+
+  @Public()
+  @Post('refresh')
+  async refresh(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
+    const refreshToken = readCookie(request, REFRESH_COOKIE_NAME);
+    const result = await this.authService.refreshBrowserSession(refreshToken);
+    return this.createBrowserAuthResponse(response, result);
   }
 
   @Post('logout')
-  async logout(@CurrentUser() user: JwtAuthUser) {
+  async logout(@CurrentUser() user: JwtAuthUser, @Res({ passthrough: true }) response: Response) {
     if (user.authType === 'agent') {
       throw new ForbiddenException('该操作仅限用户本人执行');
     }
-    await this.authService.logout(user.userId);
+    await this.authService.logout(user.userId, user.browserSessionId);
+    response.clearCookie(REFRESH_COOKIE_NAME, getClearRefreshCookieOptions());
     return { message: '已退出登录' };
   }
 
@@ -62,6 +136,20 @@ export class AuthController {
             createdAt: fullUser.agent.createdAt?.toISOString?.() || fullUser.agent.createdAt || '',
           }
         : null,
+    };
+  }
+
+  private createBrowserAuthResponse(response: Response, result: BrowserAuthResult) {
+    response.cookie(
+      REFRESH_COOKIE_NAME,
+      result.refreshToken,
+      getRefreshCookieOptions(result.refreshExpiresAt),
+    );
+
+    return {
+      user: result.user,
+      agent: result.agent,
+      token: result.token,
     };
   }
 }

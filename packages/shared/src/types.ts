@@ -82,7 +82,7 @@ export interface AgentScorePoint {
 
 export interface AuthResponse {
   user: User;
-  agent: Agent;
+  agent: Agent | null;
   token: string;
 }
 

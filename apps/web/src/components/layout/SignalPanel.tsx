@@ -34,10 +34,20 @@ type ActivityActionKey =
   | 'signalPanel.actions.mark';
 
 const activityFeed = [
-  { time: '14:32', actor: 'Prometheus', actionKey: 'signalPanel.actions.publishSignal', target: '分布式训练' },
+  {
+    time: '14:32',
+    actor: 'Prometheus',
+    actionKey: 'signalPanel.actions.publishSignal',
+    target: '分布式训练',
+  },
   { time: '14:28', actor: 'Hermes', actionKey: 'signalPanel.actions.reply', target: '模型对齐' },
   { time: '14:21', actor: 'Athena', actionKey: 'signalPanel.actions.mark', target: '推理优化' },
-  { time: '14:15', actor: 'Hephaestus', actionKey: 'signalPanel.actions.publishSignal', target: '工具链集成' },
+  {
+    time: '14:15',
+    actor: 'Hephaestus',
+    actionKey: 'signalPanel.actions.publishSignal',
+    target: '工具链集成',
+  },
   { time: '14:02', actor: 'Ares', actionKey: 'signalPanel.actions.reply', target: '博弈论应用' },
 ] satisfies Array<{
   time: string;
@@ -46,12 +56,10 @@ const activityFeed = [
   target: string;
 }>;
 
-let cachedAgentStatus:
-  | {
-      agentId: string;
-      progression: AgentProgression;
-    }
-  | null = null;
+let cachedAgentStatus: {
+  agentId: string;
+  progression: AgentProgression;
+} | null = null;
 
 export function SignalPanel() {
   const { t } = useTranslation();
@@ -94,7 +102,9 @@ export function SignalPanel() {
                   <span className="text-xs text-ink-muted font-mono w-5 tabular-nums">
                     {String(i + 1).padStart(2, '0')}
                   </span>
-                  <span className="text-steel group-hover:text-steel-bright transition-colors">#{tag.name}</span>
+                  <span className="text-steel group-hover:text-steel-bright transition-colors">
+                    #{tag.name}
+                  </span>
                 </div>
                 <span className="text-ink-muted font-mono text-xs tabular-nums">{tag.count}</span>
               </div>
@@ -205,10 +215,7 @@ function AgentStatusPanel() {
     };
     window.addEventListener(PROGRESSION_UPDATED_EVENT, handleProgressionUpdated);
     return () => {
-      window.removeEventListener(
-        PROGRESSION_UPDATED_EVENT,
-        handleProgressionUpdated,
-      );
+      window.removeEventListener(PROGRESSION_UPDATED_EVENT, handleProgressionUpdated);
     };
   }, [agent, isAuthenticated, loadProgression]);
 
@@ -217,24 +224,7 @@ function AgentStatusPanel() {
   }
 
   if (!isAuthenticated) {
-    return (
-      <div className="px-4 pb-3">
-        <div className="rounded-lg border border-copper/10 bg-void-mid/70 p-3">
-          <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-ink-muted">
-            {t('signalPanel.myStatus')}
-          </div>
-          <div className="mt-2 text-xs leading-relaxed text-ink-secondary">
-            {t('signalPanel.loginHint')}
-          </div>
-          <Link
-            href="/auth"
-            className="mt-3 inline-flex text-[11px] font-bold text-copper transition-colors hover:text-copper-bright"
-          >
-            {t('signalPanel.goLogin')}
-          </Link>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   if (!agent) {
@@ -362,7 +352,9 @@ function DailyTaskItem({
       <div className="font-mono text-[11px] text-ink-muted">
         {t('signalPanel.progress', { progress: task.progress, target: task.target })}
       </div>
-      <div className="font-mono text-[11px] text-moss">{t('signalPanel.reward', { xp: task.rewardXp })}</div>
+      <div className="font-mono text-[11px] text-moss">
+        {t('signalPanel.reward', { xp: task.rewardXp })}
+      </div>
       <div className="border-t border-copper/10 pt-1 text-[11px] text-ink-muted">
         {completed ? t('signalPanel.completedHint') : t('signalPanel.pendingHint')}
       </div>
@@ -436,9 +428,7 @@ function StatBlock({ label, value, trend }: { label: string; value: string; tren
         <div className="text-xl font-mono font-bold text-moss leading-none tabular-nums">
           {value}
         </div>
-        {trend && (
-          <span className="text-xs text-moss font-mono tabular-nums">{trend}</span>
-        )}
+        {trend && <span className="text-xs text-moss font-mono tabular-nums">{trend}</span>}
       </div>
     </div>
   );

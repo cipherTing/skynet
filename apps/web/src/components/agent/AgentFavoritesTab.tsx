@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
 import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
 import { FeedbackBar, hasVisibleFeedback } from '@/components/forum/FeedbackBar';
-import { SignalToast } from '@/components/ui/SignalToast';
+import { useToast } from '@/components/ui/SignalToast';
 import { useAuth } from '@/contexts/AuthContext';
 import { ApiError, forumApi } from '@/lib/api';
 import { formatNumber, getRelativeTime } from '@/lib/utils';
@@ -27,11 +27,11 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [errorKey, setErrorKey] = useState('');
-  const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
   const loadingRef = useRef(false);
   const requestSeqRef = useRef(0);
   const activeAgentIdRef = useRef(agentId);
   const { agent, isAuthenticated } = useAuth();
+  const toast = useToast();
 
   const { ref: loaderRef, inView } = useInView({ threshold: 0.5 });
   const PAGE_SIZE = 20;
@@ -40,12 +40,6 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
   useEffect(() => {
     activeAgentIdRef.current = agentId;
   }, [agentId]);
-
-  useEffect(() => {
-    if (!toast) return undefined;
-    const timer = window.setTimeout(() => setToast(null), 2200);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
 
   const loadFavorites = useCallback(
     async (pageNum: number, reset = false) => {
@@ -61,10 +55,7 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
           page: pageNum,
           pageSize: PAGE_SIZE,
         });
-        if (
-          requestSeqRef.current !== requestSeq ||
-          activeAgentIdRef.current !== requestAgentId
-        ) {
+        if (requestSeqRef.current !== requestSeq || activeAgentIdRef.current !== requestAgentId) {
           return;
         }
         setHidden(data.hidden);
@@ -84,19 +75,13 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
         }
         setHasMore(data.meta.page < data.meta.totalPages);
       } catch {
-        if (
-          requestSeqRef.current !== requestSeq ||
-          activeAgentIdRef.current !== requestAgentId
-        ) {
+        if (requestSeqRef.current !== requestSeq || activeAgentIdRef.current !== requestAgentId) {
           return;
         }
         setErrorKey('agent.favoritesLoadFailed');
         setHasMore(false);
       } finally {
-        if (
-          requestSeqRef.current === requestSeq &&
-          activeAgentIdRef.current === requestAgentId
-        ) {
+        if (requestSeqRef.current === requestSeq && activeAgentIdRef.current === requestAgentId) {
           setLoading(false);
           loadingRef.current = false;
         }
@@ -123,10 +108,7 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
   const handleRemove = async (postId: string) => {
     if (!isOwner) return;
     if (!isAuthenticated || !agent) {
-      setToast({
-        message: isAuthenticated ? t('forum.noAgent') : t('agent.loginToManageFavorites'),
-        tone: 'error',
-      });
+      toast.error(isAuthenticated ? t('forum.noAgent') : t('forum.loginRequired'));
       return;
     }
 
@@ -136,65 +118,50 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
     try {
       await forumApi.unfavoritePost(postId);
       if (activeAgentIdRef.current !== requestAgentId) return;
-      setToast({ message: t('forum.favoriteRemoved'), tone: 'success' });
+      toast.success(t('forum.favoriteRemoved'));
     } catch (err) {
       if (activeAgentIdRef.current !== requestAgentId) return;
       if (removedItem) {
         setFavorites((current) => {
           if (current.some((item) => item.post.id === postId)) return current;
           return [removedItem, ...current].sort(
-            (a, b) =>
-              new Date(b.favoritedAt).getTime() - new Date(a.favoritedAt).getTime(),
+            (a, b) => new Date(b.favoritedAt).getTime() - new Date(a.favoritedAt).getTime(),
           );
         });
       }
-      setToast({
-        message: err instanceof ApiError ? err.message : t('agent.removeFavoriteFailed'),
-        tone: 'error',
-      });
+      toast.error(err instanceof ApiError ? err.message : t('agent.removeFavoriteFailed'));
     }
   };
 
   if (hidden) {
     return (
-      <>
-        {toast && <SignalToast message={toast.message} tone={toast.tone} />}
-        <div className="signal-bubble p-8 text-center">
-          <Lock className="mx-auto mb-3 h-6 w-6 text-ink-muted" />
-          <p className="text-sm font-bold text-ink-secondary">{t('agent.favoritesHidden')}</p>
-          <p className="mt-1 text-xs text-ink-muted">{t('agent.favoritesHiddenHint')}</p>
-        </div>
-      </>
+      <div className="signal-bubble p-8 text-center">
+        <Lock className="mx-auto mb-3 h-6 w-6 text-ink-muted" />
+        <p className="text-sm font-bold text-ink-secondary">{t('agent.favoritesHidden')}</p>
+        <p className="mt-1 text-xs text-ink-muted">{t('agent.favoritesHiddenHint')}</p>
+      </div>
     );
   }
 
   if (errorKey && favorites.length === 0) {
     return (
-      <>
-        {toast && <SignalToast message={toast.message} tone={toast.tone} />}
-        <div className="signal-bubble p-8 text-center">
-          <p className="text-ink-muted text-sm">{t(errorKey)}</p>
-        </div>
-      </>
+      <div className="signal-bubble p-8 text-center">
+        <p className="text-ink-muted text-sm">{t(errorKey)}</p>
+      </div>
     );
   }
 
   if (!loading && favorites.length === 0) {
     return (
-      <>
-        {toast && <SignalToast message={toast.message} tone={toast.tone} />}
-        <div className="signal-bubble p-8 text-center">
-          <Bookmark className="mx-auto mb-3 h-6 w-6 text-ink-muted" />
-          <p className="text-ink-muted text-sm">{t('agent.noFavorites')}</p>
-        </div>
-      </>
+      <div className="signal-bubble p-8 text-center">
+        <Bookmark className="mx-auto mb-3 h-6 w-6 text-ink-muted" />
+        <p className="text-ink-muted text-sm">{t('agent.noFavorites')}</p>
+      </div>
     );
   }
 
   return (
     <div className="space-y-3">
-      {toast && <SignalToast message={toast.message} tone={toast.tone} />}
-
       {favorites.map((item, index) => (
         <AgentFavoriteCard
           key={`${item.post.id}-${item.favoritedAt}`}
@@ -298,9 +265,10 @@ function AgentFavoriteCard({
         {canRemove && (
           <button
             type="button"
-            disabled={!removeEnabled}
             title={removeEnabled ? t('agent.removeFavorite') : t('agent.removeFavoriteDisabled')}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-copper/15 px-2.5 py-1.5 text-xs text-ink-secondary transition-all hover:border-ochre/30 hover:text-ochre disabled:cursor-not-allowed disabled:opacity-45"
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-md border border-copper/15 px-2.5 py-1.5 text-xs transition-all hover:border-ochre/30 hover:text-ochre ${
+              removeEnabled ? 'text-ink-secondary' : 'text-ink-muted opacity-60'
+            }`}
             onClick={(event) => {
               event.stopPropagation();
               onRemove();
@@ -315,9 +283,7 @@ function AgentFavoriteCard({
       <h3 className="mb-2 text-base font-bold leading-snug text-ink-primary group-hover:text-copper transition-colors">
         {post.title}
       </h3>
-      <p className="mb-3 line-clamp-2 text-sm leading-relaxed text-ink-secondary">
-        {preview}
-      </p>
+      <p className="mb-3 line-clamp-2 text-sm leading-relaxed text-ink-secondary">{preview}</p>
 
       <div className="flex flex-col gap-2 border-t border-copper/[0.08] pt-3 sm:flex-row sm:items-center sm:justify-between">
         {showFeedback && (
@@ -348,7 +314,10 @@ function AgentFavoriteCard({
 }
 
 function toPreview(post: ForumPost) {
-  const compact = post.content.replace(/[#`*\n]/g, ' ').replace(/\s+/g, ' ').trim();
+  const compact = post.content
+    .replace(/[#`*\n]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   if (compact.length <= 140) return compact;
   return `${compact.slice(0, 140).trim()}...`;
 }

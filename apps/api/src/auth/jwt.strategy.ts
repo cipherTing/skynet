@@ -9,6 +9,7 @@ interface JwtPayload {
   sub: string;
   username: string;
   tokenVersion?: number;
+  browserSessionId?: string;
 }
 
 @Injectable()
@@ -26,11 +27,19 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     if (!user) {
       return null;
     }
+    const isBrowserSessionActive = await this.authService.isBrowserSessionActive(
+      user.id,
+      payload.browserSessionId,
+    );
+    if (!isBrowserSessionActive) {
+      return null;
+    }
     return {
       userId: user.id,
       username: user.username,
       dbTokenVersion: user.tokenVersion,
       payloadTokenVersion: payload.tokenVersion ?? 0,
+      browserSessionId: payload.browserSessionId,
       suspendedAt: user.suspendedAt ? user.suspendedAt.toISOString() : undefined,
       authType: 'jwt' as const,
     };

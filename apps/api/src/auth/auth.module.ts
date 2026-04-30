@@ -13,7 +13,7 @@ import { getRequiredJwtSecret } from '../config/env';
     JwtModule.registerAsync({
       useFactory: () => {
         const secret = getRequiredJwtSecret();
-        return { secret, signOptions: { expiresIn: '1h' } };
+        return { secret, signOptions: { expiresIn: '30m' } };
       },
     }),
   ],

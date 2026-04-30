@@ -1,4 +1,29 @@
+import axios, {
+  AxiosError,
+  AxiosHeaders,
+  type AxiosRequestConfig,
+  type AxiosResponse,
+  type InternalAxiosRequestConfig,
+} from 'axios';
 import i18n from '@/i18n/i18n';
+import type {
+  User,
+  Agent,
+  ForumPost,
+  ForumReply,
+  PaginationMeta,
+  AgentFavoritesResponse,
+  FeedbackResult,
+  FeedbackType,
+  FavoriteResult,
+  SecretKeyInfo,
+  ViewHistoryItem,
+  AgentReply,
+  AgentInteractionHistoryItem,
+  AgentProgression,
+} from '@skynet/shared';
+
+export const AUTH_EXPIRED_EVENT = 'skynet:auth-expired';
 
 const API_BASE =
   typeof window === 'undefined'
@@ -7,9 +32,15 @@ const API_BASE =
       'http://localhost:8081/api/v1'
     : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081/api/v1';
 
-function getToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return sessionStorage.getItem('skynet-token');
+let accessToken: string | null = null;
+let refreshPromise: Promise<string | null> | null = null;
+
+export function setAccessToken(token: string | null): void {
+  accessToken = token;
+}
+
+export function clearAccessToken(): void {
+  accessToken = null;
 }
 
 export class ApiError extends Error {
@@ -45,14 +76,22 @@ type ApiErrorResponse = {
   error: ApiErrorBody;
 };
 
+type BrowserAuthPayload = {
+  user: User;
+  agent: Agent | null;
+  token: string;
+};
+
+type SkynetAxiosRequestConfig = AxiosRequestConfig & {
+  skipAuthRefresh?: boolean;
+  authRetry?: boolean;
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function hasOwnField(
-  value: Record<string, unknown>,
-  field: string,
-): boolean {
+function hasOwnField(value: Record<string, unknown>, field: string): boolean {
   return Object.prototype.hasOwnProperty.call(value, field);
 }
 
@@ -80,71 +119,171 @@ function hasApiEnvelopeData(value: ApiSuccessResponse): value is ApiEnvelopeData
   return hasOwnField(value, 'data');
 }
 
-export async function apiRequest<T>(
-  endpoint: string,
-  options: RequestInit = {},
-): Promise<T> {
-  const token = getToken();
-  const headers = new Headers(options.headers || {});
-  if (!headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
-  }
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
+function unwrapApiResponse<T>(response: AxiosResponse<unknown>): T {
+  const payload = response.data;
 
-  const res = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    cache: options.cache ?? 'no-store',
-    headers: Object.fromEntries(headers.entries()),
-  });
-
-  let json: unknown;
-  try {
-    json = await res.json();
-  } catch {
-    throw new ApiError(i18n.t('errors.responseParse'), 'PARSE_ERROR', res.status);
-  }
-
-  if (!res.ok) {
-    if (!isApiErrorResponse(json)) {
-      throw new ApiError('Request failed', 'UNKNOWN', res.status);
-    }
-
-    throw new ApiError(
-      json.error.message || 'Request failed',
-      json.error.code || 'UNKNOWN',
-      res.status,
-    );
-  }
-
-  if (!isApiEnvelope(json)) {
-    throw new ApiError(i18n.t('errors.responseParse'), 'PARSE_ERROR', res.status);
-  }
-
-  if (!hasApiEnvelopeData(json)) {
+  if (response.status === 204 || payload === '' || payload === undefined) {
     return undefined as T;
   }
 
-  return json.data as T;
+  if (!isApiEnvelope(payload)) {
+    throw new ApiError(i18n.t('errors.responseParse'), 'PARSE_ERROR', response.status);
+  }
+
+  if (!hasApiEnvelopeData(payload)) {
+    return undefined as T;
+  }
+
+  return payload.data as T;
 }
 
-import type {
-  User,
-  Agent,
-  ForumPost,
-  ForumReply,
-  PaginationMeta,
-  AgentFavoritesResponse,
-  FeedbackResult,
-  FeedbackType,
-  FavoriteResult,
-  SecretKeyInfo,
-  ViewHistoryItem,
-  AgentReply,
-  AgentInteractionHistoryItem,
-  AgentProgression,
-} from '@skynet/shared';
+function normalizeAxiosError(error: AxiosError<unknown>): ApiError {
+  const statusCode = error.response?.status ?? 0;
+  const payload = error.response?.data;
+
+  if (isApiErrorResponse(payload)) {
+    return new ApiError(
+      payload.error.message || 'Request failed',
+      payload.error.code || 'UNKNOWN',
+      payload.error.statusCode,
+    );
+  }
+
+  return new ApiError(error.message || 'Request failed', 'UNKNOWN', statusCode);
+}
+
+function normalizeUnknownError(error: unknown): ApiError {
+  if (error instanceof ApiError) return error;
+  if (axios.isAxiosError<unknown>(error)) return normalizeAxiosError(error);
+  return new ApiError('Request failed', 'UNKNOWN', 0);
+}
+
+function emitAuthExpired(): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+}
+
+function isAuthRefreshExcluded(endpoint?: string): boolean {
+  if (!endpoint) return true;
+  return (
+    endpoint.includes('/auth/login') ||
+    endpoint.includes('/auth/register') ||
+    endpoint.includes('/auth/refresh')
+  );
+}
+
+function normalizeRequestHeaders(headers: HeadersInit | undefined): AxiosHeaders {
+  const normalized = new AxiosHeaders();
+  new Headers(headers).forEach((value, key) => {
+    normalized.set(key, value);
+  });
+  return normalized;
+}
+
+function applyAccessToken(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig {
+  const headers = AxiosHeaders.from(config.headers);
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+  if (accessToken && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${accessToken}`);
+  }
+  config.headers = headers;
+  return config;
+}
+
+const apiClient = axios.create({
+  baseURL: API_BASE,
+  withCredentials: true,
+});
+
+const refreshClient = axios.create({
+  baseURL: API_BASE,
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (!refreshPromise) {
+    refreshPromise = refreshClient
+      .post<unknown>('/auth/refresh')
+      .then((response) => {
+        const payload = unwrapApiResponse<BrowserAuthPayload>(response);
+        setAccessToken(payload.token);
+        return payload.token;
+      })
+      .catch(() => {
+        clearAccessToken();
+        emitAuthExpired();
+        return null;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  return refreshPromise;
+}
+
+apiClient.interceptors.request.use(applyAccessToken);
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error: unknown) => {
+    if (!axios.isAxiosError<unknown>(error)) {
+      throw normalizeUnknownError(error);
+    }
+
+    const originalConfig = error.config as SkynetAxiosRequestConfig | undefined;
+    const shouldRefresh =
+      error.response?.status === 401 &&
+      originalConfig &&
+      !originalConfig.skipAuthRefresh &&
+      !originalConfig.authRetry &&
+      !isAuthRefreshExcluded(originalConfig.url);
+
+    if (!shouldRefresh) {
+      throw normalizeAxiosError(error);
+    }
+
+    originalConfig.authRetry = true;
+    const newToken = await refreshAccessToken();
+
+    if (!newToken) {
+      throw normalizeAxiosError(error);
+    }
+
+    const headers =
+      originalConfig.headers instanceof AxiosHeaders ? originalConfig.headers : new AxiosHeaders();
+    headers.set('Authorization', `Bearer ${newToken}`);
+    originalConfig.headers = headers;
+
+    return apiClient.request(originalConfig);
+  },
+);
+
+export async function apiRequest<T>(
+  endpoint: string,
+  options: RequestInit = {},
+  requestConfig: Pick<SkynetAxiosRequestConfig, 'skipAuthRefresh'> = {},
+): Promise<T> {
+  const headers = normalizeRequestHeaders(options.headers);
+
+  const axiosConfig: SkynetAxiosRequestConfig = {
+    url: endpoint,
+    method: options.method ?? 'GET',
+    data: options.body,
+    headers,
+    signal: options.signal ?? undefined,
+    skipAuthRefresh: requestConfig.skipAuthRefresh,
+  };
+
+  const response = await apiClient.request<unknown>(axiosConfig);
+
+  return unwrapApiResponse<T>(response);
+}
 
 // Auth
 export const authApi = {
@@ -154,15 +293,21 @@ export const authApi = {
     agentName: string;
     agentDescription?: string;
   }) =>
-    apiRequest<{ user: User; agent: Agent; token: string }>('/auth/register', {
+    apiRequest<{ user: User; agent: Agent | null; token: string }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
   login: (data: { username: string; password: string }) =>
-    apiRequest<{ user: User; agent: Agent; token: string }>('/auth/login', {
+    apiRequest<{ user: User; agent: Agent | null; token: string }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  refresh: () =>
+    apiRequest<{ user: User; agent: Agent | null; token: string }>(
+      '/auth/refresh',
+      { method: 'POST' },
+      { skipAuthRefresh: true },
+    ),
   me: () => apiRequest<{ user: User; agent: Agent | null }>('/auth/me'),
   logout: () =>
     apiRequest<void>('/auth/logout', {
@@ -172,16 +317,10 @@ export const authApi = {
 
 // Forum
 export const forumApi = {
-  listPosts: (params?: {
-    page?: number;
-    pageSize?: number;
-    sortBy?: string;
-    search?: string;
-  }) => {
+  listPosts: (params?: { page?: number; pageSize?: number; sortBy?: string; search?: string }) => {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set('page', String(params.page));
-    if (params?.pageSize)
-      searchParams.set('pageSize', String(params.pageSize));
+    if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize));
     if (params?.sortBy) searchParams.set('sortBy', params.sortBy);
     if (params?.search) searchParams.set('search', params.search);
     const qs = searchParams.toString();
@@ -190,15 +329,13 @@ export const forumApi = {
     );
   },
   getPost: (id: string) => apiRequest<ForumPost>(`/forum/posts/${id}`),
-  trackView: (id: string) =>
-    apiRequest<void>(`/forum/posts/${id}/view`, { method: 'POST' }),
+  trackView: (id: string) => apiRequest<void>(`/forum/posts/${id}/view`, { method: 'POST' }),
   createPost: (data: { title: string; content: string }) =>
     apiRequest<ForumPost>('/forum/posts', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  listReplies: (postId: string) =>
-    apiRequest<ForumReply[]>(`/forum/posts/${postId}/replies`),
+  listReplies: (postId: string) => apiRequest<ForumReply[]>(`/forum/posts/${postId}/replies`),
   createReply: (postId: string, data: { content: string; parentReplyId?: string }) =>
     apiRequest<ForumReply>(`/forum/posts/${postId}/replies`, {
       method: 'POST',
@@ -287,6 +424,5 @@ export const userApi = {
       method: 'POST',
     }),
   getKeyInfo: () => apiRequest<SecretKeyInfo>('/users/me/agent/key-info'),
-  getAgentProgression: () =>
-    apiRequest<AgentProgression>('/users/me/agent/progression'),
+  getAgentProgression: () => apiRequest<AgentProgression>('/users/me/agent/progression'),
 };

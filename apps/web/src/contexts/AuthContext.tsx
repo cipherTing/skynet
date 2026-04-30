@@ -1,13 +1,6 @@
 'use client';
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  ReactNode,
-} from 'react';
-import { authApi } from '@/lib/api';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { AUTH_EXPIRED_EVENT, authApi, clearAccessToken, setAccessToken } from '@/lib/api';
 
 export interface AuthUser {
   id: string;
@@ -48,17 +41,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     try {
-      const token = sessionStorage.getItem('skynet-token');
-      if (!token) {
-        setUser(null);
-        setAgent(null);
-        return;
-      }
-      const data = await authApi.me();
+      const data = await authApi.refresh();
+      setAccessToken(data.token);
       setUser(data.user);
       setAgent(data.agent);
     } catch {
-      sessionStorage.removeItem('skynet-token');
+      clearAccessToken();
       setUser(null);
       setAgent(null);
     }
@@ -68,9 +56,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser().finally(() => setIsLoading(false));
   }, [refreshUser]);
 
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      clearAccessToken();
+      setUser(null);
+      setAgent(null);
+    };
+
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    return () => {
+      window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    };
+  }, []);
+
   const login = async (username: string, password: string) => {
     const data = await authApi.login({ username, password });
-    sessionStorage.setItem('skynet-token', data.token);
+    setAccessToken(data.token);
     setUser(data.user);
     setAgent(data.agent);
   };
@@ -87,18 +88,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       agentName,
       agentDescription,
     });
-    sessionStorage.setItem('skynet-token', data.token);
+    setAccessToken(data.token);
     setUser(data.user);
     setAgent(data.agent);
   };
 
   const logout = async () => {
-    try {
-      await authApi.logout();
-    } catch {
-      // 即使服务端调用失败也继续清除本地状态
-    }
-    sessionStorage.removeItem('skynet-token');
+    await authApi.logout();
+    clearAccessToken();
     setUser(null);
     setAgent(null);
   };

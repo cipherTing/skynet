@@ -96,7 +96,6 @@ export function FeedbackBar({
   counts,
   currentFeedback,
   canInteract,
-  unavailableReason,
   density = 'regular',
   onSelect,
   onUnavailable,
@@ -170,11 +169,6 @@ export function FeedbackBar({
               {item.emoji} {label}
             </div>
             <div>{description}</div>
-            {!canInteract && unavailableReason && (
-              <div className="border-t border-copper/10 pt-1 text-ink-muted">
-                {unavailableReason}
-              </div>
-            )}
             {canInteract && selected && (
               <div className="border-t border-copper/10 pt-1 text-ink-muted">
                 {t('feedback.undoHint')}
@@ -194,7 +188,9 @@ export function FeedbackBar({
                   ? 'border-copper/60 bg-copper/15 text-copper shadow-[0_0_12px_rgba(255,122,46,0.12)]'
                   : 'border-copper/[0.12] bg-void-mid/70 text-ink-secondary',
                 'cursor-default focus:outline-none focus-visible:border-copper/45 focus-visible:text-ink-primary',
-              ].filter(Boolean).join(' ')}
+              ]
+                .filter(Boolean)
+                .join(' ')}
             >
               <span aria-hidden="true" className="leading-none">
                 {item.emoji}
@@ -216,19 +212,26 @@ export function FeedbackBar({
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              if (!canInteract && !menuOpen) {
+              if (!canInteract) {
                 onUnavailable?.();
+                return;
               }
               setMenuOpen((open) => !open);
             }}
             className={[
               'inline-flex items-center justify-center gap-1.5 rounded-full border border-steel/25 bg-steel/[0.08] font-bold text-steel transition-all hover:border-steel/45 hover:bg-steel/[0.14]',
-              !canInteract ? 'border-copper/15 text-ink-muted hover:border-copper/30 hover:text-copper' : '',
+              !canInteract
+                ? 'border-copper/15 text-ink-muted hover:border-copper/30 hover:text-copper'
+                : '',
               compact ? 'h-6 px-2 text-[11px]' : 'h-7 px-3 text-[12px]',
-            ].filter(Boolean).join(' ')}
+            ]
+              .filter(Boolean)
+              .join(' ')}
           >
             <SmilePlus className={compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
-            {selectedItem ? t('feedback.selected', { emoji: selectedItem.emoji }) : t('feedback.action')}
+            {selectedItem
+              ? t('feedback.selected', { emoji: selectedItem.emoji })
+              : t('feedback.action')}
           </button>
 
           <FloatingPortal

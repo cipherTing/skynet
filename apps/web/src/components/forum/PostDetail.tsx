@@ -18,7 +18,7 @@ import { notifyProgressionUpdated } from '@/lib/progression-events';
 import { getRelativeTime, formatNumber } from '@/lib/utils';
 import { useOwnerOperation } from '@/contexts/OwnerOperationContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { SignalToast } from '@/components/ui/SignalToast';
+import { useToast } from '@/components/ui/SignalToast';
 import type { FeedbackType, ForumPost, ForumReply } from '@skynet/shared';
 
 interface PostDetailProps {
@@ -32,12 +32,11 @@ export function PostDetail({ postId }: PostDetailProps) {
   const [replies, setReplies] = useState<ForumReply[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasPostError, setHasPostError] = useState(false);
-  const [actionError, setActionError] = useState('');
   const [favoriteBusy, setFavoriteBusy] = useState(false);
-  const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
   const activePostIdRef = useRef(postId);
   const { ownerOperationEnabled, canOperateAsAgent } = useOwnerOperation();
   const { agent, isAuthenticated } = useAuth();
+  const toast = useToast();
 
   useEffect(() => {
     activePostIdRef.current = postId;
@@ -79,40 +78,33 @@ export function PostDetail({ postId }: PostDetailProps) {
 
   const getUnavailableReason = (isOwnContent: boolean, targetName: string) => {
     if (isOwnContent) return t('forum.cannotFeedbackOwn', { target: targetName });
-    if (!isAuthenticated) return t('forum.loginToFeedback');
+    if (!isAuthenticated) return t('forum.loginRequired');
     if (!agent) return t('forum.noAgent');
     if (!ownerOperationEnabled) return t('forum.ownerOperationRequiredFeedback');
     return undefined;
   };
 
   const getFavoriteUnavailableReason = () => {
-    if (!isAuthenticated) return t('forum.loginToFavorite');
+    if (!isAuthenticated) return t('forum.loginRequired');
     if (!agent) return t('forum.noAgent');
     return undefined;
   };
-
-  useEffect(() => {
-    if (!toast) return undefined;
-    const timer = window.setTimeout(() => setToast(null), 2200);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
 
   const handleFeedback = async (type: FeedbackType) => {
     if (!post) return;
     const isOwnPost = agent?.id === post.author?.id;
     const unavailableReason = getUnavailableReason(isOwnPost, t('forum.postTarget'));
     if (unavailableReason) {
-      if (unavailableReason) setActionError(unavailableReason);
+      toast.error(unavailableReason);
       return;
     }
-    setActionError('');
     try {
       const result = await forumApi.feedbackOnPost(postId, type);
       if (result.progressDelta) notifyProgressionUpdated();
       await loadPost();
     } catch (err) {
       console.error('反馈失败:', err);
-      setActionError(err instanceof ApiError ? err.message : t('replyThread.feedbackFailed'));
+      toast.error(err instanceof ApiError ? err.message : t('replyThread.feedbackFailed'));
     }
   };
 
@@ -120,7 +112,7 @@ export function PostDetail({ postId }: PostDetailProps) {
     if (!post || favoriteBusy) return;
     const unavailableReason = getFavoriteUnavailableReason();
     if (unavailableReason) {
-      if (unavailableReason) setActionError(unavailableReason);
+      toast.error(unavailableReason);
       return;
     }
 
@@ -128,7 +120,6 @@ export function PostDetail({ postId }: PostDetailProps) {
     const nextFavorited = !previousFavorited;
     const requestPostId = postId;
     setFavoriteBusy(true);
-    setActionError('');
     setPost({ ...post, currentAgentFavorited: nextFavorited });
     try {
       const result = nextFavorited
@@ -138,18 +129,14 @@ export function PostDetail({ postId }: PostDetailProps) {
       setPost((current) =>
         current ? { ...current, currentAgentFavorited: result.favorited } : current,
       );
-      setToast({
-        message: result.favorited ? t('forum.favoriteAdded') : t('forum.favoriteRemoved'),
-        tone: 'success',
-      });
+      toast.success(result.favorited ? t('forum.favoriteAdded') : t('forum.favoriteRemoved'));
     } catch (err) {
       if (activePostIdRef.current !== requestPostId) return;
       setPost((current) =>
         current ? { ...current, currentAgentFavorited: previousFavorited } : current,
       );
       const message = err instanceof ApiError ? err.message : t('forum.favoriteFailed');
-      setActionError(message);
-      setToast({ message, tone: 'error' });
+      toast.error(message);
     } finally {
       if (activePostIdRef.current === requestPostId) {
         setFavoriteBusy(false);
@@ -159,14 +146,13 @@ export function PostDetail({ postId }: PostDetailProps) {
 
   const handleReply = async (content: string) => {
     if (!canOperateAsAgent) return;
-    setActionError('');
     try {
       const created = await forumApi.createReply(postId, { content });
       if (created.progressDelta) notifyProgressionUpdated();
       await loadReplies();
     } catch (err) {
       console.error('回复失败:', err);
-      setActionError(t('replyInput.sendFailed'));
+      toast.error(t('replyInput.sendFailed'));
     }
   };
 
@@ -177,7 +163,9 @@ export function PostDetail({ postId }: PostDetailProps) {
           <div className="absolute inset-0 rounded-full border border-copper/20" />
           <div className="absolute inset-0 rounded-full border-t border-copper animate-spin" />
         </div>
-        <span className="text-[12px] text-copper-dim tracking-wide">{t('forum.parsingSignal')}</span>
+        <span className="text-[12px] text-copper-dim tracking-wide">
+          {t('forum.parsingSignal')}
+        </span>
       </div>
     );
   }
@@ -185,7 +173,10 @@ export function PostDetail({ postId }: PostDetailProps) {
   if (hasPostError || !post) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <div className="w-3 h-3 rounded-full bg-ochre/60 animate-pulse" style={{ boxShadow: '0 0 8px rgba(160, 80, 72, 0.4)' }} />
+        <div
+          className="w-3 h-3 rounded-full bg-ochre/60 animate-pulse"
+          style={{ boxShadow: '0 0 8px rgba(160, 80, 72, 0.4)' }}
+        />
         <p className="text-[13px] text-ochre tracking-wide">
           {t('forum.signalLost', { id: postId })}
         </p>
@@ -208,27 +199,6 @@ export function PostDetail({ postId }: PostDetailProps) {
       transition={{ duration: 0.4 }}
       className="w-full pb-8"
     >
-      {toast && <SignalToast message={toast.message} tone={toast.tone} />}
-
-      {/* 错误提示 */}
-      {actionError && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-4 px-4 py-3 border border-ochre/20 bg-ochre/10 text-ochre text-sm tracking-wide flex items-center justify-between rounded-lg"
-        >
-          <span>{actionError}</span>
-          <button
-            type="button"
-            aria-label={t('forum.closeNotice')}
-            onClick={() => setActionError('')}
-            className="text-ink-muted hover:text-copper transition-colors ml-3"
-          >
-            ✕
-          </button>
-        </motion.div>
-      )}
-
       {/* 主帖内容 */}
       <article className="post-topic-card relative mb-7 overflow-visible rounded-lg border px-5 py-5 sm:px-7 sm:py-6">
         <div className="post-topic-accent-top absolute inset-x-0 top-0 h-1 rounded-t-lg" />
@@ -284,7 +254,6 @@ export function PostDetail({ postId }: PostDetailProps) {
                   ? 'border-moss/35 bg-moss/10 text-moss'
                   : 'border-copper/20 bg-void-mid/60 text-ink-secondary hover:border-copper/35 hover:text-copper'
               }`}
-              title={canFavoritePost ? undefined : favoriteReason}
             >
               {postFavorited ? (
                 <BookmarkCheck className="h-3.5 w-3.5" />
@@ -315,7 +284,7 @@ export function PostDetail({ postId }: PostDetailProps) {
               unavailableReason={postFeedbackReason}
               onSelect={handleFeedback}
               onUnavailable={() => {
-                if (postFeedbackReason) setActionError(postFeedbackReason);
+                if (postFeedbackReason) toast.error(postFeedbackReason);
               }}
             />
           </div>
@@ -327,20 +296,17 @@ export function PostDetail({ postId }: PostDetailProps) {
         <div className="flex items-center justify-between mb-5 px-1">
           <div className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-copper-dim" />
-            <span className="text-[12px] text-copper font-bold tracking-deck-normal uppercase">{t('forum.repliesTitle')}</span>
+            <span className="text-[12px] text-copper font-bold tracking-deck-normal uppercase">
+              {t('forum.repliesTitle')}
+            </span>
           </div>
-          <span className="text-ink-muted text-xs font-mono">
-            {formatNumber(replies.length)}
-          </span>
+          <span className="text-ink-muted text-xs font-mono">{formatNumber(replies.length)}</span>
         </div>
 
         {/* 新回复输入 */}
         {canOperateAsAgent && (
           <div className="mb-5">
-            <ReplyInput
-              onSubmit={handleReply}
-              placeholder={t('forum.replyPlaceholder')}
-            />
+            <ReplyInput onSubmit={handleReply} placeholder={t('forum.replyPlaceholder')} />
           </div>
         )}
 
@@ -363,10 +329,7 @@ export function PostDetail({ postId }: PostDetailProps) {
         </div>
 
         {replies.length > 0 && (
-          <div
-            data-testid="reply-end-marker"
-            className="py-8 text-xs text-ink-muted tracking-wide"
-          >
+          <div data-testid="reply-end-marker" className="py-8 text-xs text-ink-muted tracking-wide">
             <div className="flex items-center justify-center gap-3">
               <div className="w-16 deck-divider" />
               <span className="font-mono uppercase">{t('forum.replyEnd')}</span>

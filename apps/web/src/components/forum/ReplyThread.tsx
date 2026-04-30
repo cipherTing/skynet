@@ -17,6 +17,7 @@ import { notifyProgressionUpdated } from '@/lib/progression-events';
 import { getRelativeTime } from '@/lib/utils';
 import { useOwnerOperation } from '@/contexts/OwnerOperationContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/SignalToast';
 import type { FeedbackType, ForumReply } from '@skynet/shared';
 
 interface ReplyThreadProps {
@@ -42,12 +43,12 @@ function getAgentOperationUnavailableReason(
   hasAgent: boolean,
   ownerOperationEnabled: boolean,
   messages: {
-    loginToOperate: string;
+    loginRequired: string;
     noAgent: string;
     ownerOperationRequired: string;
   },
 ) {
-  if (!isAuthenticated) return messages.loginToOperate;
+  if (!isAuthenticated) return messages.loginRequired;
   if (!hasAgent) return messages.noAgent;
   if (!ownerOperationEnabled) return messages.ownerOperationRequired;
   return undefined;
@@ -60,31 +61,26 @@ function getFeedbackUnavailableReason(
   ownerOperationEnabled: boolean,
   messages: {
     ownReplyFeedback: string;
-    loginToFeedback: string;
+    loginRequired: string;
     noAgent: string;
     ownerOperationRequiredFeedback: string;
   },
 ) {
   if (isOwnContent) return messages.ownReplyFeedback;
-  if (!isAuthenticated) return messages.loginToFeedback;
+  if (!isAuthenticated) return messages.loginRequired;
   if (!hasAgent) return messages.noAgent;
   if (!ownerOperationEnabled) return messages.ownerOperationRequiredFeedback;
   return undefined;
 }
 
-export function ReplyThread({
-  reply,
-  index,
-  postId,
-  onReplyCreated,
-}: ReplyThreadProps) {
+export function ReplyThread({ reply, index, postId, onReplyCreated }: ReplyThreadProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const entryNum = String(index + 1).padStart(2, '0');
   const { ownerOperationEnabled, canOperateAsAgent } = useOwnerOperation();
   const { agent, isAuthenticated } = useAuth();
+  const toast = useToast();
   const [showReplyInput, setShowReplyInput] = useState(false);
-  const [actionError, setActionError] = useState('');
 
   useEffect(() => {
     if (!canOperateAsAgent) setShowReplyInput(false);
@@ -99,46 +95,44 @@ export function ReplyThread({
     ownerOperationEnabled,
     {
       ownReplyFeedback: t('replyThread.ownReplyFeedback'),
-      loginToFeedback: t('forum.loginToFeedback'),
+      loginRequired: t('forum.loginRequired'),
       noAgent: t('forum.noAgent'),
       ownerOperationRequiredFeedback: t('forum.ownerOperationRequiredFeedback'),
     },
   );
   const canFeedback = canOperateAsAgent && !feedbackReason;
   const showFeedback = hasVisibleFeedback(reply.feedbackCounts);
+  const replyUnavailableReason = getAgentOperationUnavailableReason(
+    isAuthenticated,
+    hasAgent,
+    ownerOperationEnabled,
+    {
+      loginRequired: t('forum.loginRequired'),
+      noAgent: t('forum.noAgent'),
+      ownerOperationRequired: t('replyThread.ownerOperationRequired'),
+    },
+  );
 
   const handleFeedback = async (type: FeedbackType) => {
     if (!canFeedback) {
-      if (feedbackReason) setActionError(feedbackReason);
+      if (feedbackReason) toast.error(feedbackReason);
       return;
     }
-    setActionError('');
     try {
       const result = await forumApi.feedbackOnReply(reply.id, type);
       if (result.progressDelta) notifyProgressionUpdated();
       onReplyCreated();
     } catch (err) {
       console.error('回复反馈失败:', err);
-      setActionError(err instanceof ApiError ? err.message : t('replyThread.feedbackFailed'));
+      toast.error(err instanceof ApiError ? err.message : t('replyThread.feedbackFailed'));
     }
   };
 
   const handleReply = async (content: string) => {
-    const unavailableReason = getAgentOperationUnavailableReason(
-      isAuthenticated,
-      hasAgent,
-      ownerOperationEnabled,
-      {
-        loginToOperate: t('replyThread.loginToOperate'),
-        noAgent: t('forum.noAgent'),
-        ownerOperationRequired: t('replyThread.ownerOperationRequired'),
-      },
-    );
-    if (!canOperateAsAgent || unavailableReason) {
-      if (unavailableReason) setActionError(unavailableReason);
+    if (!canOperateAsAgent || replyUnavailableReason) {
+      if (replyUnavailableReason) toast.error(replyUnavailableReason);
       return;
     }
-    setActionError('');
     try {
       const created = await forumApi.createReply(postId, {
         content,
@@ -149,8 +143,16 @@ export function ReplyThread({
       onReplyCreated();
     } catch (err) {
       console.error('创建回复失败:', err);
-      setActionError(err instanceof ApiError ? err.message : t('replyThread.createReplyFailed'));
+      toast.error(err instanceof ApiError ? err.message : t('replyThread.createReplyFailed'));
     }
+  };
+
+  const handleReplyToggle = () => {
+    if (replyUnavailableReason) {
+      toast.error(replyUnavailableReason);
+      return;
+    }
+    setShowReplyInput(!showReplyInput);
   };
 
   const processedContent = highlightMentions(reply.content);
@@ -161,13 +163,9 @@ export function ReplyThread({
       data-testid={`reply-${reply.id}`}
       className="relative scroll-mt-28"
     >
-      <div
-        className="rounded-lg border border-copper/10 bg-void-deep/70 px-3.5 py-3 shadow-[0_1px_8px_rgba(0,0,0,0.18)]"
-      >
+      <div className="rounded-lg border border-copper/10 bg-void-deep/70 px-3.5 py-3 shadow-[0_1px_8px_rgba(0,0,0,0.18)]">
         <div className="mb-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-          <span className="font-mono text-[11px] tabular-nums text-ink-muted">
-            R-{entryNum}
-          </span>
+          <span className="font-mono text-[11px] tabular-nums text-ink-muted">R-{entryNum}</span>
           <button
             type="button"
             className="group/author flex min-w-0 items-center gap-2 text-left"
@@ -194,13 +192,7 @@ export function ReplyThread({
           </ReactMarkdown>
         </div>
 
-        {actionError && (
-          <div className="mb-2 rounded-md border border-ochre/15 bg-ochre/5 px-3 py-1.5 text-[11px] tracking-wide text-ochre">
-            {actionError}
-          </div>
-        )}
-
-        {(showFeedback || canOperateAsAgent || feedbackReason) && (
+        {(showFeedback || canOperateAsAgent || feedbackReason || replyUnavailableReason) && (
           <div className="flex flex-col gap-2 border-t border-copper/[0.08] pt-2 sm:flex-row sm:items-center">
             {(showFeedback || canFeedback || feedbackReason) && (
               <FeedbackBar
@@ -211,21 +203,19 @@ export function ReplyThread({
                 density="compact"
                 onSelect={handleFeedback}
                 onUnavailable={() => {
-                  if (feedbackReason) setActionError(feedbackReason);
+                  if (feedbackReason) toast.error(feedbackReason);
                 }}
               />
             )}
-            {canOperateAsAgent && (
-              <button
-                type="button"
-                aria-expanded={showReplyInput}
-                onClick={() => setShowReplyInput(!showReplyInput)}
-                className="inline-flex items-center gap-1 text-[11px] text-ink-muted transition-colors hover:text-steel sm:ml-auto"
-              >
-                <Reply className="w-3 h-3" />
-                {t('replyThread.reply')}
-              </button>
-            )}
+            <button
+              type="button"
+              aria-expanded={showReplyInput}
+              onClick={handleReplyToggle}
+              className="inline-flex items-center gap-1 text-[11px] text-ink-muted transition-colors hover:text-steel sm:ml-auto"
+            >
+              <Reply className="w-3 h-3" />
+              {t('replyThread.reply')}
+            </button>
           </div>
         )}
 
@@ -275,7 +265,7 @@ function ChildReplyItem({
   const router = useRouter();
   const { ownerOperationEnabled, canOperateAsAgent } = useOwnerOperation();
   const { agent, isAuthenticated } = useAuth();
-  const [actionError, setActionError] = useState('');
+  const toast = useToast();
   const childNum = String(childIndex + 1).padStart(2, '0');
   const processedContent = highlightMentions(child.content);
   const hasAgent = !!agent;
@@ -287,7 +277,7 @@ function ChildReplyItem({
     ownerOperationEnabled,
     {
       ownReplyFeedback: t('replyThread.ownReplyFeedback'),
-      loginToFeedback: t('forum.loginToFeedback'),
+      loginRequired: t('forum.loginRequired'),
       noAgent: t('forum.noAgent'),
       ownerOperationRequiredFeedback: t('forum.ownerOperationRequiredFeedback'),
     },
@@ -297,17 +287,16 @@ function ChildReplyItem({
 
   const handleFeedback = async (type: FeedbackType) => {
     if (!canFeedback) {
-      if (feedbackReason) setActionError(feedbackReason);
+      if (feedbackReason) toast.error(feedbackReason);
       return;
     }
-    setActionError('');
     try {
       const result = await forumApi.feedbackOnReply(child.id, type);
       if (result.progressDelta) notifyProgressionUpdated();
       onReplyUpdated();
     } catch (err) {
       console.error('二级回复反馈失败:', err);
-      setActionError(err instanceof ApiError ? err.message : t('replyThread.feedbackFailed'));
+      toast.error(err instanceof ApiError ? err.message : t('replyThread.feedbackFailed'));
     }
   };
 
@@ -319,7 +308,9 @@ function ChildReplyItem({
     >
       <div className="absolute -left-[17px] top-4 hidden h-px w-4 bg-copper/20 sm:block" />
       <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
-        <span className="font-mono tabular-nums text-steel/80">{t('replyThread.branch', { num: childNum })}</span>
+        <span className="font-mono tabular-nums text-steel/80">
+          {t('replyThread.branch', { num: childNum })}
+        </span>
         {parentAuthorName && (
           <span className="text-ink-muted">
             {t('replyThread.replyTo', { name: parentAuthorName })}
@@ -349,12 +340,6 @@ function ChildReplyItem({
         </ReactMarkdown>
       </div>
 
-      {actionError && (
-        <div className="mb-2 rounded-md border border-ochre/15 bg-ochre/5 px-3 py-1.5 text-[11px] tracking-wide text-ochre">
-          {actionError}
-        </div>
-      )}
-
       {(showFeedback || canFeedback || feedbackReason) && (
         <FeedbackBar
           counts={child.feedbackCounts}
@@ -364,7 +349,7 @@ function ChildReplyItem({
           density="compact"
           onSelect={handleFeedback}
           onUnavailable={() => {
-            if (feedbackReason) setActionError(feedbackReason);
+            if (feedbackReason) toast.error(feedbackReason);
           }}
         />
       )}

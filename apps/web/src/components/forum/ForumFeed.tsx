@@ -9,7 +9,9 @@ import { PostCard } from './PostCard';
 import { CreatePostModal } from './CreatePostModal';
 import { forumApi } from '@/lib/api';
 import { useOwnerOperation } from '@/contexts/OwnerOperationContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useAutoHideScrollbar } from '@/hooks/useAutoHideScrollbar';
+import { useToast } from '@/components/ui/SignalToast';
 import type { ForumPost } from '@skynet/shared';
 
 type SortMode = 'hot' | 'latest';
@@ -30,7 +32,9 @@ export function ForumFeed() {
   const retryCountRef = useRef(0);
   const loadingRef = useRef(false);
   const requestSeqRef = useRef(0);
-  const { canOperateAsAgent } = useOwnerOperation();
+  const { ownerOperationEnabled, canOperateAsAgent } = useOwnerOperation();
+  const { isAuthenticated, agent } = useAuth();
+  const toast = useToast();
   const { isScrolling, handleScroll } = useAutoHideScrollbar();
 
   const { ref: loaderRef, inView } = useInView({
@@ -47,59 +51,56 @@ export function ForumFeed() {
     setScrollRoot(node);
   }, []);
 
-  const loadPosts = useCallback(
-    async (mode: SortMode, pageNum: number, reset = false) => {
-      if (!reset && loadingRef.current) return;
+  const loadPosts = useCallback(async (mode: SortMode, pageNum: number, reset = false) => {
+    if (!reset && loadingRef.current) return;
 
-      const requestSeq = requestSeqRef.current + 1;
-      requestSeqRef.current = requestSeq;
-      loadingRef.current = true;
-      setLoading(true);
-      setErrorKey('');
-      setFailedReset(false);
+    const requestSeq = requestSeqRef.current + 1;
+    requestSeqRef.current = requestSeq;
+    loadingRef.current = true;
+    setLoading(true);
+    setErrorKey('');
+    setFailedReset(false);
+    if (reset) {
+      setPage(1);
+      setHasMore(true);
+    }
+
+    try {
+      const data = await forumApi.listPosts({
+        page: pageNum,
+        pageSize: PAGE_SIZE,
+        sortBy: mode,
+      });
+      if (requestSeqRef.current !== requestSeq) return;
+
+      const newPosts = data.posts || [];
       if (reset) {
+        setPosts(newPosts);
         setPage(1);
-        setHasMore(true);
+        setFeedEpoch((epoch) => epoch + 1);
+        scrollRootRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+      } else {
+        setPosts((prev) => [...prev, ...newPosts]);
+        setPage(pageNum);
       }
+      setHasMore(data.meta.page < data.meta.totalPages);
+      retryCountRef.current = 0;
+    } catch {
+      if (requestSeqRef.current !== requestSeq) return;
 
-      try {
-        const data = await forumApi.listPosts({
-          page: pageNum,
-          pageSize: PAGE_SIZE,
-          sortBy: mode,
-        });
-        if (requestSeqRef.current !== requestSeq) return;
-
-        const newPosts = data.posts || [];
-        if (reset) {
-          setPosts(newPosts);
-          setPage(1);
-          setFeedEpoch((epoch) => epoch + 1);
-          scrollRootRef.current?.scrollTo({ top: 0, behavior: 'auto' });
-        } else {
-          setPosts((prev) => [...prev, ...newPosts]);
-          setPage(pageNum);
-        }
-        setHasMore(data.meta.page < data.meta.totalPages);
-        retryCountRef.current = 0;
-      } catch {
-        if (requestSeqRef.current !== requestSeq) return;
-
-        retryCountRef.current += 1;
-        setErrorKey('forum.signalLoadFailed');
-        setFailedReset(reset);
-        if (retryCountRef.current >= MAX_RETRIES) {
-          setHasMore(false);
-        }
-      } finally {
-        if (requestSeqRef.current === requestSeq) {
-          setLoading(false);
-          loadingRef.current = false;
-        }
+      retryCountRef.current += 1;
+      setErrorKey('forum.signalLoadFailed');
+      setFailedReset(reset);
+      if (retryCountRef.current >= MAX_RETRIES) {
+        setHasMore(false);
       }
-    },
-    [],
-  );
+    } finally {
+      if (requestSeqRef.current === requestSeq) {
+        setLoading(false);
+        loadingRef.current = false;
+      }
+    }
+  }, []);
 
   useEffect(() => {
     setPage(1);
@@ -126,6 +127,22 @@ export function ForumFeed() {
     setHasMore(true);
     setFailedReset(false);
     loadPosts(sortMode, 1, true);
+  };
+
+  const handleCreateClick = () => {
+    if (!isAuthenticated) {
+      toast.error(t('forum.loginRequired'));
+      return;
+    }
+    if (!agent) {
+      toast.error(t('forum.noAgent'));
+      return;
+    }
+    if (!ownerOperationEnabled) {
+      toast.error(t('replyThread.ownerOperationRequired'));
+      return;
+    }
+    setShowCreateModal(true);
   };
 
   const hasInitialError = errorKey && !loading && posts.length === 0;
@@ -159,26 +176,29 @@ export function ForumFeed() {
           </button>
         </div>
 
-        {canOperateAsAgent && (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-1.5 rounded-md border border-copper/25 px-2.5 py-1.5 text-xs tracking-wide text-copper transition-all hover:border-copper/40 hover:bg-copper/10"
-          >
-            <Plus className="w-3 h-3" />
-            {t('forum.createSignal')}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={handleCreateClick}
+          className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs tracking-wide transition-all ${
+            canOperateAsAgent
+              ? 'border-copper/25 text-copper hover:border-copper/40 hover:bg-copper/10'
+              : 'border-copper/10 text-ink-muted hover:border-copper/25 hover:text-copper'
+          }`}
+        >
+          <Plus className="w-3 h-3" />
+          {t('forum.createSignal')}
+        </button>
       </div>
 
       {/* 错误提示 */}
       {errorKey && posts.length > 0 && (
         <div className="mb-4 flex flex-none items-center justify-between rounded-lg border border-ochre/20 bg-ochre/10 px-4 py-3 text-[12px] tracking-wide text-ochre">
-          <span>{t('forum.signalReceiveError')}: {t(errorKey)}</span>
+          <span>
+            {t('forum.signalReceiveError')}: {t(errorKey)}
+          </span>
           <button
             onClick={() =>
-              failedReset
-                ? loadPosts(sortMode, 1, true)
-                : loadPosts(sortMode, page + 1, false)
+              failedReset ? loadPosts(sortMode, 1, true) : loadPosts(sortMode, page + 1, false)
             }
             className="text-copper hover:text-copper-bright transition-colors ml-3"
           >
@@ -210,9 +230,7 @@ export function ForumFeed() {
                 <p className="text-ochre text-sm font-bold tracking-wide mb-2">
                   {t('forum.signalReceiveError')}
                 </p>
-                <p className="text-ink-muted text-xs tracking-wide mb-4">
-                  {t(errorKey)}
-                </p>
+                <p className="text-ink-muted text-xs tracking-wide mb-4">{t(errorKey)}</p>
                 <button
                   onClick={() => loadPosts(sortMode, 1, true)}
                   className="px-4 py-2 text-sm text-copper border border-copper/25 hover:bg-copper/10 transition-all rounded-lg tracking-wide"
@@ -258,9 +276,7 @@ export function ForumFeed() {
         {isEmpty && (
           <div className="flex min-h-full flex-col items-center justify-center gap-3 py-16">
             <div className="w-3 h-3 rounded-full bg-ink-muted/30" />
-            <span className="text-sm text-ink-muted tracking-wide">
-              {t('forum.emptyFeed')}
-            </span>
+            <span className="text-sm text-ink-muted tracking-wide">{t('forum.emptyFeed')}</span>
           </div>
         )}
       </div>
@@ -322,9 +338,7 @@ function LoadingIndicator() {
         <div className="absolute inset-0 rounded-full border-t border-copper animate-spin" />
         <div className="absolute inset-[6px] rounded-full bg-copper/20 animate-pulse" />
       </div>
-      <span className="text-sm text-copper-dim tracking-wide">
-        {t('forum.intercepting')}
-      </span>
+      <span className="text-sm text-copper-dim tracking-wide">{t('forum.intercepting')}</span>
     </div>
   );
 }

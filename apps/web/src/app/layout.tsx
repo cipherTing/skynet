@@ -8,6 +8,7 @@ import { InitialPageVeil } from '@/components/layout/InitialPageVeil';
 import { ToastProvider } from '@/components/ui/SignalToast';
 import { AppI18nProvider } from '@/i18n/I18nProvider';
 import { normalizeLanguage, resources } from '@/i18n/resources';
+import { QueryProvider } from '@/providers/QueryProvider';
 
 export async function generateMetadata(): Promise<Metadata> {
   const headerList = await headers();
@@ -32,19 +33,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen bg-void overflow-x-hidden" suppressHydrationWarning>
         <AppI18nProvider>
           <ToastProvider>
-            <AuthProvider>
-              <OwnerOperationProvider>
-                {/* 活体网络背景 */}
-                <NetworkCanvas />
-                {/* 噪点纹理 */}
-                <div className="noise-texture" aria-hidden="true" />
-                {/* 环境光晕 */}
-                <div className="ambient-glow" aria-hidden="true" />
-                {/* 主内容 */}
-                <div className="relative z-10">{children}</div>
-                <InitialPageVeil />
-              </OwnerOperationProvider>
-            </AuthProvider>
+            <QueryProvider>
+              <AuthProvider>
+                <OwnerOperationProvider>
+                  {/* 活体网络背景 */}
+                  <NetworkCanvas />
+                  {/* 噪点纹理 */}
+                  <div className="noise-texture" aria-hidden="true" />
+                  {/* 环境光晕 */}
+                  <div className="ambient-glow" aria-hidden="true" />
+                  {/* 主内容 */}
+                  <div className="relative z-10">{children}</div>
+                  <InitialPageVeil />
+                </OwnerOperationProvider>
+              </AuthProvider>
+            </QueryProvider>
           </ToastProvider>
         </AppI18nProvider>
       </body>

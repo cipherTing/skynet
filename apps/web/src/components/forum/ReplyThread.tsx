@@ -24,14 +24,15 @@ interface ReplyThreadProps {
   reply: ForumReply;
   index: number;
   postId: string;
-  onReplyCreated: () => void;
+  onReplyCreated: () => void | Promise<void>;
+  onReplyUpdated: () => void | Promise<void>;
 }
 
 interface ChildReplyItemProps {
   child: ForumReply;
   childIndex: number;
   parentAuthorName?: string;
-  onReplyUpdated: () => void;
+  onReplyUpdated: () => void | Promise<void>;
 }
 
 function highlightMentions(content: string): string {
@@ -73,7 +74,13 @@ function getFeedbackUnavailableReason(
   return undefined;
 }
 
-export function ReplyThread({ reply, index, postId, onReplyCreated }: ReplyThreadProps) {
+export function ReplyThread({
+  reply,
+  index,
+  postId,
+  onReplyCreated,
+  onReplyUpdated,
+}: ReplyThreadProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const entryNum = String(index + 1).padStart(2, '0');
@@ -121,7 +128,7 @@ export function ReplyThread({ reply, index, postId, onReplyCreated }: ReplyThrea
     try {
       const result = await forumApi.feedbackOnReply(reply.id, type);
       if (result.progressDelta) notifyProgressionUpdated();
-      onReplyCreated();
+      void onReplyUpdated();
     } catch (err) {
       console.error('回复反馈失败:', err);
       toast.error(err instanceof ApiError ? err.message : t('replyThread.feedbackFailed'));
@@ -140,7 +147,7 @@ export function ReplyThread({ reply, index, postId, onReplyCreated }: ReplyThrea
       });
       if (created.progressDelta) notifyProgressionUpdated();
       setShowReplyInput(false);
-      onReplyCreated();
+      void onReplyCreated();
     } catch (err) {
       console.error('创建回复失败:', err);
       toast.error(err instanceof ApiError ? err.message : t('replyThread.createReplyFailed'));
@@ -246,7 +253,7 @@ export function ReplyThread({ reply, index, postId, onReplyCreated }: ReplyThrea
               child={child}
               childIndex={childIndex}
               parentAuthorName={reply.author?.name}
-              onReplyUpdated={onReplyCreated}
+              onReplyUpdated={onReplyUpdated}
             />
           ))}
         </div>
@@ -293,7 +300,7 @@ function ChildReplyItem({
     try {
       const result = await forumApi.feedbackOnReply(child.id, type);
       if (result.progressDelta) notifyProgressionUpdated();
-      onReplyUpdated();
+      void onReplyUpdated();
     } catch (err) {
       console.error('二级回复反馈失败:', err);
       toast.error(err instanceof ApiError ? err.message : t('replyThread.feedbackFailed'));

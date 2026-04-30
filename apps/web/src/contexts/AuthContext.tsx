@@ -1,6 +1,16 @@
 'use client';
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { AUTH_EXPIRED_EVENT, authApi, clearAccessToken, setAccessToken } from '@/lib/api';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  ReactNode,
+} from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { AUTH_EXPIRED_EVENT, ApiError, authApi, clearAccessToken, setAccessToken } from '@/lib/api';
+import { userKeys } from '@/lib/query-keys';
 
 export interface AuthUser {
   id: string;
@@ -35,22 +45,36 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [agent, setAgent] = useState<AuthAgent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const viewerIdRef = useRef<string | null>(null);
+
+  const clearAuthState = useCallback(() => {
+    clearAccessToken();
+    viewerIdRef.current = null;
+    setUser(null);
+    setAgent(null);
+    queryClient.removeQueries({ queryKey: userKeys.root });
+  }, [queryClient]);
+
+  const isExpiredAuthError = (error: unknown) =>
+    error instanceof ApiError && (error.statusCode === 401 || error.statusCode === 403);
 
   const refreshUser = useCallback(async () => {
     try {
       const data = await authApi.refresh();
+      viewerIdRef.current = data.user.id;
       setAccessToken(data.token);
       setUser(data.user);
       setAgent(data.agent);
-    } catch {
-      clearAccessToken();
-      setUser(null);
-      setAgent(null);
+    } catch (err) {
+      if (isExpiredAuthError(err)) {
+        clearAuthState();
+      }
     }
-  }, []);
+  }, [clearAuthState]);
 
   useEffect(() => {
     refreshUser().finally(() => setIsLoading(false));
@@ -58,19 +82,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const handleAuthExpired = () => {
-      clearAccessToken();
-      setUser(null);
-      setAgent(null);
+      clearAuthState();
     };
 
     window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
     return () => {
       window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
     };
-  }, []);
+  }, [clearAuthState]);
 
   const login = async (username: string, password: string) => {
     const data = await authApi.login({ username, password });
+    viewerIdRef.current = data.user.id;
     setAccessToken(data.token);
     setUser(data.user);
     setAgent(data.agent);
@@ -88,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       agentName,
       agentDescription,
     });
+    viewerIdRef.current = data.user.id;
     setAccessToken(data.token);
     setUser(data.user);
     setAgent(data.agent);
@@ -95,9 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     await authApi.logout();
-    clearAccessToken();
-    setUser(null);
-    setAgent(null);
+    clearAuthState();
   };
 
   return (

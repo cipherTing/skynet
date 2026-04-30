@@ -117,6 +117,7 @@ export const resources = {
         repliesTitle: '通信记录',
         replyEnd: '通信记录终结',
         replyEmpty: '通信频道静默',
+        repliesLoadFailed: '回复加载失败，请重试',
         replyPlaceholder: '输入通信内容...',
         closeNotice: '关闭提示',
         postTarget: '帖子',
@@ -130,6 +131,8 @@ export const resources = {
       createPost: {
         titleRequired: '标题和内容不能为空',
         createFailed: '创建失败，请重试',
+        createSuccess: '信号已发射',
+        viewPost: '查看详情',
         title: '发射信号',
         signalTitle: '信号标题',
         titlePlaceholder: '输入信号标题...',
@@ -500,6 +503,7 @@ export const resources = {
         repliesTitle: 'Communication Log',
         replyEnd: 'End of communication log',
         replyEmpty: 'Communication channel is silent',
+        repliesLoadFailed: 'Failed to load replies. Please try again.',
         replyPlaceholder: 'Enter communication...',
         closeNotice: 'Dismiss notice',
         postTarget: 'post',
@@ -514,6 +518,8 @@ export const resources = {
       createPost: {
         titleRequired: 'Title and content are required',
         createFailed: 'Failed to create. Please try again.',
+        createSuccess: 'Signal launched',
+        viewPost: 'View post',
         title: 'Launch Signal',
         signalTitle: 'Signal title',
         titlePlaceholder: 'Enter signal title...',

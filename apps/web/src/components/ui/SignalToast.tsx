@@ -11,34 +11,57 @@ import {
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
+import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FLOATING_Z_INDEX } from '@/components/ui/FloatingPortal';
 
 export type SignalToastTone = 'success' | 'error' | 'info';
 
+type ToastLinkAction = {
+  kind: 'link';
+  label: string;
+  href: string;
+};
+
+type ToastButtonAction = {
+  kind: 'button';
+  label: string;
+  onClick: () => void | Promise<void>;
+};
+
+type ToastAction = ToastLinkAction | ToastButtonAction;
+
 type ToastState = {
   id: number;
   message: string;
   tone: SignalToastTone;
+  action?: ToastAction;
+  durationMs: number;
 };
 
 type ToastInput = {
   message: string;
   tone?: SignalToastTone;
+  action?: ToastAction;
+  durationMs?: number;
 };
+
+type ToastOptions = Omit<ToastInput, 'message' | 'tone'>;
 
 type ToastContextValue = {
   show: (toast: ToastInput) => void;
-  success: (message: string) => void;
-  error: (message: string) => void;
-  info: (message: string) => void;
+  success: (message: string, options?: ToastOptions) => void;
+  error: (message: string, options?: ToastOptions) => void;
+  info: (message: string, options?: ToastOptions) => void;
 };
 
 interface SignalToastProps {
   message: string;
   tone?: SignalToastTone;
 }
+
+const DEFAULT_TOAST_DURATION_MS = 2400;
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
@@ -53,7 +76,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!toast) return undefined;
-    const timer = window.setTimeout(() => setToast(null), 2400);
+    const timer = window.setTimeout(() => setToast(null), toast.durationMs);
     return () => window.clearTimeout(timer);
   }, [toast]);
 
@@ -63,15 +86,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       id: toastIdRef.current,
       message: nextToast.message,
       tone: nextToast.tone ?? 'info',
+      action: nextToast.action,
+      durationMs: nextToast.durationMs ?? DEFAULT_TOAST_DURATION_MS,
     });
   }, []);
 
   const value = useMemo<ToastContextValue>(
     () => ({
       show,
-      success: (message: string) => show({ message, tone: 'success' }),
-      error: (message: string) => show({ message, tone: 'error' }),
-      info: (message: string) => show({ message, tone: 'info' }),
+      success: (message: string, options?: ToastOptions) =>
+        show({ message, tone: 'success', ...options }),
+      error: (message: string, options?: ToastOptions) =>
+        show({ message, tone: 'error', ...options }),
+      info: (message: string, options?: ToastOptions) =>
+        show({ message, tone: 'info', ...options }),
     }),
     [show],
   );
@@ -79,7 +107,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {mounted && toast && <ToastPortal toast={toast} />}
+      {mounted && toast && <ToastPortal toast={toast} onDismiss={() => setToast(null)} />}
     </ToastContext.Provider>
   );
 }
@@ -99,19 +127,29 @@ export function SignalToast({ message, tone = 'success' }: SignalToastProps) {
 
   if (!mounted || !message) return null;
 
-  return createPortal(<ToastFrame id={0} message={message} tone={tone} />, document.body);
+  return createPortal(
+    <ToastFrame id={0} message={message} tone={tone} durationMs={DEFAULT_TOAST_DURATION_MS} />,
+    document.body,
+  );
 }
 
-function ToastPortal({ toast }: { toast: ToastState }) {
+function ToastPortal({ toast, onDismiss }: { toast: ToastState; onDismiss: () => void }) {
   return createPortal(
     <AnimatePresence mode="wait">
-      <ToastFrame key={toast.id} id={toast.id} message={toast.message} tone={toast.tone} />
+      <ToastFrame key={toast.id} {...toast} onDismiss={onDismiss} />
     </AnimatePresence>,
     document.body,
   );
 }
 
-function ToastFrame({ id, message, tone }: ToastState) {
+function ToastFrame({
+  id,
+  message,
+  tone,
+  action,
+  onDismiss,
+}: ToastState & { onDismiss?: () => void }) {
+  const [actionRunning, setActionRunning] = useState(false);
   const Icon = tone === 'success' ? CheckCircle2 : tone === 'error' ? AlertTriangle : Info;
   const toneClass =
     tone === 'success'
@@ -134,6 +172,34 @@ function ToastFrame({ id, message, tone }: ToastState) {
     >
       <Icon className="h-4 w-4 flex-shrink-0" />
       <span className="min-w-0 break-words">{message}</span>
+      {action?.kind === 'link' ? (
+        <Link
+          href={action.href}
+          onClick={onDismiss}
+          className="ml-1 shrink-0 rounded-md border border-current/25 px-2.5 py-1 text-xs font-bold transition-colors hover:bg-current/10"
+        >
+          {action.label}
+        </Link>
+      ) : action?.kind === 'button' ? (
+        <button
+          type="button"
+          disabled={actionRunning}
+          onClick={async () => {
+            if (actionRunning) return;
+            setActionRunning(true);
+            try {
+              await action.onClick();
+              onDismiss?.();
+            } catch (err) {
+              console.error('Toast action failed:', err);
+              setActionRunning(false);
+            }
+          }}
+          className="ml-1 shrink-0 rounded-md border border-current/25 px-2.5 py-1 text-xs font-bold transition-colors hover:bg-current/10 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {action.label}
+        </button>
+      ) : null}
     </motion.div>
   );
 }

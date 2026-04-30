@@ -1,81 +1,55 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { useInView } from 'react-intersection-observer';
 import { Radio } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AgentInteractionCard } from '@/components/agent/AgentInteractionCard';
+import { useAuth } from '@/contexts/AuthContext';
 import { forumApi } from '@/lib/api';
-import type { AgentInteractionHistoryItem } from '@skynet/shared';
+import { forumKeys } from '@/lib/query-keys';
+import type { AgentInteractionHistoryItem, PaginationMeta } from '@skynet/shared';
 
 interface AgentHistoryTabProps {
   agentId: string;
 }
 
+type AgentHistoryPage = {
+  interactions: AgentInteractionHistoryItem[];
+  meta: PaginationMeta;
+};
+
+const PAGE_SIZE = 20;
+
 export function AgentHistoryTab({ agentId }: AgentHistoryTabProps) {
   const { t } = useTranslation();
-  const [interactions, setInteractions] = useState<AgentInteractionHistoryItem[]>([]);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(true);
-  const [errorKey, setErrorKey] = useState('');
-  const loadingRef = useRef(false);
-  const requestSeqRef = useRef(0);
-
+  const { isLoading: authLoading, user } = useAuth();
+  const viewerKey = user?.id ?? 'anonymous';
   const { ref: loaderRef, inView } = useInView({ threshold: 0.5 });
-  const PAGE_SIZE = 20;
-
-  const loadInteractions = useCallback(
-    async (pageNum: number, reset = false) => {
-      if (!reset && loadingRef.current) return;
-
-      const requestSeq = requestSeqRef.current + 1;
-      requestSeqRef.current = requestSeq;
-      loadingRef.current = true;
-      setLoading(true);
-      setErrorKey('');
-
-      try {
-        const data = await forumApi.listAgentInteractions(agentId, {
-          page: pageNum,
-          pageSize: PAGE_SIZE,
-        });
-        if (requestSeqRef.current !== requestSeq) return;
-
-        const newItems = data.interactions || [];
-        if (reset) {
-          setInteractions(newItems);
-          setPage(1);
-        } else {
-          setInteractions((prev) => [...prev, ...newItems]);
-          setPage(pageNum);
-        }
-        setHasMore(data.meta.page < data.meta.totalPages);
-      } catch {
-        if (requestSeqRef.current !== requestSeq) return;
-        setErrorKey('agent.historyLoadFailed');
-        setHasMore(false);
-      } finally {
-        if (requestSeqRef.current === requestSeq) {
-          setLoading(false);
-          loadingRef.current = false;
-        }
-      }
+  const historyQuery = useInfiniteQuery({
+    queryKey: forumKeys.agentHistory(viewerKey, agentId, PAGE_SIZE),
+    queryFn: ({ pageParam }) =>
+      forumApi.listAgentInteractions(agentId, {
+        page: Number(pageParam),
+        pageSize: PAGE_SIZE,
+      }),
+    initialPageParam: 1,
+    enabled: !authLoading,
+    getNextPageParam: (lastPage: AgentHistoryPage) => {
+      return lastPage.meta.page < lastPage.meta.totalPages ? lastPage.meta.page + 1 : undefined;
     },
-    [agentId],
-  );
+  });
+  const interactions = historyQuery.data?.pages.flatMap((page) => page.interactions) ?? [];
+  const loading = historyQuery.isPending || historyQuery.isFetchingNextPage;
+  const hasMore = historyQuery.hasNextPage === true;
+  const errorKey = historyQuery.isError ? 'agent.historyLoadFailed' : '';
 
   useEffect(() => {
-    setPage(1);
-    setHasMore(true);
-    loadInteractions(1, true);
-  }, [agentId, loadInteractions]);
-
-  useEffect(() => {
-    if (inView && hasMore && !loadingRef.current && interactions.length > 0) {
-      loadInteractions(page + 1);
+    if (inView && hasMore && !historyQuery.isFetchingNextPage && interactions.length > 0) {
+      void historyQuery.fetchNextPage();
     }
-  }, [inView, hasMore, page, loadInteractions, interactions.length]);
+  }, [hasMore, inView, interactions.length, historyQuery]);
 
   if (errorKey && interactions.length === 0 && !loading) {
     return (
@@ -86,7 +60,7 @@ export function AgentHistoryTab({ agentId }: AgentHistoryTabProps) {
         </div>
         <button
           type="button"
-          onClick={() => loadInteractions(1, true)}
+          onClick={() => void historyQuery.refetch()}
           className="mt-4 rounded-lg border border-copper/25 px-4 py-2 text-xs text-copper transition-colors hover:bg-copper/10"
         >
           {t('app.reload')}
@@ -122,7 +96,7 @@ export function AgentHistoryTab({ agentId }: AgentHistoryTabProps) {
         <div className="py-4 text-center">
           <button
             type="button"
-            onClick={() => loadInteractions(page + 1)}
+            onClick={() => void (hasMore ? historyQuery.fetchNextPage() : historyQuery.refetch())}
             className="text-xs text-copper transition-colors hover:text-copper-bright"
           >
             {t('agent.loadMoreFailed')}

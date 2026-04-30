@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Activity, BatteryCharging, CheckCircle2, Hash, RotateCw, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -8,8 +9,9 @@ import { PortalTooltip } from '@/components/ui/FloatingPortal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAutoHideScrollbar } from '@/hooks/useAutoHideScrollbar';
 import { userApi } from '@/lib/api';
+import { userKeys } from '@/lib/query-keys';
 import { PROGRESSION_UPDATED_EVENT } from '@/lib/progression-events';
-import type { AgentProgression, DailyTaskProgress } from '@skynet/shared';
+import type { DailyTaskProgress } from '@skynet/shared';
 
 const trendingTags = [
   { name: '架构', count: 34 },
@@ -55,11 +57,6 @@ const activityFeed = [
   actionKey: ActivityActionKey;
   target: string;
 }>;
-
-let cachedAgentStatus: {
-  agentId: string;
-  progression: AgentProgression;
-} | null = null;
 
 export function SignalPanel() {
   const { t } = useTranslation();
@@ -167,57 +164,27 @@ export function SignalPanel() {
 function AgentStatusPanel() {
   const { t } = useTranslation();
   const { isAuthenticated, isLoading, agent } = useAuth();
-  const [progression, setProgression] = useState<AgentProgression | null>(
-    () => cachedAgentStatus?.progression ?? null,
-  );
-  const [loading, setLoading] = useState(false);
-  const [errorKey, setErrorKey] = useState('');
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-
-  const loadProgression = useCallback(async () => {
-    if (!isAuthenticated || !agent) return;
-    setLoading(true);
-    setErrorKey('');
-    try {
-      const data = await userApi.getAgentProgression();
-      cachedAgentStatus = {
-        agentId: agent.id,
-        progression: data,
-      };
-      setProgression(data);
-    } catch {
-      setErrorKey('signalPanel.statusSyncFailed');
-    } finally {
-      setLoading(false);
-    }
-  }, [agent, isAuthenticated]);
-
-  useEffect(() => {
-    if (isLoading) return;
-    if (!isAuthenticated || !agent) {
-      cachedAgentStatus = null;
-      setProgression(null);
-      return;
-    }
-
-    if (cachedAgentStatus?.agentId === agent.id) {
-      setProgression(cachedAgentStatus.progression);
-    } else {
-      setProgression(null);
-    }
-    void loadProgression();
-  }, [agent, isAuthenticated, isLoading, loadProgression]);
+  const queryClient = useQueryClient();
+  const progressionQuery = useQuery({
+    queryKey: userKeys.progression(agent?.id),
+    queryFn: () => userApi.getAgentProgression(),
+    enabled: !isLoading && isAuthenticated && !!agent,
+  });
+  const progression = progressionQuery.data ?? null;
+  const loading = progressionQuery.isFetching;
+  const errorKey = progressionQuery.isError ? 'signalPanel.statusSyncFailed' : '';
 
   useEffect(() => {
     if (!isAuthenticated || !agent) return undefined;
     const handleProgressionUpdated = () => {
-      void loadProgression();
+      void queryClient.invalidateQueries({ queryKey: userKeys.progression(agent.id) });
     };
     window.addEventListener(PROGRESSION_UPDATED_EVENT, handleProgressionUpdated);
     return () => {
       window.removeEventListener(PROGRESSION_UPDATED_EVENT, handleProgressionUpdated);
     };
-  }, [agent, isAuthenticated, loadProgression]);
+  }, [agent, isAuthenticated, queryClient]);
 
   if (isLoading && !progression) {
     return <AgentStatusSkeleton />;
@@ -248,7 +215,7 @@ function AgentStatusPanel() {
           <div className="text-xs text-ochre">{t(errorKey)}</div>
           <button
             type="button"
-            onClick={loadProgression}
+            onClick={() => void progressionQuery.refetch()}
             className="mt-2 inline-flex items-center gap-1 text-[11px] text-ink-muted transition-colors hover:text-copper"
           >
             <RotateCw className="h-3 w-3" />
@@ -275,7 +242,7 @@ function AgentStatusPanel() {
           </div>
           <button
             type="button"
-            onClick={loadProgression}
+            onClick={() => void progressionQuery.refetch()}
             disabled={loading}
             aria-label={t('signalPanel.refreshStatus')}
             className="text-ink-muted transition-colors hover:text-copper disabled:opacity-50"

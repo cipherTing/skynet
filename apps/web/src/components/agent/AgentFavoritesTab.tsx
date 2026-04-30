@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useInView } from 'react-intersection-observer';
 import { Bookmark, Clock, Eye, Lock, MessageSquare, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -12,98 +13,53 @@ import { FeedbackBar, hasVisibleFeedback } from '@/components/forum/FeedbackBar'
 import { useToast } from '@/components/ui/SignalToast';
 import { useAuth } from '@/contexts/AuthContext';
 import { ApiError, forumApi } from '@/lib/api';
+import { forumKeys } from '@/lib/query-keys';
 import { formatNumber, getRelativeTime } from '@/lib/utils';
-import type { AgentFavoriteItem, ForumPost } from '@skynet/shared';
+import type { AgentFavoriteItem, AgentFavoritesResponse, ForumPost } from '@skynet/shared';
 
 interface AgentFavoritesTabProps {
   agentId: string;
 }
 
+const PAGE_SIZE = 20;
+
 export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
   const { t } = useTranslation();
-  const [favorites, setFavorites] = useState<AgentFavoriteItem[]>([]);
-  const [hidden, setHidden] = useState(false);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [errorKey, setErrorKey] = useState('');
-  const loadingRef = useRef(false);
-  const requestSeqRef = useRef(0);
-  const activeAgentIdRef = useRef(agentId);
-  const { agent, isAuthenticated } = useAuth();
+  const { agent, isAuthenticated, isLoading: authLoading, user } = useAuth();
   const toast = useToast();
+  const queryClient = useQueryClient();
 
   const { ref: loaderRef, inView } = useInView({ threshold: 0.5 });
-  const PAGE_SIZE = 20;
   const isOwner = agent?.id === agentId;
-
-  useEffect(() => {
-    activeAgentIdRef.current = agentId;
-  }, [agentId]);
-
-  const loadFavorites = useCallback(
-    async (pageNum: number, reset = false) => {
-      if (!reset && loadingRef.current) return;
-      const requestSeq = requestSeqRef.current + 1;
-      requestSeqRef.current = requestSeq;
-      const requestAgentId = agentId;
-      loadingRef.current = true;
-      setLoading(true);
-      setErrorKey('');
-      try {
-        const data = await forumApi.listAgentFavorites(requestAgentId, {
-          page: pageNum,
-          pageSize: PAGE_SIZE,
-        });
-        if (requestSeqRef.current !== requestSeq || activeAgentIdRef.current !== requestAgentId) {
-          return;
-        }
-        setHidden(data.hidden);
-        if (data.hidden) {
-          setFavorites([]);
-          setHasMore(false);
-          return;
-        }
-
-        const newItems = data.favorites || [];
-        if (reset) {
-          setFavorites(newItems);
-          setPage(1);
-        } else {
-          setFavorites((prev) => [...prev, ...newItems]);
-          setPage(pageNum);
-        }
-        setHasMore(data.meta.page < data.meta.totalPages);
-      } catch {
-        if (requestSeqRef.current !== requestSeq || activeAgentIdRef.current !== requestAgentId) {
-          return;
-        }
-        setErrorKey('agent.favoritesLoadFailed');
-        setHasMore(false);
-      } finally {
-        if (requestSeqRef.current === requestSeq && activeAgentIdRef.current === requestAgentId) {
-          setLoading(false);
-          loadingRef.current = false;
-        }
-      }
+  const viewerKey = user?.id ?? 'anonymous';
+  const queryKey = forumKeys.agentFavorites(viewerKey, agentId, PAGE_SIZE);
+  const favoritesQuery = useInfiniteQuery({
+    queryKey,
+    queryFn: ({ pageParam }) =>
+      forumApi.listAgentFavorites(agentId, {
+        page: Number(pageParam),
+        pageSize: PAGE_SIZE,
+      }),
+    initialPageParam: 1,
+    enabled: !authLoading,
+    getNextPageParam: (lastPage: AgentFavoritesResponse) => {
+      if (lastPage.hidden) return undefined;
+      return lastPage.meta.page < lastPage.meta.totalPages ? lastPage.meta.page + 1 : undefined;
     },
-    [agentId],
-  );
+  });
+  const hidden = favoritesQuery.data?.pages.some((page) => page.hidden) ?? false;
+  const favorites = hidden
+    ? []
+    : (favoritesQuery.data?.pages.flatMap((page) => page.favorites) ?? []);
+  const loading = favoritesQuery.isPending || favoritesQuery.isFetchingNextPage;
+  const hasMore = favoritesQuery.hasNextPage === true;
+  const errorKey = favoritesQuery.isError ? 'agent.favoritesLoadFailed' : '';
 
   useEffect(() => {
-    setPage(1);
-    setHasMore(true);
-    setHidden(false);
-    setFavorites([]);
-    setErrorKey('');
-    loadFavorites(1, true);
-  }, [agentId, loadFavorites]);
-
-  useEffect(() => {
-    if (inView && hasMore && !loadingRef.current && favorites.length > 0) {
-      loadFavorites(page + 1);
+    if (inView && hasMore && !favoritesQuery.isFetchingNextPage && favorites.length > 0) {
+      void favoritesQuery.fetchNextPage();
     }
-  }, [inView, hasMore, page, loadFavorites, favorites.length]);
+  }, [favorites.length, favoritesQuery, hasMore, inView]);
 
   const handleRemove = async (postId: string) => {
     if (!isOwner) return;
@@ -112,23 +68,13 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
       return;
     }
 
-    const removedItem = favorites.find((item) => item.post.id === postId);
-    const requestAgentId = agentId;
-    setFavorites((current) => current.filter((item) => item.post.id !== postId));
     try {
       await forumApi.unfavoritePost(postId);
-      if (activeAgentIdRef.current !== requestAgentId) return;
+      void queryClient.invalidateQueries({ queryKey });
+      void queryClient.invalidateQueries({ queryKey: forumKeys.post(viewerKey, postId) });
+      void queryClient.invalidateQueries({ queryKey: forumKeys.postsRoot(viewerKey) });
       toast.success(t('forum.favoriteRemoved'));
     } catch (err) {
-      if (activeAgentIdRef.current !== requestAgentId) return;
-      if (removedItem) {
-        setFavorites((current) => {
-          if (current.some((item) => item.post.id === postId)) return current;
-          return [removedItem, ...current].sort(
-            (a, b) => new Date(b.favoritedAt).getTime() - new Date(a.favoritedAt).getTime(),
-          );
-        });
-      }
       toast.error(err instanceof ApiError ? err.message : t('agent.removeFavoriteFailed'));
     }
   };
@@ -185,7 +131,9 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
       {errorKey && favorites.length > 0 && (
         <div className="text-center py-4">
           <button
-            onClick={() => loadFavorites(page, false)}
+            onClick={() =>
+              void (hasMore ? favoritesQuery.fetchNextPage() : favoritesQuery.refetch())
+            }
             className="text-xs text-copper hover:text-copper-bright transition-colors"
           >
             {t('agent.loadMoreFailed')}

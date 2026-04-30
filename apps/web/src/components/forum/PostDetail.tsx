@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bookmark, BookmarkCheck, Calendar, Eye, MessageSquare } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -14,6 +15,7 @@ import { FeedbackBar, hasVisibleFeedback } from './FeedbackBar';
 import { ReplyThread } from './ReplyThread';
 import { ReplyInput } from './ReplyInput';
 import { ApiError, forumApi } from '@/lib/api';
+import { forumKeys } from '@/lib/query-keys';
 import { notifyProgressionUpdated } from '@/lib/progression-events';
 import { getRelativeTime, formatNumber } from '@/lib/utils';
 import { useOwnerOperation } from '@/contexts/OwnerOperationContext';
@@ -28,53 +30,59 @@ interface PostDetailProps {
 export function PostDetail({ postId }: PostDetailProps) {
   const { t } = useTranslation();
   const router = useRouter();
-  const [post, setPost] = useState<ForumPost | null>(null);
-  const [replies, setReplies] = useState<ForumReply[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [hasPostError, setHasPostError] = useState(false);
   const [favoriteBusy, setFavoriteBusy] = useState(false);
   const activePostIdRef = useRef(postId);
+  const trackedViewPostIdRef = useRef<string | null>(null);
   const { ownerOperationEnabled, canOperateAsAgent } = useOwnerOperation();
-  const { agent, isAuthenticated } = useAuth();
+  const { agent, isAuthenticated, isLoading: authLoading, user } = useAuth();
   const toast = useToast();
+  const queryClient = useQueryClient();
+  const viewerKey = user?.id ?? 'anonymous';
+  const postQuery = useQuery({
+    queryKey: forumKeys.post(viewerKey, postId),
+    queryFn: () => forumApi.getPost(postId),
+    enabled: !authLoading,
+  });
+  const repliesQuery = useQuery({
+    queryKey: forumKeys.replies(viewerKey, postId),
+    queryFn: () => forumApi.listReplies(postId),
+    enabled: !authLoading,
+  });
+  const post = postQuery.data ?? null;
+  const replies = repliesQuery.data ?? [];
+  const loading = authLoading || postQuery.isPending || repliesQuery.isPending;
+  const hasPostError = postQuery.isError;
 
   useEffect(() => {
     activePostIdRef.current = postId;
     setFavoriteBusy(false);
   }, [postId]);
 
-  const loadPost = useCallback(async () => {
-    setHasPostError(false);
-    try {
-      const data = await forumApi.getPost(postId);
-      setPost(data);
-    } catch (err) {
-      console.error('帖子加载失败:', err);
-      setHasPostError(true);
-    }
-  }, [postId]);
-
-  const loadReplies = useCallback(async () => {
-    try {
-      const data = await forumApi.listReplies(postId);
-      setReplies(data || []);
-    } catch (err) {
-      console.error('回复加载失败:', err);
-    }
-  }, [postId]);
-
   useEffect(() => {
-    setLoading(true);
-    Promise.all([loadPost(), loadReplies()]).finally(() => setLoading(false));
-  }, [loadPost, loadReplies]);
-
-  const viewTracked = useRef(false);
-  useEffect(() => {
-    if (!viewTracked.current) {
-      viewTracked.current = true;
+    if (trackedViewPostIdRef.current !== postId) {
+      trackedViewPostIdRef.current = postId;
       forumApi.trackView(postId).catch(() => {});
     }
   }, [postId]);
+
+  const refreshPostData = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: forumKeys.post(viewerKey, postId) }),
+      queryClient.invalidateQueries({ queryKey: forumKeys.postsRoot(viewerKey) }),
+    ]);
+  };
+
+  const refreshReplyData = async () => {
+    await queryClient.invalidateQueries({ queryKey: forumKeys.replies(viewerKey, postId) });
+  };
+
+  const refreshReplyCreatedData = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: forumKeys.replies(viewerKey, postId) }),
+      queryClient.invalidateQueries({ queryKey: forumKeys.post(viewerKey, postId) }),
+      queryClient.invalidateQueries({ queryKey: forumKeys.postsRoot(viewerKey) }),
+    ]);
+  };
 
   const getUnavailableReason = (isOwnContent: boolean, targetName: string) => {
     if (isOwnContent) return t('forum.cannotFeedbackOwn', { target: targetName });
@@ -101,7 +109,7 @@ export function PostDetail({ postId }: PostDetailProps) {
     try {
       const result = await forumApi.feedbackOnPost(postId, type);
       if (result.progressDelta) notifyProgressionUpdated();
-      await loadPost();
+      await refreshPostData();
     } catch (err) {
       console.error('反馈失败:', err);
       toast.error(err instanceof ApiError ? err.message : t('replyThread.feedbackFailed'));
@@ -120,19 +128,28 @@ export function PostDetail({ postId }: PostDetailProps) {
     const nextFavorited = !previousFavorited;
     const requestPostId = postId;
     setFavoriteBusy(true);
-    setPost({ ...post, currentAgentFavorited: nextFavorited });
+    queryClient.setQueryData<ForumPost>(forumKeys.post(viewerKey, requestPostId), {
+      ...post,
+      currentAgentFavorited: nextFavorited,
+    });
     try {
       const result = nextFavorited
         ? await forumApi.favoritePost(requestPostId)
         : await forumApi.unfavoritePost(requestPostId);
       if (activePostIdRef.current !== requestPostId) return;
-      setPost((current) =>
+      queryClient.setQueryData<ForumPost>(forumKeys.post(viewerKey, requestPostId), (current) =>
         current ? { ...current, currentAgentFavorited: result.favorited } : current,
       );
+      void queryClient.invalidateQueries({ queryKey: forumKeys.postsRoot(viewerKey) });
+      if (agent) {
+        void queryClient.invalidateQueries({
+          queryKey: forumKeys.agentFavorites(viewerKey, agent.id, 20),
+        });
+      }
       toast.success(result.favorited ? t('forum.favoriteAdded') : t('forum.favoriteRemoved'));
     } catch (err) {
       if (activePostIdRef.current !== requestPostId) return;
-      setPost((current) =>
+      queryClient.setQueryData<ForumPost>(forumKeys.post(viewerKey, requestPostId), (current) =>
         current ? { ...current, currentAgentFavorited: previousFavorited } : current,
       );
       const message = err instanceof ApiError ? err.message : t('forum.favoriteFailed');
@@ -149,7 +166,7 @@ export function PostDetail({ postId }: PostDetailProps) {
     try {
       const created = await forumApi.createReply(postId, { content });
       if (created.progressDelta) notifyProgressionUpdated();
-      await loadReplies();
+      await refreshReplyCreatedData();
     } catch (err) {
       console.error('回复失败:', err);
       toast.error(t('replyInput.sendFailed'));
@@ -322,11 +339,25 @@ export function PostDetail({ postId }: PostDetailProps) {
                 reply={reply}
                 index={index}
                 postId={postId}
-                onReplyCreated={loadReplies}
+                onReplyCreated={refreshReplyCreatedData}
+                onReplyUpdated={refreshReplyData}
               />
             </motion.div>
           ))}
         </div>
+
+        {repliesQuery.isError && (
+          <div className="rounded-lg border border-ochre/20 bg-ochre/10 px-4 py-3 text-center text-[12px] tracking-wide text-ochre">
+            <p>{t('forum.repliesLoadFailed')}</p>
+            <button
+              type="button"
+              onClick={() => void repliesQuery.refetch()}
+              className="mt-2 text-copper transition-colors hover:text-copper-bright"
+            >
+              {t('app.retry')}
+            </button>
+          </div>
+        )}
 
         {replies.length > 0 && (
           <div data-testid="reply-end-marker" className="py-8 text-xs text-ink-muted tracking-wide">
@@ -338,7 +369,7 @@ export function PostDetail({ postId }: PostDetailProps) {
           </div>
         )}
 
-        {replies.length === 0 && !loading && (
+        {replies.length === 0 && !loading && !repliesQuery.isError && (
           <div className="flex flex-col items-center justify-center py-10 gap-2">
             <div className="w-2 h-2 rounded-full bg-ink-muted/20" />
             <span className="text-[12px] text-ink-muted tracking-wide">

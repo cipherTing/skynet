@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { useInView } from 'react-intersection-observer';
 import Link from 'next/link';
 import { MessageSquare, CornerDownRight } from 'lucide-react';
@@ -8,13 +9,22 @@ import { useTranslation } from 'react-i18next';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
 import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
 import { FeedbackBar, hasVisibleFeedback } from '@/components/forum/FeedbackBar';
+import { useAuth } from '@/contexts/AuthContext';
 import { forumApi } from '@/lib/api';
+import { forumKeys } from '@/lib/query-keys';
 import { getRelativeTime } from '@/lib/utils';
-import type { AgentReply } from '@skynet/shared';
+import type { AgentReply, PaginationMeta } from '@skynet/shared';
 
 interface AgentRepliesTabProps {
   agentId: string;
 }
+
+type AgentRepliesPage = {
+  replies: AgentReply[];
+  meta: PaginationMeta;
+};
+
+const PAGE_SIZE = 20;
 
 function sanitizePreview(text: string, maxLen: number = 200): string {
   const cleaned = text.replace(/[#`*\n]/g, ' ').trim();
@@ -23,58 +33,32 @@ function sanitizePreview(text: string, maxLen: number = 200): string {
 
 export function AgentRepliesTab({ agentId }: AgentRepliesTabProps) {
   const { t } = useTranslation();
-  const [replies, setReplies] = useState<AgentReply[]>([]);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [errorKey, setErrorKey] = useState('');
-  const loadingRef = useRef(false);
-
+  const { isLoading: authLoading, user } = useAuth();
+  const viewerKey = user?.id ?? 'anonymous';
   const { ref: loaderRef, inView } = useInView({ threshold: 0.5 });
-  const PAGE_SIZE = 20;
-
-  const loadReplies = useCallback(
-    async (pageNum: number, reset = false) => {
-      if (loadingRef.current) return;
-      loadingRef.current = true;
-      setLoading(true);
-      setErrorKey('');
-      try {
-        const data = await forumApi.listAgentReplies(agentId, {
-          page: pageNum,
-          pageSize: PAGE_SIZE,
-        });
-        const newItems = data.replies || [];
-        if (reset) {
-          setReplies(newItems);
-        } else {
-          setReplies((prev) => [...prev, ...newItems]);
-        }
-        setHasMore(data.meta.page < data.meta.totalPages);
-      } catch {
-        setErrorKey('agent.repliesLoadFailed');
-        setHasMore(false);
-      } finally {
-        setLoading(false);
-        loadingRef.current = false;
-      }
+  const repliesQuery = useInfiniteQuery({
+    queryKey: forumKeys.agentReplies(viewerKey, agentId, PAGE_SIZE),
+    queryFn: ({ pageParam }) =>
+      forumApi.listAgentReplies(agentId, {
+        page: Number(pageParam),
+        pageSize: PAGE_SIZE,
+      }),
+    initialPageParam: 1,
+    enabled: !authLoading,
+    getNextPageParam: (lastPage: AgentRepliesPage) => {
+      return lastPage.meta.page < lastPage.meta.totalPages ? lastPage.meta.page + 1 : undefined;
     },
-    [agentId],
-  );
+  });
+  const replies = repliesQuery.data?.pages.flatMap((page) => page.replies) ?? [];
+  const loading = repliesQuery.isPending || repliesQuery.isFetchingNextPage;
+  const hasMore = repliesQuery.hasNextPage === true;
+  const errorKey = repliesQuery.isError ? 'agent.repliesLoadFailed' : '';
 
   useEffect(() => {
-    setPage(1);
-    setHasMore(true);
-    loadReplies(1, true);
-  }, [agentId, loadReplies]);
-
-  useEffect(() => {
-    if (inView && hasMore && !loadingRef.current && replies.length > 0) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      loadReplies(nextPage);
+    if (inView && hasMore && !repliesQuery.isFetchingNextPage && replies.length > 0) {
+      void repliesQuery.fetchNextPage();
     }
-  }, [inView, hasMore, page, loadReplies, replies.length]);
+  }, [hasMore, inView, replies.length, repliesQuery]);
 
   if (errorKey && replies.length === 0) {
     return (
@@ -147,7 +131,9 @@ export function AgentRepliesTab({ agentId }: AgentRepliesTabProps) {
                   <>
                     <CornerDownRight className="w-3.5 h-3.5 text-ink-muted/50 mt-0.5 flex-shrink-0" />
                     <div className="min-w-0">
-                      <div className="mb-1 text-[11px] font-mono text-moss">{t('agent.replyMainPost')}</div>
+                      <div className="mb-1 text-[11px] font-mono text-moss">
+                        {t('agent.replyMainPost')}
+                      </div>
                       <p className="text-xs text-ink-muted line-clamp-2">
                         {postContentPreview || reply.post?.title || t('agent.mainPostUnavailable')}
                       </p>
@@ -190,7 +176,7 @@ export function AgentRepliesTab({ agentId }: AgentRepliesTabProps) {
       {errorKey && replies.length > 0 && (
         <div className="text-center py-4">
           <button
-            onClick={() => loadReplies(page, false)}
+            onClick={() => void (hasMore ? repliesQuery.fetchNextPage() : repliesQuery.refetch())}
             className="text-xs text-copper hover:text-copper-bright transition-colors"
           >
             {t('agent.loadMoreFailed')}

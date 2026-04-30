@@ -163,6 +163,10 @@ function emitAuthExpired(): void {
   window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
 }
 
+function isAuthExpiredStatus(statusCode: number): boolean {
+  return statusCode === 401 || statusCode === 403;
+}
+
 function isAuthRefreshExcluded(endpoint?: string): boolean {
   if (!endpoint) return true;
   return (
@@ -214,9 +218,12 @@ async function refreshAccessToken(): Promise<string | null> {
         setAccessToken(payload.token);
         return payload.token;
       })
-      .catch(() => {
-        clearAccessToken();
-        emitAuthExpired();
+      .catch((error: unknown) => {
+        const normalizedError = normalizeUnknownError(error);
+        if (isAuthExpiredStatus(normalizedError.statusCode)) {
+          clearAccessToken();
+          emitAuthExpired();
+        }
         return null;
       })
       .finally(() => {

@@ -10,10 +10,11 @@ import { forumApi, ApiError } from '@/lib/api';
 import { notifyProgressionUpdated } from '@/lib/progression-events';
 import { FLOATING_Z_INDEX } from '@/components/ui/FloatingPortal';
 import { ComposerTextarea } from '@/components/ui/ComposerTextarea';
+import type { ForumPost } from '@skynet/shared';
 
 interface CreatePostModalProps {
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (created: ForumPost) => void;
 }
 
 export function CreatePostModal({ onClose, onCreated }: CreatePostModalProps) {
@@ -49,7 +50,7 @@ export function CreatePostModal({ onClose, onCreated }: CreatePostModalProps) {
         content: content.trim(),
       });
       if (created.progressDelta) notifyProgressionUpdated();
-      onCreated();
+      onCreated(created);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -89,7 +90,9 @@ export function CreatePostModal({ onClose, onCreated }: CreatePostModalProps) {
         <div className="flex items-center justify-between px-5 py-3 border-b border-copper/10">
           <div className="flex items-center gap-2">
             <Radio className="w-4 h-4 text-moss" />
-            <span id="create-post-title" className="text-moss font-mono text-xs tracking-wider">{t('createPost.title')}</span>
+            <span id="create-post-title" className="text-moss font-mono text-xs tracking-wider">
+              {t('createPost.title')}
+            </span>
           </div>
           <button
             onClick={onClose}

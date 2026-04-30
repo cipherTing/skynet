@@ -1,70 +1,54 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { useInView } from 'react-intersection-observer';
 import { useTranslation } from 'react-i18next';
 import { PostCard } from '@/components/forum/PostCard';
+import { useAuth } from '@/contexts/AuthContext';
 import { forumApi } from '@/lib/api';
-import type { ForumPost } from '@skynet/shared';
+import { forumKeys } from '@/lib/query-keys';
+import type { ForumPost, PaginationMeta } from '@skynet/shared';
 
 interface AgentPostsTabProps {
   agentId: string;
 }
 
+type AgentPostsPage = {
+  posts: ForumPost[];
+  meta: PaginationMeta;
+};
+
+const PAGE_SIZE = 20;
+
 export function AgentPostsTab({ agentId }: AgentPostsTabProps) {
   const { t } = useTranslation();
-  const [posts, setPosts] = useState<ForumPost[]>([]);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [errorKey, setErrorKey] = useState('');
-  const loadingRef = useRef(false);
-
+  const { isLoading: authLoading, user } = useAuth();
+  const viewerKey = user?.id ?? 'anonymous';
   const { ref: loaderRef, inView } = useInView({ threshold: 0.5 });
-  const PAGE_SIZE = 20;
-
-  const loadPosts = useCallback(
-    async (pageNum: number, reset = false) => {
-      if (loadingRef.current) return;
-      loadingRef.current = true;
-      setLoading(true);
-      setErrorKey('');
-      try {
-        const data = await forumApi.listAgentPosts(agentId, {
-          page: pageNum,
-          pageSize: PAGE_SIZE,
-        });
-        const newItems = data.posts || [];
-        if (reset) {
-          setPosts(newItems);
-        } else {
-          setPosts((prev) => [...prev, ...newItems]);
-        }
-        setHasMore(data.meta.page < data.meta.totalPages);
-      } catch {
-        setErrorKey('agent.postsLoadFailed');
-        setHasMore(false);
-      } finally {
-        setLoading(false);
-        loadingRef.current = false;
-      }
+  const postsQuery = useInfiniteQuery({
+    queryKey: forumKeys.agentPosts(viewerKey, agentId, PAGE_SIZE),
+    queryFn: ({ pageParam }) =>
+      forumApi.listAgentPosts(agentId, {
+        page: Number(pageParam),
+        pageSize: PAGE_SIZE,
+      }),
+    initialPageParam: 1,
+    enabled: !authLoading,
+    getNextPageParam: (lastPage: AgentPostsPage) => {
+      return lastPage.meta.page < lastPage.meta.totalPages ? lastPage.meta.page + 1 : undefined;
     },
-    [agentId],
-  );
+  });
+  const posts = postsQuery.data?.pages.flatMap((page) => page.posts) ?? [];
+  const loading = postsQuery.isPending || postsQuery.isFetchingNextPage;
+  const hasMore = postsQuery.hasNextPage === true;
+  const errorKey = postsQuery.isError ? 'agent.postsLoadFailed' : '';
 
   useEffect(() => {
-    setPage(1);
-    setHasMore(true);
-    loadPosts(1, true);
-  }, [agentId, loadPosts]);
-
-  useEffect(() => {
-    if (inView && hasMore && !loadingRef.current && posts.length > 0) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      loadPosts(nextPage);
+    if (inView && hasMore && !postsQuery.isFetchingNextPage && posts.length > 0) {
+      void postsQuery.fetchNextPage();
     }
-  }, [inView, hasMore, page, loadPosts, posts.length]);
+  }, [hasMore, inView, posts.length, postsQuery]);
 
   if (errorKey && posts.length === 0) {
     return (
@@ -85,12 +69,7 @@ export function AgentPostsTab({ agentId }: AgentPostsTabProps) {
   return (
     <div className="space-y-3">
       {posts.map((post, index) => (
-        <PostCard
-          key={post.id}
-          post={post}
-          index={index}
-          animationIndex={index % PAGE_SIZE}
-        />
+        <PostCard key={post.id} post={post} index={index} animationIndex={index % PAGE_SIZE} />
       ))}
 
       {loading && (
@@ -105,7 +84,7 @@ export function AgentPostsTab({ agentId }: AgentPostsTabProps) {
       {errorKey && posts.length > 0 && (
         <div className="text-center py-4">
           <button
-            onClick={() => loadPosts(page, false)}
+            onClick={() => void (hasMore ? postsQuery.fetchNextPage() : postsQuery.refetch())}
             className="text-xs text-copper hover:text-copper-bright transition-colors"
           >
             {t('agent.loadMoreFailed')}

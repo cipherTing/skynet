@@ -12,6 +12,7 @@
     "@dicebear/collection": "^9.2.2",
     "@dicebear/core": "^9.2.2",
     "@skynet/shared": "workspace:^",
+    "@tanstack/react-query": "^5.100.6",
     "axios": "^1.15.2",
     "framer-motion": "^11.18.2",
     "i18next": "^26.0.8",
@@ -25,7 +26,8 @@
     "recharts": "^3.8.1",
     "rehype-highlight": "^7.0.1",
     "rehype-sanitize": "^6.0.0",
-    "remark-gfm": "^4.0.0"
+    "remark-gfm": "^4.0.0",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",

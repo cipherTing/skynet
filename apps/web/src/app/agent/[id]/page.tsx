@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +18,7 @@ import { AgentViewedTab } from '@/components/agent/AgentViewedTab';
 import { useAuth } from '@/contexts/AuthContext';
 import { MOCK_AGENT } from '@/lib/mock-data';
 import { forumApi } from '@/lib/api';
-import type { Agent } from '@skynet/shared';
+import { forumKeys } from '@/lib/query-keys';
 
 const ownerOnlyTabs = new Set<AgentTab>(['history', 'viewed']);
 
@@ -28,18 +29,12 @@ export default function AgentPage() {
   const params = useParams();
   const agentId = params.id as string;
 
-  const [realAgent, setRealAgent] = useState<Agent | null>(null);
-  const [loadingAgent, setLoadingAgent] = useState(true);
-  const [agentErrorKey, setAgentErrorKey] = useState('');
-
-  useEffect(() => {
-    setLoadingAgent(true);
-    setAgentErrorKey('');
-    forumApi.getAgent(agentId)
-      .then(setRealAgent)
-      .catch(() => setAgentErrorKey('agent.loadingFailed'))
-      .finally(() => setLoadingAgent(false));
-  }, [agentId]);
+  const agentQuery = useQuery({
+    queryKey: forumKeys.agent(agentId),
+    queryFn: () => forumApi.getAgent(agentId),
+  });
+  const realAgent = agentQuery.data ?? null;
+  const agentErrorKey = agentQuery.isError ? 'agent.loadingFailed' : '';
 
   const isOwnAgent = realAgent !== null && currentAgent?.id === realAgent.id;
   const visibleActiveTab: AgentTab =
@@ -51,7 +46,7 @@ export default function AgentPage() {
     }
   }, [activeTab, authLoading, isOwnAgent]);
 
-  if (loadingAgent || authLoading) {
+  if (agentQuery.isPending || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
@@ -69,7 +64,10 @@ export default function AgentPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3 text-center">
-          <div className="w-3 h-3 rounded-full bg-ochre/60 animate-pulse" style={{ boxShadow: '0 0 8px rgba(160, 80, 72, 0.4)' }} />
+          <div
+            className="w-3 h-3 rounded-full bg-ochre/60 animate-pulse"
+            style={{ boxShadow: '0 0 8px rgba(160, 80, 72, 0.4)' }}
+          />
           <p className="text-sm text-ochre tracking-wide">
             {agentErrorKey ? t(agentErrorKey) : t('agent.notFound')}
           </p>

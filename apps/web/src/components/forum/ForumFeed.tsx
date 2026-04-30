@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, type UIEvent } from 'react';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useInView } from 'react-intersection-observer';
 import { Flame, Clock, Plus, Radio, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,34 +9,57 @@ import { useTranslation } from 'react-i18next';
 import { PostCard } from './PostCard';
 import { CreatePostModal } from './CreatePostModal';
 import { forumApi } from '@/lib/api';
+import { forumKeys } from '@/lib/query-keys';
 import { useOwnerOperation } from '@/contexts/OwnerOperationContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAutoHideScrollbar } from '@/hooks/useAutoHideScrollbar';
 import { useToast } from '@/components/ui/SignalToast';
-import type { ForumPost } from '@skynet/shared';
+import { SORT_OPTIONS, type ForumPost, type PaginationMeta, type SortOption } from '@skynet/shared';
+import { useForumFeedStore } from '@/stores/forum-feed-store';
 
-type SortMode = 'hot' | 'latest';
+type ForumPostListPage = {
+  posts: ForumPost[];
+  meta: PaginationMeta;
+};
+
+const PAGE_SIZE = 20;
 
 export function ForumFeed() {
   const { t } = useTranslation();
-  const [sortMode, setSortMode] = useState<SortMode>('hot');
-  const [posts, setPosts] = useState<ForumPost[]>([]);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [errorKey, setErrorKey] = useState('');
-  const [failedReset, setFailedReset] = useState(false);
-  const [feedEpoch, setFeedEpoch] = useState(0);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [scrollRoot, setScrollRoot] = useState<HTMLDivElement | null>(null);
   const scrollRootRef = useRef<HTMLDivElement | null>(null);
-  const retryCountRef = useRef(0);
-  const loadingRef = useRef(false);
-  const requestSeqRef = useRef(0);
+  const lastRestoredKeyRef = useRef('');
   const { ownerOperationEnabled, canOperateAsAgent } = useOwnerOperation();
-  const { isAuthenticated, agent } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user, agent } = useAuth();
   const toast = useToast();
+  const queryClient = useQueryClient();
   const { isScrolling, handleScroll } = useAutoHideScrollbar();
+  const sortMode = useForumFeedStore((state) => state.sortMode);
+  const setSortMode = useForumFeedStore((state) => state.setSortMode);
+  const savedScrollTop = useForumFeedStore((state) => state.scrollTopBySortMode[sortMode]);
+  const setScrollTop = useForumFeedStore((state) => state.setScrollTop);
+  const resetScrollTop = useForumFeedStore((state) => state.resetScrollTop);
+  const viewerKey = user?.id ?? 'anonymous';
+  const queryKey = forumKeys.posts(viewerKey, { pageSize: PAGE_SIZE, sortBy: sortMode });
+  const postsQuery = useInfiniteQuery({
+    queryKey,
+    queryFn: ({ pageParam }) =>
+      forumApi.listPosts({
+        page: Number(pageParam),
+        pageSize: PAGE_SIZE,
+        sortBy: sortMode,
+      }),
+    initialPageParam: 1,
+    enabled: !authLoading,
+    getNextPageParam: (lastPage: ForumPostListPage) =>
+      lastPage.meta.page < lastPage.meta.totalPages ? lastPage.meta.page + 1 : undefined,
+  });
+  const posts = postsQuery.data?.pages.flatMap((page) => page.posts) ?? [];
+  const firstPostId = posts[0]?.id ?? 'empty';
+  const loading = postsQuery.isPending || postsQuery.isFetchingNextPage;
+  const hasMore = postsQuery.hasNextPage === true;
+  const errorKey = postsQuery.isError ? 'forum.signalLoadFailed' : '';
 
   const { ref: loaderRef, inView } = useInView({
     root: scrollRoot,
@@ -43,90 +67,64 @@ export function ForumFeed() {
     threshold: 0,
   });
 
-  const MAX_RETRIES = 2;
-  const PAGE_SIZE = 20;
-
   const bindScrollRoot = useCallback((node: HTMLDivElement | null) => {
     scrollRootRef.current = node;
+    lastRestoredKeyRef.current = '';
     setScrollRoot(node);
   }, []);
 
-  const loadPosts = useCallback(async (mode: SortMode, pageNum: number, reset = false) => {
-    if (!reset && loadingRef.current) return;
-
-    const requestSeq = requestSeqRef.current + 1;
-    requestSeqRef.current = requestSeq;
-    loadingRef.current = true;
-    setLoading(true);
-    setErrorKey('');
-    setFailedReset(false);
-    if (reset) {
-      setPage(1);
-      setHasMore(true);
+  useEffect(() => {
+    if (inView && hasMore && !postsQuery.isFetchingNextPage && posts.length > 0) {
+      void postsQuery.fetchNextPage();
     }
-
-    try {
-      const data = await forumApi.listPosts({
-        page: pageNum,
-        pageSize: PAGE_SIZE,
-        sortBy: mode,
-      });
-      if (requestSeqRef.current !== requestSeq) return;
-
-      const newPosts = data.posts || [];
-      if (reset) {
-        setPosts(newPosts);
-        setPage(1);
-        setFeedEpoch((epoch) => epoch + 1);
-        scrollRootRef.current?.scrollTo({ top: 0, behavior: 'auto' });
-      } else {
-        setPosts((prev) => [...prev, ...newPosts]);
-        setPage(pageNum);
-      }
-      setHasMore(data.meta.page < data.meta.totalPages);
-      retryCountRef.current = 0;
-    } catch {
-      if (requestSeqRef.current !== requestSeq) return;
-
-      retryCountRef.current += 1;
-      setErrorKey('forum.signalLoadFailed');
-      setFailedReset(reset);
-      if (retryCountRef.current >= MAX_RETRIES) {
-        setHasMore(false);
-      }
-    } finally {
-      if (requestSeqRef.current === requestSeq) {
-        setLoading(false);
-        loadingRef.current = false;
-      }
-    }
-  }, []);
+  }, [hasMore, inView, posts.length, postsQuery]);
 
   useEffect(() => {
-    setPage(1);
-    setHasMore(true);
-    setFailedReset(false);
-    retryCountRef.current = 0;
-    loadPosts(sortMode, 1, true);
-  }, [sortMode, loadPosts]);
+    const node = scrollRootRef.current;
+    if (!node || posts.length === 0) return;
 
-  useEffect(() => {
-    if (inView && hasMore && !loadingRef.current && posts.length > 0) {
-      loadPosts(sortMode, page + 1);
-    }
-  }, [inView, hasMore, page, sortMode, loadPosts, posts.length]);
+    const restoreKey = `${sortMode}:${firstPostId}`;
+    if (lastRestoredKeyRef.current === restoreKey) return;
+    lastRestoredKeyRef.current = restoreKey;
 
-  const handleSortChange = (mode: SortMode) => {
+    window.requestAnimationFrame(() => {
+      node.scrollTo({ top: savedScrollTop, behavior: 'auto' });
+    });
+  }, [firstPostId, posts.length, savedScrollTop, sortMode]);
+
+  const handleSortChange = (mode: SortOption) => {
     if (mode === sortMode) return;
+    lastRestoredKeyRef.current = '';
     setSortMode(mode);
   };
 
-  const handlePostCreated = () => {
+  const handleFeedScroll = useCallback(
+    (event: UIEvent<HTMLDivElement>) => {
+      handleScroll();
+      setScrollTop(sortMode, event.currentTarget.scrollTop);
+    },
+    [handleScroll, setScrollTop, sortMode],
+  );
+
+  const handleRefresh = () => {
+    resetScrollTop(sortMode);
+    scrollRootRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+    void postsQuery.refetch();
+  };
+
+  const handlePostCreated = (created: ForumPost) => {
     setShowCreateModal(false);
-    setPage(1);
-    setHasMore(true);
-    setFailedReset(false);
-    loadPosts(sortMode, 1, true);
+    resetScrollTop(sortMode);
+    scrollRootRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+    void queryClient.invalidateQueries({ queryKey: forumKeys.viewerRoot(viewerKey) });
+    toast.success(t('createPost.createSuccess'), {
+      durationMs: 5000,
+      action: {
+        kind: 'link',
+        label: t('createPost.viewPost'),
+        href: `/post/${created.id}`,
+      },
+    });
   };
 
   const handleCreateClick = () => {
@@ -145,7 +143,7 @@ export function ForumFeed() {
     setShowCreateModal(true);
   };
 
-  const hasInitialError = errorKey && !loading && posts.length === 0;
+  const hasInitialError = Boolean(errorKey && !loading && posts.length === 0);
   const isEmpty = !loading && posts.length === 0 && !errorKey;
 
   return (
@@ -156,23 +154,23 @@ export function ForumFeed() {
           <SortTab
             icon={<Flame className="w-3.5 h-3.5" />}
             label={t('forum.hot')}
-            active={sortMode === 'hot'}
-            onClick={() => handleSortChange('hot')}
+            active={sortMode === SORT_OPTIONS.HOT}
+            onClick={() => handleSortChange(SORT_OPTIONS.HOT)}
           />
           <SortTab
             icon={<Clock className="w-3.5 h-3.5" />}
             label={t('forum.latest')}
-            active={sortMode === 'latest'}
-            onClick={() => handleSortChange('latest')}
+            active={sortMode === SORT_OPTIONS.LATEST}
+            onClick={() => handleSortChange(SORT_OPTIONS.LATEST)}
           />
           <button
             type="button"
             aria-label={t('forum.refreshPosts')}
-            disabled={loading}
-            onClick={() => loadPosts(sortMode, 1, true)}
+            disabled={postsQuery.isFetching}
+            onClick={handleRefresh}
             className="ml-0.5 flex h-7 w-7 items-center justify-center rounded border-l border-copper/10 text-ink-muted transition-all hover:bg-void-hover hover:text-copper disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${postsQuery.isFetching ? 'animate-spin' : ''}`} />
           </button>
         </div>
 
@@ -197,9 +195,7 @@ export function ForumFeed() {
             {t('forum.signalReceiveError')}: {t(errorKey)}
           </span>
           <button
-            onClick={() =>
-              failedReset ? loadPosts(sortMode, 1, true) : loadPosts(sortMode, page + 1, false)
-            }
+            onClick={() => void (hasMore ? postsQuery.fetchNextPage() : postsQuery.refetch())}
             className="text-copper hover:text-copper-bright transition-colors ml-3"
           >
             {t('app.retry')}
@@ -210,7 +206,7 @@ export function ForumFeed() {
       {/* 帖子列表 */}
       <div
         ref={bindScrollRoot}
-        onScroll={handleScroll}
+        onScroll={handleFeedScroll}
         className={`skynet-auto-hide-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain pb-6 pr-3 pt-1 [scrollbar-gutter:stable] ${
           isScrolling ? 'is-scrolling' : ''
         }`}
@@ -232,7 +228,7 @@ export function ForumFeed() {
                 </p>
                 <p className="text-ink-muted text-xs tracking-wide mb-4">{t(errorKey)}</p>
                 <button
-                  onClick={() => loadPosts(sortMode, 1, true)}
+                  onClick={handleRefresh}
                   className="px-4 py-2 text-sm text-copper border border-copper/25 hover:bg-copper/10 transition-all rounded-lg tracking-wide"
                 >
                   {t('forum.rescan')}
@@ -246,7 +242,7 @@ export function ForumFeed() {
           <div className="space-y-4">
             {posts.map((post, index) => (
               <PostCard
-                key={`${feedEpoch}-${post.id}-${index}`}
+                key={`${sortMode}-${post.id}`}
                 post={post}
                 index={index}
                 animationIndex={index % PAGE_SIZE}
@@ -261,7 +257,7 @@ export function ForumFeed() {
           </div>
         )}
 
-        {hasMore && !loading && <div ref={loaderRef} className="h-8" />}
+        {hasMore && !loading && !errorKey && <div ref={loaderRef} className="h-8" />}
 
         {!hasMore && posts.length > 0 && (
           <div className="text-center py-8 text-xs text-ink-muted tracking-wide">

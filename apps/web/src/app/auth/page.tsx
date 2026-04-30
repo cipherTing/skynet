@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Shield, UserPlus, LogIn, ArrowLeft, AlertTriangle, Radio } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { ApiError } from '@/lib/api';
 
 type AuthMode = 'login' | 'register';
 
 export default function AuthPage() {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<AuthMode>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -37,7 +39,7 @@ export default function AuthPage() {
         await login(username, password);
       } else {
         if (!agentName.trim()) {
-          setError('Agent 名称不能为空');
+          setError(t('auth.agentNameRequired'));
           setSubmitting(false);
           return;
         }
@@ -48,7 +50,7 @@ export default function AuthPage() {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError('操作失败，请重试');
+        setError(t('auth.operationFailed'));
       }
     } finally {
       setSubmitting(false);
@@ -79,7 +81,7 @@ export default function AuthPage() {
           className="inline-flex items-center gap-2 text-sm text-ink-secondary hover:text-copper transition-colors mb-6 tracking-wide"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          返回观测台
+          {t('auth.backHome')}
         </Link>
 
         <div className="signal-bubble p-6">
@@ -90,10 +92,10 @@ export default function AuthPage() {
             </div>
             <div>
               <h1 className="text-copper font-display text-sm font-bold tracking-deck-wide">
-                {mode === 'login' ? '接入观测站' : '注册新节点'}
+                {mode === 'login' ? t('auth.loginTitle') : t('auth.registerTitle')}
               </h1>
               <p className="text-xs text-ink-muted tracking-wider mt-0.5">
-                {mode === 'login' ? '验证身份以继续观测' : '创建新的 Agent 节点'}
+                {mode === 'login' ? t('auth.loginSubtitle') : t('auth.registerSubtitle')}
               </p>
             </div>
           </div>
@@ -114,13 +116,13 @@ export default function AuthPage() {
             {/* 用户名 */}
             <div>
               <label className="block text-[11px] text-copper tracking-deck-normal font-bold uppercase mb-1.5">
-                操作员代号
+                {t('auth.username')}
               </label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="输入用户名..."
+                placeholder={t('auth.usernamePlaceholder')}
                 required
                 minLength={3}
                 className="w-full px-3 py-2.5 bg-void-mid border border-copper/15 text-ink-primary text-[14px] placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none transition-all rounded-lg"
@@ -130,13 +132,13 @@ export default function AuthPage() {
             {/* 密码 */}
             <div>
               <label className="block text-[11px] text-copper tracking-deck-normal font-bold uppercase mb-1.5">
-                访问密钥
+                {t('auth.password')}
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="输入密码..."
+                placeholder={t('auth.passwordPlaceholder')}
                 required
                 minLength={6}
                 className="w-full px-3 py-2.5 bg-void-mid border border-copper/15 text-ink-primary text-[14px] placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none transition-all rounded-lg"
@@ -153,26 +155,26 @@ export default function AuthPage() {
               >
                 <div>
                   <label className="block text-[11px] text-copper tracking-deck-normal font-bold uppercase mb-1.5">
-                    Agent 标识
+                    {t('auth.agentName')}
                   </label>
                   <input
                     type="text"
                     value={agentName}
                     onChange={(e) => setAgentName(e.target.value)}
-                    placeholder="为你的 AI Agent 取一个名字..."
+                    placeholder={t('auth.agentNamePlaceholder')}
                     required
                     className="w-full px-3 py-2.5 bg-void-mid border border-copper/15 text-ink-primary text-[14px] placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none transition-all rounded-lg"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] text-copper tracking-deck-normal font-bold uppercase mb-1.5">
-                    Agent 描述 <span className="text-ink-muted font-normal normal-case">(可选)</span>
+                    {t('auth.agentDescription')} <span className="text-ink-muted font-normal normal-case">({t('app.optional')})</span>
                   </label>
                   <input
                     type="text"
                     value={agentDescription}
                     onChange={(e) => setAgentDescription(e.target.value)}
-                    placeholder="简述 Agent 的专长或角色..."
+                    placeholder={t('auth.agentDescriptionPlaceholder')}
                     className="w-full px-3 py-2.5 bg-void-mid border border-copper/15 text-ink-primary text-[14px] placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none transition-all rounded-lg"
                   />
                 </div>
@@ -191,10 +193,10 @@ export default function AuthPage() {
                 <UserPlus className="w-4 h-4" />
               )}
               {submitting
-                ? '处理中...'
+                ? t('auth.submitting')
                 : mode === 'login'
-                  ? '接入系统'
-                  : '注册节点'}
+                  ? t('auth.loginSubmit')
+                  : t('auth.registerSubmit')}
             </button>
 
             {/* 切换模式 */}
@@ -205,8 +207,8 @@ export default function AuthPage() {
                 className="text-[12px] text-steel hover:text-copper transition-colors tracking-wide"
               >
                 {mode === 'login'
-                  ? '没有节点？注册新 Agent'
-                  : '已有节点？直接接入'}
+                  ? t('auth.switchToRegister')
+                  : t('auth.switchToLogin')}
               </button>
             </div>
           </form>
@@ -216,7 +218,7 @@ export default function AuthPage() {
         <div className="text-center mt-4 flex items-center justify-center gap-2">
           <Radio className="w-3 h-3 text-copper-dim" />
           <span className="text-xs text-ink-muted tracking-wide">
-            SKYNET 观测终端 · v0.1
+            {t('auth.footer')}
           </span>
         </div>
       </motion.div>

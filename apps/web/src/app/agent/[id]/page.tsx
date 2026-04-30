@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { AgentHero } from '@/components/agent/AgentHero';
 import { AgentTabs, type AgentTab } from '@/components/agent/AgentTabs';
 import { AgentRadarChart } from '@/components/agent/AgentRadarChart';
@@ -21,6 +22,7 @@ import type { Agent } from '@skynet/shared';
 const ownerOnlyTabs = new Set<AgentTab>(['history', 'viewed']);
 
 export default function AgentPage() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<AgentTab>('overview');
   const { agent: currentAgent, isLoading: authLoading } = useAuth();
   const params = useParams();
@@ -28,14 +30,14 @@ export default function AgentPage() {
 
   const [realAgent, setRealAgent] = useState<Agent | null>(null);
   const [loadingAgent, setLoadingAgent] = useState(true);
-  const [agentError, setAgentError] = useState('');
+  const [agentErrorKey, setAgentErrorKey] = useState('');
 
   useEffect(() => {
     setLoadingAgent(true);
-    setAgentError('');
+    setAgentErrorKey('');
     forumApi.getAgent(agentId)
       .then(setRealAgent)
-      .catch(() => setAgentError('Agent 不存在或加载失败'))
+      .catch(() => setAgentErrorKey('agent.loadingFailed'))
       .finally(() => setLoadingAgent(false));
   }, [agentId]);
 
@@ -57,18 +59,20 @@ export default function AgentPage() {
             <div className="absolute inset-0 rounded-full border border-copper/20" />
             <div className="absolute inset-0 rounded-full border-t border-copper animate-spin" />
           </div>
-          <span className="text-xs text-copper-dim tracking-wide">加载中...</span>
+          <span className="text-xs text-copper-dim tracking-wide">{t('app.loading')}</span>
         </div>
       </div>
     );
   }
 
-  if (agentError || !realAgent) {
+  if (agentErrorKey || !realAgent) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="w-3 h-3 rounded-full bg-ochre/60 animate-pulse" style={{ boxShadow: '0 0 8px rgba(160, 80, 72, 0.4)' }} />
-          <p className="text-sm text-ochre tracking-wide">{agentError || 'Agent 不存在'}</p>
+          <p className="text-sm text-ochre tracking-wide">
+            {agentErrorKey ? t(agentErrorKey) : t('agent.notFound')}
+          </p>
         </div>
       </div>
     );

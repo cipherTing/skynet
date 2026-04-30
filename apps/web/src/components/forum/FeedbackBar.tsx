@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Check, SmilePlus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
   FLOATING_Z_INDEX,
   FloatingPortal,
@@ -14,56 +15,38 @@ import type { FeedbackCounts, FeedbackType } from '@skynet/shared';
 export const FEEDBACK_ITEMS: Array<{
   type: FeedbackType;
   emoji: string;
-  label: string;
-  description: string;
 }> = [
   {
     type: 'SPARK',
     emoji: '💡',
-    label: '灵感',
-    description: '这条内容带来了新的想法或方向。',
   },
   {
     type: 'ON_POINT',
     emoji: '🎯',
-    label: '精准',
-    description: '观点命中问题核心，判断很准。',
   },
   {
     type: 'CONSTRUCTIVE',
     emoji: '🌱',
-    label: '建设性',
-    description: '提供了可继续推进的补充或方案。',
   },
   {
     type: 'RESONATE',
     emoji: '🤝',
-    label: '共鸣',
-    description: '你认可这条内容的感受、立场或方向。',
   },
   {
     type: 'UNCLEAR',
     emoji: '❓',
-    label: '困惑',
-    description: '表达还不够清楚，需要进一步说明。',
   },
   {
     type: 'OFF_TOPIC',
     emoji: '⚠️',
-    label: '偏题',
-    description: '内容和当前主题关联较弱。',
   },
   {
     type: 'NOISE',
     emoji: '🗑️',
-    label: '噪声',
-    description: '信息价值较低，干扰了讨论。',
   },
   {
     type: 'VIOLATION',
     emoji: '🚨',
-    label: '举报',
-    description: '内容可能违反社区规则，需要后续处理。',
   },
 ];
 
@@ -118,6 +101,7 @@ export function FeedbackBar({
   onSelect,
   onUnavailable,
 }: FeedbackBarProps) {
+  const { t } = useTranslation();
   const normalizedCounts = normalizeFeedbackCounts(counts);
   const visibleItems = FEEDBACK_ITEMS.filter((item) => normalizedCounts[item.type] > 0);
   const compact = density === 'compact';
@@ -173,17 +157,19 @@ export function FeedbackBar({
     <div
       className={`flex flex-wrap items-center ${compact ? 'gap-1.5' : 'gap-2'}`}
       role="group"
-      aria-label="反馈"
+      aria-label={t('feedback.aria')}
     >
       {visibleItems.map((item) => {
         const selected = currentFeedback === item.type;
         const count = normalizedCounts[item.type];
+        const label = t(`feedback.items.${item.type}.label`);
+        const description = t(`feedback.items.${item.type}.description`);
         const tooltip = (
           <div className="space-y-1">
             <div className="font-bold text-ink-primary">
-              {item.emoji} {item.label}
+              {item.emoji} {label}
             </div>
-            <div>{item.description}</div>
+            <div>{description}</div>
             {!canInteract && unavailableReason && (
               <div className="border-t border-copper/10 pt-1 text-ink-muted">
                 {unavailableReason}
@@ -191,7 +177,7 @@ export function FeedbackBar({
             )}
             {canInteract && selected && (
               <div className="border-t border-copper/10 pt-1 text-ink-muted">
-                再次点击可撤销这项反馈。
+                {t('feedback.undoHint')}
               </div>
             )}
           </div>
@@ -200,7 +186,7 @@ export function FeedbackBar({
         return (
           <PortalTooltip key={item.type} content={tooltip} placement="top" align="center">
             <span
-              aria-label={`${item.label}，${count} 次`}
+              aria-label={t('feedback.countLabel', { label, count })}
               className={[
                 'inline-flex h-7 min-w-[50px] items-center justify-center gap-1 rounded-full border px-2 font-mono text-[12px] tabular-nums transition-all',
                 compact ? 'h-6 min-w-[44px] px-1.5 text-[11px]' : '',
@@ -242,7 +228,7 @@ export function FeedbackBar({
             ].filter(Boolean).join(' ')}
           >
             <SmilePlus className={compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
-            {selectedItem ? `已评 ${selectedItem.emoji}` : '评价'}
+            {selectedItem ? t('feedback.selected', { emoji: selectedItem.emoji }) : t('feedback.action')}
           </button>
 
           <FloatingPortal
@@ -263,16 +249,18 @@ export function FeedbackBar({
                   id={menuTitleId}
                   className="text-[11px] font-bold uppercase tracking-deck-normal text-copper"
                 >
-                  选择评价
+                  {t('feedback.choose')}
                 </div>
                 <div className="mt-0.5 text-[11px] leading-relaxed text-ink-muted">
-                  同一项再次点击会撤销，选择其他项会切换。
+                  {t('feedback.chooseHint')}
                 </div>
               </div>
               <div className="grid gap-1">
                 {FEEDBACK_ITEMS.map((item, itemIndex) => {
                   const selected = currentFeedback === item.type;
                   const count = normalizedCounts[item.type];
+                  const label = t(`feedback.items.${item.type}.label`);
+                  const description = t(`feedback.items.${item.type}.description`);
                   return (
                     <button
                       key={item.type}
@@ -306,10 +294,10 @@ export function FeedbackBar({
                       </span>
                       <span className="min-w-0">
                         <span className="block text-[12px] font-bold text-ink-primary">
-                          {item.label}
+                          {label}
                         </span>
                         <span className="mt-0.5 block text-[11px] leading-snug text-ink-muted">
-                          {item.description}
+                          {description}
                         </span>
                       </span>
                       <span className="flex items-center gap-1 text-[11px] font-mono text-ink-secondary">

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useInView } from 'react-intersection-observer';
+import { useTranslation } from 'react-i18next';
 import { PostCard } from '@/components/forum/PostCard';
 import { forumApi } from '@/lib/api';
 import type { ForumPost } from '@skynet/shared';
@@ -11,11 +12,12 @@ interface AgentPostsTabProps {
 }
 
 export function AgentPostsTab({ agentId }: AgentPostsTabProps) {
+  const { t } = useTranslation();
   const [posts, setPosts] = useState<ForumPost[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [error, setError] = useState('');
+  const [errorKey, setErrorKey] = useState('');
   const loadingRef = useRef(false);
 
   const { ref: loaderRef, inView } = useInView({ threshold: 0.5 });
@@ -26,7 +28,7 @@ export function AgentPostsTab({ agentId }: AgentPostsTabProps) {
       if (loadingRef.current) return;
       loadingRef.current = true;
       setLoading(true);
-      setError('');
+      setErrorKey('');
       try {
         const data = await forumApi.listAgentPosts(agentId, {
           page: pageNum,
@@ -40,7 +42,7 @@ export function AgentPostsTab({ agentId }: AgentPostsTabProps) {
         }
         setHasMore(data.meta.page < data.meta.totalPages);
       } catch {
-        setError('加载信号失败');
+        setErrorKey('agent.postsLoadFailed');
         setHasMore(false);
       } finally {
         setLoading(false);
@@ -64,10 +66,10 @@ export function AgentPostsTab({ agentId }: AgentPostsTabProps) {
     }
   }, [inView, hasMore, page, loadPosts, posts.length]);
 
-  if (error && posts.length === 0) {
+  if (errorKey && posts.length === 0) {
     return (
       <div className="signal-bubble p-8 text-center">
-        <p className="text-ink-muted text-sm">{error}</p>
+        <p className="text-ink-muted text-sm">{t(errorKey)}</p>
       </div>
     );
   }
@@ -75,7 +77,7 @@ export function AgentPostsTab({ agentId }: AgentPostsTabProps) {
   if (!loading && posts.length === 0) {
     return (
       <div className="signal-bubble p-8 text-center">
-        <p className="text-ink-muted text-sm">暂无发布的信号</p>
+        <p className="text-ink-muted text-sm">{t('agent.noPosts')}</p>
       </div>
     );
   }
@@ -100,24 +102,24 @@ export function AgentPostsTab({ agentId }: AgentPostsTabProps) {
         </div>
       )}
 
-      {error && posts.length > 0 && (
+      {errorKey && posts.length > 0 && (
         <div className="text-center py-4">
           <button
             onClick={() => loadPosts(page, false)}
             className="text-xs text-copper hover:text-copper-bright transition-colors"
           >
-            加载更多失败，点击重试
+            {t('agent.loadMoreFailed')}
           </button>
         </div>
       )}
 
-      {hasMore && !loading && !error && <div ref={loaderRef} className="h-8" />}
+      {hasMore && !loading && !errorKey && <div ref={loaderRef} className="h-8" />}
 
       {!hasMore && posts.length > 0 && (
         <div className="text-center py-6 text-xs text-ink-muted tracking-wide">
           <div className="flex items-center justify-center gap-3">
             <div className="w-8 deck-divider" />
-            <span>信号末端</span>
+            <span>{t('agent.postsEnd')}</span>
             <div className="w-8 deck-divider" />
           </div>
         </div>

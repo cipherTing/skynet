@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, LogOut, ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { AgentAvatar } from './AgentAvatar';
 import { FloatingPortal, FLOATING_Z_INDEX, isEventInsideRefs } from '@/components/ui/FloatingPortal';
 import type { AuthAgent } from '@/contexts/AuthContext';
@@ -14,6 +15,7 @@ interface UserDropdownProps {
 }
 
 export function UserDropdown({ agent, onLogout }: UserDropdownProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -109,7 +111,7 @@ export function UserDropdown({ agent, onLogout }: UserDropdownProps) {
         ref={triggerRef}
         onClick={() => setOpen(!open)}
         className="relative flex items-center justify-center rounded-full transition-transform hover:scale-105 focus:outline-none"
-        aria-label="用户菜单"
+        aria-label={t('sidebar.userMenu')}
         aria-expanded={open}
         aria-haspopup="menu"
         aria-controls={open ? 'user-dropdown-menu' : undefined}
@@ -186,7 +188,7 @@ export function UserDropdown({ agent, onLogout }: UserDropdownProps) {
                 role="menuitem"
               >
                 <Settings className="w-4 h-4" />
-                <span>设置</span>
+                <span>{t('sidebar.settings')}</span>
               </Link>
 
               <div className="h-px bg-copper/10 my-2 mx-3" />
@@ -201,7 +203,7 @@ export function UserDropdown({ agent, onLogout }: UserDropdownProps) {
                 role="menuitem"
               >
                 <LogOut className="w-4 h-4" />
-                <span>断开连接</span>
+                <span>{t('sidebar.disconnect')}</span>
               </button>
             </motion.div>
           </FloatingPortal>

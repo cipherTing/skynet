@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import type { Dispatch, RefObject, SetStateAction } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   AreaChart,
   Area,
@@ -228,6 +229,7 @@ function TooltipBridge({
 }
 
 export function AgentCoherenceChart({ history }: AgentCoherenceChartProps) {
+  const { t } = useTranslation();
   const gradientId = useId();
   const chartRef = useRef<HTMLDivElement | null>(null);
   const [tooltip, setTooltip] = useState<PortalChartTooltip | null>(null);
@@ -241,8 +243,8 @@ export function AgentCoherenceChart({ history }: AgentCoherenceChartProps) {
       role="img"
       aria-label={
         lastPoint
-          ? `凝聚分数趋势图，近 30 天，当前 ${lastPoint.value}（${lastPoint.date}）`
-          : '凝聚分数趋势图，暂无数据'
+          ? t('agent.scoreChartAria', { score: lastPoint.value, date: lastPoint.date })
+          : t('agent.scoreChartEmptyAria')
       }
     >
       {/* 标题 */}
@@ -250,10 +252,10 @@ export function AgentCoherenceChart({ history }: AgentCoherenceChartProps) {
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-moss shadow-led-moss" />
           <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-moss">
-            凝聚分数趋势
+            {t('agent.scoreChartTitle')}
           </span>
         </div>
-        <span className="text-[10px] text-ink-muted">近 30 天</span>
+        <span className="text-[10px] text-ink-muted">{t('agent.last30Days')}</span>
       </div>
 
       {/* 图表 */}
@@ -321,29 +323,36 @@ export function AgentCoherenceChart({ history }: AgentCoherenceChartProps) {
         className="pointer-events-none rounded-lg border border-moss/30 bg-void-deep px-3 py-2 text-xs shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
         role="tooltip"
       >
-        {tooltip && (
-          <>
-            <div className="text-ink-muted mb-0.5">{tooltip.data.date}</div>
-            <div className="font-mono text-moss font-bold">
-              凝聚分数 {tooltip.data.value}
-            </div>
-            <div className="mt-0.5 text-[10px] text-ink-muted">
-              Lv{getAgentLevelByXp(tooltip.data.value).level} · {getAgentLevelByXp(tooltip.data.value).name}
-            </div>
-          </>
-        )}
+        {tooltip &&
+          (() => {
+            const levelMeta = getAgentLevelByXp(tooltip.data.value);
+            const levelName = t(`agent.levelNames.${levelMeta.level}`, {
+              defaultValue: levelMeta.name,
+            });
+            return (
+              <>
+                <div className="text-ink-muted mb-0.5">{tooltip.data.date}</div>
+                <div className="font-mono text-moss font-bold">
+                  {t('agent.score', { score: tooltip.data.value })}
+                </div>
+                <div className="mt-0.5 text-[10px] text-ink-muted">
+                  Lv{levelMeta.level} · {levelName}
+                </div>
+              </>
+            );
+          })()}
       </FloatingPortal>
 
       {/* 底部当前值 */}
       <div className="px-4 pb-3 pt-1 flex items-center gap-2">
         {lastPoint ? (
           <>
-            <span className="text-[10px] text-ink-muted">当前</span>
+            <span className="text-[10px] text-ink-muted">{t('agent.current')}</span>
             <span className="text-xs font-mono font-bold text-moss">{lastPoint.value}</span>
             <span className="text-[10px] text-ink-muted">({lastPoint.date})</span>
           </>
         ) : (
-          <span className="text-[10px] text-ink-muted">暂无数据</span>
+          <span className="text-[10px] text-ink-muted">{t('agent.noData')}</span>
         )}
       </div>
     </div>

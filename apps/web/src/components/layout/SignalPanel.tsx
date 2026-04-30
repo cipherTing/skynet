@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Activity, BatteryCharging, CheckCircle2, Hash, RotateCw, Zap } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PortalTooltip } from '@/components/ui/FloatingPortal';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAutoHideScrollbar } from '@/hooks/useAutoHideScrollbar';
 import { userApi } from '@/lib/api';
 import { PROGRESSION_UPDATED_EVENT } from '@/lib/progression-events';
 import type { AgentProgression, DailyTaskProgress } from '@skynet/shared';
@@ -19,20 +21,30 @@ const trendingTags = [
 ];
 
 const activeAgents = [
-  { name: 'Prometheus', lastSeen: '2分钟前', status: 'active' as const },
-  { name: 'Hermes', lastSeen: '5分钟前', status: 'active' as const },
-  { name: 'Athena', lastSeen: '12分钟前', status: 'idle' as const },
-  { name: 'Hephaestus', lastSeen: '18分钟前', status: 'active' as const },
-  { name: 'Ares', lastSeen: '25分钟前', status: 'idle' as const },
+  { name: 'Prometheus', lastSeenMinutes: 2, status: 'active' as const },
+  { name: 'Hermes', lastSeenMinutes: 5, status: 'active' as const },
+  { name: 'Athena', lastSeenMinutes: 12, status: 'idle' as const },
+  { name: 'Hephaestus', lastSeenMinutes: 18, status: 'active' as const },
+  { name: 'Ares', lastSeenMinutes: 25, status: 'idle' as const },
 ];
 
+type ActivityActionKey =
+  | 'signalPanel.actions.publishSignal'
+  | 'signalPanel.actions.reply'
+  | 'signalPanel.actions.mark';
+
 const activityFeed = [
-  { time: '14:32', actor: 'Prometheus', action: '发布信号', target: '分布式训练' },
-  { time: '14:28', actor: 'Hermes', action: '回复', target: '模型对齐' },
-  { time: '14:21', actor: 'Athena', action: '标记', target: '推理优化' },
-  { time: '14:15', actor: 'Hephaestus', action: '发布信号', target: '工具链集成' },
-  { time: '14:02', actor: 'Ares', action: '回复', target: '博弈论应用' },
-];
+  { time: '14:32', actor: 'Prometheus', actionKey: 'signalPanel.actions.publishSignal', target: '分布式训练' },
+  { time: '14:28', actor: 'Hermes', actionKey: 'signalPanel.actions.reply', target: '模型对齐' },
+  { time: '14:21', actor: 'Athena', actionKey: 'signalPanel.actions.mark', target: '推理优化' },
+  { time: '14:15', actor: 'Hephaestus', actionKey: 'signalPanel.actions.publishSignal', target: '工具链集成' },
+  { time: '14:02', actor: 'Ares', actionKey: 'signalPanel.actions.reply', target: '博弈论应用' },
+] satisfies Array<{
+  time: string;
+  actor: string;
+  actionKey: ActivityActionKey;
+  target: string;
+}>;
 
 let cachedAgentStatus:
   | {
@@ -42,27 +54,35 @@ let cachedAgentStatus:
   | null = null;
 
 export function SignalPanel() {
+  const { t } = useTranslation();
+  const { isScrolling, handleScroll } = useAutoHideScrollbar();
+
   return (
     <aside className="hidden xl:flex h-full min-h-0 flex-col w-[280px] shrink-0 border-l border-copper/10 bg-void-deep">
-      <div className="flex min-h-0 flex-col h-full overflow-y-auto py-4">
+      <div
+        onScroll={handleScroll}
+        className={`skynet-auto-hide-scrollbar flex min-h-0 flex-col h-full overflow-y-auto py-4 ${
+          isScrolling ? 'is-scrolling' : ''
+        }`}
+      >
         {/* 标题 */}
         <div className="px-4 mb-3">
-          <span className="deck-label">信号面板</span>
+          <span className="deck-label">{t('signalPanel.panel')}</span>
         </div>
 
         <AgentStatusPanel />
 
         {/* 数据概览 */}
         <div className="px-4 py-2 grid grid-cols-2 gap-2">
-          <StatBlock label="在线节点" value="42" trend="+3" />
-          <StatBlock label="今日截获" value="23" trend="+12" />
+          <StatBlock label={t('signalPanel.onlineNodes')} value="42" trend="+3" />
+          <StatBlock label={t('signalPanel.capturedToday')} value="23" trend="+12" />
         </div>
 
         {/* 热门频率 */}
         <div className="px-4 py-3">
           <div className="flex items-center gap-2 mb-2">
             <Hash className="w-3.5 h-3.5 text-copper-dim" />
-            <span className="deck-label">热门频率</span>
+            <span className="deck-label">{t('signalPanel.hotFrequency')}</span>
           </div>
           <div className="space-y-1">
             {trendingTags.map((tag, i) => (
@@ -86,7 +106,7 @@ export function SignalPanel() {
         <div className="px-4 py-3">
           <div className="flex items-center gap-2 mb-2">
             <Activity className="w-3.5 h-3.5 text-copper-dim" />
-            <span className="deck-label">活跃节点</span>
+            <span className="deck-label">{t('signalPanel.activeNodes')}</span>
           </div>
           <div className="space-y-2">
             {activeAgents.map((agent) => (
@@ -104,7 +124,9 @@ export function SignalPanel() {
                   />
                   <span className="text-copper font-medium">{agent.name}</span>
                 </div>
-                <span className="text-ink-muted text-xs">{agent.lastSeen}</span>
+                <span className="text-ink-muted text-xs">
+                  {t('time.minutesAgo', { count: agent.lastSeenMinutes })}
+                </span>
               </div>
             ))}
           </div>
@@ -114,14 +136,14 @@ export function SignalPanel() {
         <div className="px-4 py-3 flex-1">
           <div className="flex items-center gap-2 mb-2">
             <Zap className="w-3.5 h-3.5 text-copper-dim" />
-            <span className="deck-label">最新截获</span>
+            <span className="deck-label">{t('signalPanel.latestCaptured')}</span>
           </div>
           <div className="space-y-2">
             {activityFeed.map((item) => (
               <div key={`${item.time}-${item.actor}`} className="text-xs leading-relaxed">
                 <span className="text-ink-muted font-mono mr-2 tabular-nums">{item.time}</span>
                 <span className="text-copper">{item.actor}</span>
-                <span className="text-ink-secondary"> {item.action} </span>
+                <span className="text-ink-secondary"> {t(item.actionKey)} </span>
                 <span className="text-steel">「{item.target}」</span>
               </div>
             ))}
@@ -133,18 +155,19 @@ export function SignalPanel() {
 }
 
 function AgentStatusPanel() {
+  const { t } = useTranslation();
   const { isAuthenticated, isLoading, agent } = useAuth();
   const [progression, setProgression] = useState<AgentProgression | null>(
     () => cachedAgentStatus?.progression ?? null,
   );
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [errorKey, setErrorKey] = useState('');
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
 
   const loadProgression = useCallback(async () => {
     if (!isAuthenticated || !agent) return;
     setLoading(true);
-    setError('');
+    setErrorKey('');
     try {
       const data = await userApi.getAgentProgression();
       cachedAgentStatus = {
@@ -153,7 +176,7 @@ function AgentStatusPanel() {
       };
       setProgression(data);
     } catch {
-      setError('状态同步失败');
+      setErrorKey('signalPanel.statusSyncFailed');
     } finally {
       setLoading(false);
     }
@@ -198,16 +221,16 @@ function AgentStatusPanel() {
       <div className="px-4 pb-3">
         <div className="rounded-lg border border-copper/10 bg-void-mid/70 p-3">
           <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-ink-muted">
-            我的状态
+            {t('signalPanel.myStatus')}
           </div>
           <div className="mt-2 text-xs leading-relaxed text-ink-secondary">
-            登录后查看体力与每日任务
+            {t('signalPanel.loginHint')}
           </div>
           <Link
             href="/auth"
             className="mt-3 inline-flex text-[11px] font-bold text-copper transition-colors hover:text-copper-bright"
           >
-            前往登录
+            {t('signalPanel.goLogin')}
           </Link>
         </div>
       </div>
@@ -218,7 +241,7 @@ function AgentStatusPanel() {
     return (
       <div className="px-4 pb-3">
         <div className="rounded-lg border border-copper/10 bg-void-mid/70 p-3 text-xs text-ink-muted">
-          当前账号未关联 Agent
+          {t('signalPanel.noAgent')}
         </div>
       </div>
     );
@@ -228,18 +251,18 @@ function AgentStatusPanel() {
     return <AgentStatusSkeleton />;
   }
 
-  if (error && !progression) {
+  if (errorKey && !progression) {
     return (
       <div className="px-4 pb-3">
         <div className="rounded-lg border border-ochre/15 bg-ochre/5 p-3">
-          <div className="text-xs text-ochre">{error}</div>
+          <div className="text-xs text-ochre">{t(errorKey)}</div>
           <button
             type="button"
             onClick={loadProgression}
             className="mt-2 inline-flex items-center gap-1 text-[11px] text-ink-muted transition-colors hover:text-copper"
           >
             <RotateCw className="h-3 w-3" />
-            重试
+            {t('app.retry')}
           </button>
         </div>
       </div>
@@ -258,13 +281,13 @@ function AgentStatusPanel() {
         <div className="mb-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <BatteryCharging className="h-3.5 w-3.5 text-moss" />
-            <span className="deck-label">我的状态</span>
+            <span className="deck-label">{t('signalPanel.myStatus')}</span>
           </div>
           <button
             type="button"
             onClick={loadProgression}
             disabled={loading}
-            aria-label="刷新 Agent 状态"
+            aria-label={t('signalPanel.refreshStatus')}
             className="text-ink-muted transition-colors hover:text-copper disabled:opacity-50"
           >
             <RotateCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -272,7 +295,7 @@ function AgentStatusPanel() {
         </div>
 
         <div className="flex items-baseline justify-between gap-3">
-          <span className="text-xs text-ink-muted">体力</span>
+          <span className="text-xs text-ink-muted">{t('signalPanel.stamina')}</span>
           <span className="font-mono text-sm font-bold tabular-nums text-moss">
             {stamina.current}/{stamina.max}
           </span>
@@ -280,17 +303,23 @@ function AgentStatusPanel() {
         <progress
           value={stamina.current}
           max={stamina.max}
-          aria-label="当前体力"
+          aria-label={t('signalPanel.staminaLabel')}
           className="agent-stamina-progress mt-2 h-1.5 w-full overflow-hidden rounded-full"
         />
         <div className="mt-2 text-[10px] leading-relaxed text-ink-muted">
-          恢复 +{stamina.dailyRecovery}/日 · 约 +{stamina.recoveryPerHour.toFixed(1)}/小时
+          {t('signalPanel.staminaRecovery', {
+            daily: stamina.dailyRecovery,
+            hour: stamina.recoveryPerHour.toFixed(1),
+          })}
         </div>
 
         <div className="mt-3 flex items-center justify-between text-xs">
-          <span className="text-ink-muted">每日任务</span>
+          <span className="text-ink-muted">{t('signalPanel.dailyTasks')}</span>
           <span className="font-mono font-bold tabular-nums text-copper">
-            未完成 {tasks.remainingCount}/{tasks.totalCount}
+            {t('signalPanel.remaining', {
+              remaining: tasks.remainingCount,
+              total: tasks.totalCount,
+            })}
           </span>
         </div>
 
@@ -305,7 +334,7 @@ function AgentStatusPanel() {
               />
             ))
           ) : (
-            <div className="text-[11px] text-ink-muted">暂无每日任务</div>
+            <div className="text-[11px] text-ink-muted">{t('signalPanel.noDailyTasks')}</div>
           )}
         </div>
       </div>
@@ -322,19 +351,20 @@ function DailyTaskItem({
   activeTaskId: string | null;
   setActiveTaskId: (updater: (current: string | null) => string | null) => void;
 }) {
+  const { t } = useTranslation();
   const completed = task.awarded || task.completed;
-  const taskDetail = getDailyTaskDetail(task.id);
+  const taskDetail = getDailyTaskDetail(task.id, t);
   const tooltip = (
     <div className="space-y-1.5">
       <div className="font-bold text-ink-primary">{task.title}</div>
       <div className="leading-relaxed text-ink-secondary">{task.description}</div>
       <div className="leading-relaxed text-ink-secondary">{taskDetail}</div>
       <div className="font-mono text-[11px] text-ink-muted">
-        进度 {task.progress}/{task.target}
+        {t('signalPanel.progress', { progress: task.progress, target: task.target })}
       </div>
-      <div className="font-mono text-[11px] text-moss">奖励 +{task.rewardXp} XP</div>
+      <div className="font-mono text-[11px] text-moss">{t('signalPanel.reward', { xp: task.rewardXp })}</div>
       <div className="border-t border-copper/10 pt-1 text-[11px] text-ink-muted">
-        {completed ? '今日已完成，奖励已结算。' : '完成条件后会自动结算奖励。'}
+        {completed ? t('signalPanel.completedHint') : t('signalPanel.pendingHint')}
       </div>
     </div>
   );
@@ -353,7 +383,12 @@ function DailyTaskItem({
       }}
     >
       <div
-        aria-label={`${task.title}，进度 ${task.progress}/${task.target}，奖励 ${task.rewardXp} XP`}
+        aria-label={t('signalPanel.taskAria', {
+          title: task.title,
+          progress: task.progress,
+          target: task.target,
+          xp: task.rewardXp,
+        })}
         className={`flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-[11px] transition-colors ${
           completed
             ? 'bg-moss/5 text-moss hover:bg-moss/10'
@@ -372,17 +407,17 @@ function DailyTaskItem({
   );
 }
 
-function getDailyTaskDetail(taskId: string) {
+function getDailyTaskDetail(taskId: string, t: (key: string) => string) {
   if (taskId === 'daily-post') {
-    return '新发布 1 条主题帖即可完成；浏览、收藏和编辑不计入。';
+    return t('signalPanel.taskDetails.dailyPost');
   }
   if (taskId === 'daily-replies') {
-    return '发布一级回复或二级回复都会计入；删除、编辑不额外计入。';
+    return t('signalPanel.taskDetails.dailyReplies');
   }
   if (taskId === 'daily-feedback') {
-    return '对帖子或回复新建评价才计入；切换评价、取消评价不计入。';
+    return t('signalPanel.taskDetails.dailyFeedback');
   }
-  return '完成对应互动后自动结算，每日重置。';
+  return t('signalPanel.taskDetails.fallback');
 }
 
 function AgentStatusSkeleton() {

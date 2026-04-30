@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { X, Eye, Send, Radio } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { forumApi, ApiError } from '@/lib/api';
 import { notifyProgressionUpdated } from '@/lib/progression-events';
 import { FLOATING_Z_INDEX } from '@/components/ui/FloatingPortal';
@@ -16,6 +17,7 @@ interface CreatePostModalProps {
 }
 
 export function CreatePostModal({ onClose, onCreated }: CreatePostModalProps) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [showPreview, setShowPreview] = useState(false);
@@ -36,7 +38,7 @@ export function CreatePostModal({ onClose, onCreated }: CreatePostModalProps) {
 
   const handleSubmit = useCallback(async () => {
     if (!title.trim() || !content.trim()) {
-      setError('标题和内容不能为空');
+      setError(t('createPost.titleRequired'));
       return;
     }
     setError('');
@@ -52,12 +54,12 @@ export function CreatePostModal({ onClose, onCreated }: CreatePostModalProps) {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError('创建失败，请重试');
+        setError(t('createPost.createFailed'));
       }
     } finally {
       setSubmitting(false);
     }
-  }, [title, content, onCreated]);
+  }, [title, content, onCreated, t]);
 
   return (
     <motion.div
@@ -87,10 +89,11 @@ export function CreatePostModal({ onClose, onCreated }: CreatePostModalProps) {
         <div className="flex items-center justify-between px-5 py-3 border-b border-copper/10">
           <div className="flex items-center gap-2">
             <Radio className="w-4 h-4 text-moss" />
-            <span id="create-post-title" className="text-moss font-mono text-xs tracking-wider">发射信号</span>
+            <span id="create-post-title" className="text-moss font-mono text-xs tracking-wider">{t('createPost.title')}</span>
           </div>
           <button
             onClick={onClose}
+            aria-label={t('app.cancel')}
             className="text-ink-muted hover:text-ochre transition-colors p-1 rounded-md hover:bg-ochre/5"
           >
             <X className="w-4 h-4" />
@@ -108,13 +111,13 @@ export function CreatePostModal({ onClose, onCreated }: CreatePostModalProps) {
           {/* 标题 */}
           <div>
             <label className="block text-[11px] text-copper tracking-deck-normal font-bold uppercase mb-1.5">
-              信号标题
+              {t('createPost.signalTitle')}
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="输入信号标题..."
+              placeholder={t('createPost.titlePlaceholder')}
               className="w-full px-3 py-2.5 bg-void-mid border border-copper/15 text-ink-primary text-[14px] placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none transition-all rounded-lg"
             />
           </div>
@@ -126,7 +129,7 @@ export function CreatePostModal({ onClose, onCreated }: CreatePostModalProps) {
                 htmlFor="create-post-content"
                 className="text-[11px] text-copper tracking-deck-normal font-bold uppercase"
               >
-                信号内容 (Markdown)
+                {t('createPost.content')}
               </label>
               <button
                 onClick={() => setShowPreview(!showPreview)}
@@ -135,7 +138,7 @@ export function CreatePostModal({ onClose, onCreated }: CreatePostModalProps) {
                 }`}
               >
                 <Eye className="w-3 h-3" />
-                {showPreview ? '编辑' : '预览'}
+                {showPreview ? t('createPost.edit') : t('createPost.preview')}
               </button>
             </div>
 
@@ -143,7 +146,7 @@ export function CreatePostModal({ onClose, onCreated }: CreatePostModalProps) {
               <div className="min-h-[200px] px-3 py-2.5 bg-void-deep/60 border border-copper/10 rounded-lg">
                 <div className="prose-deck text-[14px]">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {content || '*暂无内容*'}
+                    {content || t('createPost.emptyPreview')}
                   </ReactMarkdown>
                 </div>
               </div>
@@ -152,7 +155,7 @@ export function CreatePostModal({ onClose, onCreated }: CreatePostModalProps) {
                 id="create-post-content"
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="支持 Markdown 格式..."
+                placeholder={t('createPost.markdownPlaceholder')}
                 rows={8}
                 variant="framed"
               />
@@ -165,7 +168,7 @@ export function CreatePostModal({ onClose, onCreated }: CreatePostModalProps) {
               onClick={onClose}
               className="px-4 py-2 text-[12px] text-ink-secondary hover:text-ink-primary border border-copper/15 hover:border-copper/30 transition-all tracking-wide rounded-lg"
             >
-              取消
+              {t('app.cancel')}
             </button>
             <button
               onClick={handleSubmit}
@@ -173,7 +176,7 @@ export function CreatePostModal({ onClose, onCreated }: CreatePostModalProps) {
               className="flex items-center gap-1.5 px-4 py-2 text-[12px] text-void bg-copper hover:bg-copper-dim disabled:opacity-40 disabled:cursor-not-allowed transition-all tracking-wide font-bold rounded-lg"
             >
               <Send className="w-3 h-3" />
-              {submitting ? '发射中...' : '发射信号'}
+              {submitting ? t('createPost.submitting') : t('createPost.submit')}
             </button>
           </div>
         </div>

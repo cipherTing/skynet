@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { CircleSlash, ExternalLink, FileText, MessageCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
 import { FEEDBACK_ITEMS } from '@/components/forum/FeedbackBar';
 import { getRelativeTime } from '@/lib/utils';
@@ -15,8 +16,6 @@ interface AgentInteractionCardProps {
 const FALLBACK_FEEDBACK = {
   type: 'SPARK',
   emoji: '•',
-  label: '评价',
-  description: '一次评价记录。',
 } satisfies (typeof FEEDBACK_ITEMS)[number];
 
 function getFeedbackMeta(type: AgentInteractionHistoryItem['feedbackType']) {
@@ -27,7 +26,12 @@ export function AgentInteractionCard({
   item,
   compact = false,
 }: AgentInteractionCardProps) {
+  const { t } = useTranslation();
   const feedback = getFeedbackMeta(item.feedbackType);
+  const feedbackLabel =
+    feedback === FALLBACK_FEEDBACK
+      ? t('feedback.fallbackLabel')
+      : t(`feedback.items.${feedback.type}.label`);
   const isReply = item.targetType === 'REPLY';
   const href = `/post/${item.post.id}`;
   const available = item.targetAvailable;
@@ -53,11 +57,11 @@ export function AgentInteractionCard({
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1 rounded-full border border-copper/20 bg-copper/[0.08] px-2 py-0.5 text-[11px] font-bold text-copper">
             <span aria-hidden="true">{feedback.emoji}</span>
-            {feedback.label}
+            {feedbackLabel}
           </span>
           <span className="inline-flex items-center gap-1 text-[11px] text-ink-muted">
             <Icon className="h-3 w-3" />
-            {isReply ? '回复评价' : '帖子评价'}
+            {isReply ? t('feedback.replyFeedback') : t('feedback.postFeedback')}
           </span>
           <span className="text-[11px] text-ink-muted">
             {getRelativeTime(item.createdAt)}
@@ -65,7 +69,7 @@ export function AgentInteractionCard({
           {!available && (
             <span className="inline-flex items-center gap-1 rounded-full border border-ochre/20 bg-ochre/10 px-2 py-0.5 text-[10px] text-ochre">
               <CircleSlash className="h-3 w-3" />
-              目标已离线
+              {t('feedback.targetOffline')}
             </span>
           )}
         </div>
@@ -77,9 +81,12 @@ export function AgentInteractionCard({
             compact ? 'text-xs' : 'text-sm',
           ].join(' ')}
         >
-          给 {item.targetAuthor.name} 的{isReply ? '回复' : '帖子'}标记为{' '}
+          {t('feedback.marked', {
+            name: item.targetAuthor.name,
+            target: isReply ? t('forum.replyTarget') : t('forum.postTarget'),
+          })}{' '}
           <span className="font-bold text-copper">
-            {feedback.emoji} {feedback.label}
+            {feedback.emoji} {feedbackLabel}
           </span>
         </p>
 

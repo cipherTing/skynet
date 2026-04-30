@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useInView } from 'react-intersection-observer';
 import Link from 'next/link';
 import { MessageSquare, CornerDownRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
 import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
 import { FeedbackBar, hasVisibleFeedback } from '@/components/forum/FeedbackBar';
@@ -21,11 +22,12 @@ function sanitizePreview(text: string, maxLen: number = 200): string {
 }
 
 export function AgentRepliesTab({ agentId }: AgentRepliesTabProps) {
+  const { t } = useTranslation();
   const [replies, setReplies] = useState<AgentReply[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [error, setError] = useState('');
+  const [errorKey, setErrorKey] = useState('');
   const loadingRef = useRef(false);
 
   const { ref: loaderRef, inView } = useInView({ threshold: 0.5 });
@@ -36,7 +38,7 @@ export function AgentRepliesTab({ agentId }: AgentRepliesTabProps) {
       if (loadingRef.current) return;
       loadingRef.current = true;
       setLoading(true);
-      setError('');
+      setErrorKey('');
       try {
         const data = await forumApi.listAgentReplies(agentId, {
           page: pageNum,
@@ -50,7 +52,7 @@ export function AgentRepliesTab({ agentId }: AgentRepliesTabProps) {
         }
         setHasMore(data.meta.page < data.meta.totalPages);
       } catch {
-        setError('加载回复失败');
+        setErrorKey('agent.repliesLoadFailed');
         setHasMore(false);
       } finally {
         setLoading(false);
@@ -74,10 +76,10 @@ export function AgentRepliesTab({ agentId }: AgentRepliesTabProps) {
     }
   }, [inView, hasMore, page, loadReplies, replies.length]);
 
-  if (error && replies.length === 0) {
+  if (errorKey && replies.length === 0) {
     return (
       <div className="signal-bubble p-8 text-center">
-        <p className="text-ink-muted text-sm">{error}</p>
+        <p className="text-ink-muted text-sm">{t(errorKey)}</p>
       </div>
     );
   }
@@ -85,7 +87,7 @@ export function AgentRepliesTab({ agentId }: AgentRepliesTabProps) {
   if (!loading && replies.length === 0) {
     return (
       <div className="signal-bubble p-8 text-center">
-        <p className="text-ink-muted text-sm">暂无发布的回复</p>
+        <p className="text-ink-muted text-sm">{t('agent.noReplies')}</p>
       </div>
     );
   }
@@ -130,7 +132,9 @@ export function AgentRepliesTab({ agentId }: AgentRepliesTabProps) {
                     <div className="min-w-0">
                       <div className="mb-1 flex min-w-0 items-center gap-1.5 text-[11px] font-mono text-steel">
                         <span className="truncate">
-                          回复 @{reply.parentReply.author?.name || '未知 Agent'}
+                          {t('replyThread.replyTo', {
+                            name: reply.parentReply.author?.name || t('agent.unknownAgent'),
+                          })}
                         </span>
                         <AgentLevelBadge level={reply.parentReply.author?.level} compact />
                       </div>
@@ -143,9 +147,9 @@ export function AgentRepliesTab({ agentId }: AgentRepliesTabProps) {
                   <>
                     <CornerDownRight className="w-3.5 h-3.5 text-ink-muted/50 mt-0.5 flex-shrink-0" />
                     <div className="min-w-0">
-                      <div className="mb-1 text-[11px] font-mono text-moss">回复主帖</div>
+                      <div className="mb-1 text-[11px] font-mono text-moss">{t('agent.replyMainPost')}</div>
                       <p className="text-xs text-ink-muted line-clamp-2">
-                        {postContentPreview || reply.post?.title || '主帖内容暂不可见'}
+                        {postContentPreview || reply.post?.title || t('agent.mainPostUnavailable')}
                       </p>
                     </div>
                   </>
@@ -183,24 +187,24 @@ export function AgentRepliesTab({ agentId }: AgentRepliesTabProps) {
         </div>
       )}
 
-      {error && replies.length > 0 && (
+      {errorKey && replies.length > 0 && (
         <div className="text-center py-4">
           <button
             onClick={() => loadReplies(page, false)}
             className="text-xs text-copper hover:text-copper-bright transition-colors"
           >
-            加载更多失败，点击重试
+            {t('agent.loadMoreFailed')}
           </button>
         </div>
       )}
 
-      {hasMore && !loading && !error && <div ref={loaderRef} className="h-8" />}
+      {hasMore && !loading && !errorKey && <div ref={loaderRef} className="h-8" />}
 
       {!hasMore && replies.length > 0 && (
         <div className="text-center py-6 text-xs text-ink-muted tracking-wide">
           <div className="flex items-center justify-center gap-3">
             <div className="w-8 deck-divider" />
-            <span>回复末端</span>
+            <span>{t('agent.repliesEnd')}</span>
             <div className="w-8 deck-divider" />
           </div>
         </div>

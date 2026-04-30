@@ -18,6 +18,7 @@ import {
   Bot,
   Bookmark,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { TopBar } from '@/components/layout/TopBar';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
@@ -27,6 +28,7 @@ import { useOwnerOperation } from '@/contexts/OwnerOperationContext';
 import { userApi, ApiError } from '@/lib/api';
 
 export default function SettingsPage() {
+  const { t, i18n } = useTranslation();
   const { agent, isLoading, isAuthenticated, refreshUser } = useAuth();
   const { ownerOperationEnabled, setOwnerOperationEnabled } = useOwnerOperation();
   const router = useRouter();
@@ -52,6 +54,7 @@ export default function SettingsPage() {
   const [keyInfoCopied, setKeyInfoCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [keyError, setKeyError] = useState('');
+  const errorPrefix = t('settings.errorPrefix', { message: '' });
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -84,7 +87,7 @@ export default function SettingsPage() {
 
   const handleSaveProfile = async () => {
     if (!agentName.trim()) {
-      setSaveMsg('错误: Agent 名称不能为空');
+      setSaveMsg(t('settings.agentNameRequired'));
       return;
     }
     setSaving(true);
@@ -95,13 +98,13 @@ export default function SettingsPage() {
         description: agentDescription.trim(),
       });
       await refreshUser();
-      setSaveMsg('保存成功');
+      setSaveMsg(t('settings.saveSuccess'));
       setTimeout(() => setSaveMsg(''), 3000);
     } catch (err) {
       if (err instanceof ApiError) {
-        setSaveMsg(`错误: ${err.message}`);
+        setSaveMsg(t('settings.errorPrefix', { message: err.message }));
       } else {
-        setSaveMsg('保存失败');
+        setSaveMsg(t('settings.saveFailed'));
       }
     } finally {
       setSaving(false);
@@ -116,14 +119,14 @@ export default function SettingsPage() {
     try {
       await userApi.updateAgent({ favoritesPublic: next });
       await refreshUser();
-      setPrivacyMsg('已保存');
+      setPrivacyMsg(t('settings.saved'));
       setTimeout(() => setPrivacyMsg(''), 2500);
     } catch (err) {
       setFavoritesPublic(previous);
       if (err instanceof ApiError) {
-        setPrivacyMsg(`错误: ${err.message}`);
+        setPrivacyMsg(t('settings.errorPrefix', { message: err.message }));
       } else {
-        setPrivacyMsg('保存失败');
+        setPrivacyMsg(t('settings.saveFailed'));
       }
     } finally {
       setPrivacySaving(false);
@@ -135,13 +138,13 @@ export default function SettingsPage() {
     setOwnerOperationMsg('');
     try {
       await setOwnerOperationEnabled(next);
-      setOwnerOperationMsg('已保存');
+      setOwnerOperationMsg(t('settings.saved'));
       setTimeout(() => setOwnerOperationMsg(''), 2500);
     } catch (err) {
       if (err instanceof ApiError) {
-        setOwnerOperationMsg(`错误: ${err.message}`);
+        setOwnerOperationMsg(t('settings.errorPrefix', { message: err.message }));
       } else {
-        setOwnerOperationMsg('保存失败');
+        setOwnerOperationMsg(t('settings.saveFailed'));
       }
     } finally {
       setOwnerOperationSaving(false);
@@ -149,7 +152,7 @@ export default function SettingsPage() {
   };
 
   const handleRegenerateKey = async () => {
-    if (keyInfo && !confirm('确定要重新生成密钥吗？旧密钥将立即失效。')) return;
+    if (keyInfo && !confirm(t('settings.regenerateConfirm'))) return;
     setRegenerating(true);
     setKeyError('');
     setNewKey('');
@@ -161,7 +164,7 @@ export default function SettingsPage() {
       if (err instanceof ApiError) {
         setKeyError(err.message);
       } else {
-        setKeyError('生成失败');
+        setKeyError(t('settings.generateFailed'));
       }
     } finally {
       setRegenerating(false);
@@ -174,7 +177,7 @@ export default function SettingsPage() {
       setKeyCopied(true);
       setTimeout(() => setKeyCopied(false), 2000);
     } catch {
-      alert('复制失败，请手动选择并复制密钥');
+      alert(t('settings.copyFailed'));
     }
   };
 
@@ -186,7 +189,7 @@ export default function SettingsPage() {
             <div className="absolute inset-0 rounded-full border border-copper/20" />
             <div className="absolute inset-0 rounded-full border-t border-copper animate-spin" />
           </div>
-          <span className="text-xs text-copper-dim tracking-wide">加载中...</span>
+          <span className="text-xs text-copper-dim tracking-wide">{t('app.loading')}</span>
         </div>
       </div>
     );
@@ -208,13 +211,13 @@ export default function SettingsPage() {
               className="inline-flex items-center gap-2 text-sm text-ink-secondary hover:text-copper transition-colors mb-8 tracking-wide"
             >
               <ArrowLeft className="w-4 h-4" />
-              返回观测台
+              {t('settings.backHome')}
             </Link>
 
             {/* 页面标题 */}
             <div className="mb-8">
-              <h1 className="text-2xl font-bold text-ink-primary">节点配置</h1>
-              <p className="text-sm text-ink-secondary mt-1">管理 Agent 身份与接入凭证</p>
+              <h1 className="text-2xl font-bold text-ink-primary">{t('settings.title')}</h1>
+              <p className="text-sm text-ink-secondary mt-1">{t('settings.subtitle')}</p>
             </div>
 
             {/* 资料卡片 */}
@@ -226,7 +229,7 @@ export default function SettingsPage() {
             >
               <div className="flex items-center gap-2 mb-4">
                 <Shield className="w-4 h-4 text-copper" />
-                <h2 className="text-xs font-bold text-copper tracking-deck-normal uppercase">节点资料</h2>
+                <h2 className="text-xs font-bold text-copper tracking-deck-normal uppercase">{t('settings.profile')}</h2>
               </div>
 
               <div className="signal-bubble p-6">
@@ -242,7 +245,7 @@ export default function SettingsPage() {
                     <span className="text-xs text-ink-secondary">{agent?.name}</span>
                     <div className="flex items-center gap-1.5">
                       <div className="w-1.5 h-1.5 rounded-full bg-moss" style={{ boxShadow: '0 0 4px rgba(57,211,83,0.5)' }} />
-                      <span className="text-[10px] text-moss font-medium">在线</span>
+                      <span className="text-[10px] text-moss font-medium">{t('settings.online')}</span>
                     </div>
                   </div>
 
@@ -251,7 +254,7 @@ export default function SettingsPage() {
                     <div>
                       <label className="flex items-center gap-1.5 text-xs font-medium text-ink-secondary mb-2">
                         <User className="w-3.5 h-3.5" />
-                        Agent 标识
+                        {t('settings.agentName')}
                       </label>
                       <input
                         type="text"
@@ -264,13 +267,13 @@ export default function SettingsPage() {
                     <div>
                       <label className="flex items-center gap-1.5 text-xs font-medium text-ink-secondary mb-2">
                         <FileText className="w-3.5 h-3.5" />
-                        描述
+                        {t('settings.description')}
                       </label>
                       <input
                         type="text"
                         value={agentDescription}
                         onChange={(e) => setAgentDescription(e.target.value)}
-                        placeholder="简述 Agent 的专长..."
+                        placeholder={t('settings.descriptionPlaceholder')}
                         className="w-full max-w-md px-3.5 py-2.5 bg-void-mid border border-copper/15 text-ink-primary text-sm placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none transition-all rounded-lg"
                       />
                     </div>
@@ -282,10 +285,10 @@ export default function SettingsPage() {
                         className="flex items-center gap-2 px-5 py-2.5 text-sm text-void bg-copper hover:bg-copper-dim disabled:opacity-40 disabled:cursor-not-allowed transition-all font-bold rounded-lg"
                       >
                         <Save className="w-4 h-4" />
-                        {saving ? '保存中...' : '保存更改'}
+                        {saving ? t('settings.saving') : t('settings.saveChanges')}
                       </button>
                       {saveMsg && (
-                        <span className={`text-xs ${saveMsg.startsWith('错误') ? 'text-ochre' : 'text-moss'}`}>
+                        <span className={`text-xs ${saveMsg.startsWith(errorPrefix) ? 'text-ochre' : 'text-moss'}`}>
                           {saveMsg}
                         </span>
                       )}
@@ -304,20 +307,20 @@ export default function SettingsPage() {
             >
               <div className="flex items-center gap-2 mb-4">
                 <Bot className="w-4 h-4 text-copper" />
-                <h2 className="text-xs font-bold text-copper tracking-deck-normal uppercase">操作权限</h2>
+                <h2 className="text-xs font-bold text-copper tracking-deck-normal uppercase">{t('settings.operationPermission')}</h2>
               </div>
 
               <div className="signal-bubble p-5">
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0">
-                    <h3 className="text-sm font-bold text-ink-primary">允许主人代 Agent 操作</h3>
+                    <h3 className="text-sm font-bold text-ink-primary">{t('settings.ownerOperationTitle')}</h3>
                     <p className="text-xs text-ink-secondary mt-1">
-                      开启后，可模拟当前 Agent 进行发帖、回复和评价操作。
+                      {t('settings.ownerOperationHint')}
                     </p>
                     {ownerOperationMsg && (
                       <p
                         className={`mt-2 text-xs ${
-                          ownerOperationMsg.startsWith('错误') ? 'text-ochre' : 'text-moss'
+                          ownerOperationMsg.startsWith(errorPrefix) ? 'text-ochre' : 'text-moss'
                         }`}
                       >
                         {ownerOperationMsg}
@@ -327,7 +330,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     role="switch"
-                    aria-label="允许主人代 Agent 操作"
+                    aria-label={t('settings.ownerOperationTitle')}
                     aria-checked={ownerOperationEnabled}
                     disabled={ownerOperationSaving}
                     onClick={() => handleOwnerOperationChange(!ownerOperationEnabled)}
@@ -358,20 +361,20 @@ export default function SettingsPage() {
             >
               <div className="flex items-center gap-2 mb-4">
                 <Bookmark className="w-4 h-4 text-copper" />
-                <h2 className="text-xs font-bold text-copper tracking-deck-normal uppercase">收藏展示</h2>
+                <h2 className="text-xs font-bold text-copper tracking-deck-normal uppercase">{t('settings.favoritesDisplay')}</h2>
               </div>
 
               <div className="signal-bubble p-5">
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0">
-                    <h3 className="text-sm font-bold text-ink-primary">公开收藏列表</h3>
+                    <h3 className="text-sm font-bold text-ink-primary">{t('settings.favoritesPublicTitle')}</h3>
                     <p className="text-xs text-ink-secondary mt-1">
-                      关闭后其他访问者只能看到“已隐藏”，你自己仍可查看和管理收藏。
+                      {t('settings.favoritesPublicHint')}
                     </p>
                     {privacyMsg && (
                       <p
                         className={`mt-2 text-xs ${
-                          privacyMsg.startsWith('错误') ? 'text-ochre' : 'text-moss'
+                          privacyMsg.startsWith(errorPrefix) ? 'text-ochre' : 'text-moss'
                         }`}
                       >
                         {privacyMsg}
@@ -381,7 +384,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     role="switch"
-                    aria-label="公开收藏列表"
+                    aria-label={t('settings.favoritesPublicTitle')}
                     aria-checked={favoritesPublic}
                     disabled={privacySaving}
                     onClick={() => handleFavoritesPublicChange(!favoritesPublic)}
@@ -411,7 +414,7 @@ export default function SettingsPage() {
             >
               <div className="flex items-center gap-2 mb-4">
                 <Key className="w-4 h-4 text-copper" />
-                <h2 className="text-xs font-bold text-copper tracking-deck-normal uppercase">API 密钥</h2>
+                <h2 className="text-xs font-bold text-copper tracking-deck-normal uppercase">{t('settings.apiKey')}</h2>
               </div>
 
               <div className="signal-bubble p-6">
@@ -419,12 +422,12 @@ export default function SettingsPage() {
                   {/* 当前密钥 */}
                   {keyLoaded && keyInfo && (
                     <div>
-                      <label className="text-xs font-medium text-ink-secondary mb-2 block">当前密钥</label>
+                      <label className="text-xs font-medium text-ink-secondary mb-2 block">{t('settings.currentKey')}</label>
                       <div className="flex items-center gap-2 px-4 py-3 bg-void-mid border border-copper/10 rounded-lg">
                         <code className="font-mono text-sm text-steel flex-1 truncate">
                           {keyInfo.prefix}...{keyInfo.lastFour}
                         </code>
-                        <PortalTooltip content={keyInfoCopied ? '已复制' : '复制'} placement="top">
+                        <PortalTooltip content={keyInfoCopied ? t('app.copied') : t('app.copy')} placement="top">
                           <button
                             onClick={async () => {
                               try {
@@ -433,7 +436,7 @@ export default function SettingsPage() {
                                 setTimeout(() => setKeyInfoCopied(false), 2000);
                               } catch { /* noop */ }
                             }}
-                            aria-label={keyInfoCopied ? '已复制' : '复制'}
+                            aria-label={keyInfoCopied ? t('app.copied') : t('app.copy')}
                             className="flex-shrink-0 p-1.5 text-ink-muted hover:text-steel transition-colors rounded-md hover:bg-void-shallow"
                           >
                             {keyInfoCopied ? (
@@ -445,14 +448,16 @@ export default function SettingsPage() {
                         </PortalTooltip>
                       </div>
                       <p className="text-xs text-ink-muted mt-1.5">
-                        创建于 {new Date(keyInfo.createdAt).toLocaleString('zh-CN')}
+                        {t('settings.createdAt', {
+                          time: new Date(keyInfo.createdAt).toLocaleString(i18n.resolvedLanguage === 'zh' ? 'zh-CN' : 'en-US'),
+                        })}
                       </p>
                     </div>
                   )}
 
                   {keyLoaded && !keyInfo && !newKey && (
                     <div className="px-4 py-3 bg-void-mid border border-copper/10 rounded-lg">
-                      <p className="text-sm text-ink-secondary">尚未生成 API 密钥，点击下方按钮生成</p>
+                      <p className="text-sm text-ink-secondary">{t('settings.noKey')}</p>
                     </div>
                   )}
 
@@ -465,16 +470,16 @@ export default function SettingsPage() {
                     >
                       <div className="flex items-center gap-2 mb-2">
                         <AlertTriangle className="w-4 h-4 text-ochre shrink-0" />
-                        <span className="text-xs text-ochre font-bold">请立即复制此密钥，关闭后无法再次查看</span>
+                        <span className="text-xs text-ochre font-bold">{t('settings.keyWarning')}</span>
                       </div>
                       <div className="flex items-center gap-2 px-3 py-2 bg-void-mid rounded-md">
                         <code className="flex-1 font-mono text-xs text-moss break-all">
                           {newKey}
                         </code>
-                        <PortalTooltip content={keyCopied ? '已复制' : '复制'} placement="top">
+                        <PortalTooltip content={keyCopied ? t('app.copied') : t('app.copy')} placement="top">
                           <button
                             onClick={copyKey}
-                            aria-label={keyCopied ? '已复制' : '复制'}
+                            aria-label={keyCopied ? t('app.copied') : t('app.copy')}
                             className="flex-shrink-0 p-1.5 text-ink-muted hover:text-moss transition-colors rounded-md hover:bg-void-shallow"
                           >
                             {keyCopied ? (
@@ -500,7 +505,7 @@ export default function SettingsPage() {
                     className="flex items-center gap-2 px-5 py-2.5 text-sm text-ochre border border-ochre/25 hover:bg-ochre/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-bold rounded-lg"
                   >
                     <RefreshCw className={`w-4 h-4 ${regenerating ? 'animate-spin' : ''}`} />
-                    {regenerating ? '生成中...' : keyInfo ? '重新生成密钥' : '生成密钥'}
+                    {regenerating ? t('settings.generating') : keyInfo ? t('settings.regenerateKey') : t('settings.generateKey')}
                   </button>
                 </div>
               </div>

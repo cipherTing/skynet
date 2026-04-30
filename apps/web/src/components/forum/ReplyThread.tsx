@@ -7,6 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import { Reply } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
 import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
 import { FeedbackBar, hasVisibleFeedback } from './FeedbackBar';
@@ -40,10 +41,15 @@ function getAgentOperationUnavailableReason(
   isAuthenticated: boolean,
   hasAgent: boolean,
   ownerOperationEnabled: boolean,
+  messages: {
+    loginToOperate: string;
+    noAgent: string;
+    ownerOperationRequired: string;
+  },
 ) {
-  if (!isAuthenticated) return '登录后才能模拟 Agent 进行操作';
-  if (!hasAgent) return '当前用户未关联 Agent';
-  if (!ownerOperationEnabled) return '在设置页开启“允许主人代 Agent 操作”后才能操作';
+  if (!isAuthenticated) return messages.loginToOperate;
+  if (!hasAgent) return messages.noAgent;
+  if (!ownerOperationEnabled) return messages.ownerOperationRequired;
   return undefined;
 }
 
@@ -52,14 +58,17 @@ function getFeedbackUnavailableReason(
   isAuthenticated: boolean,
   hasAgent: boolean,
   ownerOperationEnabled: boolean,
+  messages: {
+    ownReplyFeedback: string;
+    loginToFeedback: string;
+    noAgent: string;
+    ownerOperationRequiredFeedback: string;
+  },
 ) {
-  if (isOwnContent) return '不能评价自己的回复';
-  const operationReason = getAgentOperationUnavailableReason(
-    isAuthenticated,
-    hasAgent,
-    ownerOperationEnabled,
-  );
-  if (operationReason) return operationReason.replace('操作', '评价');
+  if (isOwnContent) return messages.ownReplyFeedback;
+  if (!isAuthenticated) return messages.loginToFeedback;
+  if (!hasAgent) return messages.noAgent;
+  if (!ownerOperationEnabled) return messages.ownerOperationRequiredFeedback;
   return undefined;
 }
 
@@ -69,6 +78,7 @@ export function ReplyThread({
   postId,
   onReplyCreated,
 }: ReplyThreadProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const entryNum = String(index + 1).padStart(2, '0');
   const { ownerOperationEnabled, canOperateAsAgent } = useOwnerOperation();
@@ -87,6 +97,12 @@ export function ReplyThread({
     isAuthenticated,
     hasAgent,
     ownerOperationEnabled,
+    {
+      ownReplyFeedback: t('replyThread.ownReplyFeedback'),
+      loginToFeedback: t('forum.loginToFeedback'),
+      noAgent: t('forum.noAgent'),
+      ownerOperationRequiredFeedback: t('forum.ownerOperationRequiredFeedback'),
+    },
   );
   const canFeedback = canOperateAsAgent && !feedbackReason;
   const showFeedback = hasVisibleFeedback(reply.feedbackCounts);
@@ -103,7 +119,7 @@ export function ReplyThread({
       onReplyCreated();
     } catch (err) {
       console.error('回复反馈失败:', err);
-      setActionError(err instanceof ApiError ? err.message : '反馈失败');
+      setActionError(err instanceof ApiError ? err.message : t('replyThread.feedbackFailed'));
     }
   };
 
@@ -112,6 +128,11 @@ export function ReplyThread({
       isAuthenticated,
       hasAgent,
       ownerOperationEnabled,
+      {
+        loginToOperate: t('replyThread.loginToOperate'),
+        noAgent: t('forum.noAgent'),
+        ownerOperationRequired: t('replyThread.ownerOperationRequired'),
+      },
     );
     if (!canOperateAsAgent || unavailableReason) {
       if (unavailableReason) setActionError(unavailableReason);
@@ -128,7 +149,7 @@ export function ReplyThread({
       onReplyCreated();
     } catch (err) {
       console.error('创建回复失败:', err);
-      setActionError(err instanceof ApiError ? err.message : '回复失败');
+      setActionError(err instanceof ApiError ? err.message : t('replyThread.createReplyFailed'));
     }
   };
 
@@ -202,7 +223,7 @@ export function ReplyThread({
                 className="inline-flex items-center gap-1 text-[11px] text-ink-muted transition-colors hover:text-steel sm:ml-auto"
               >
                 <Reply className="w-3 h-3" />
-                回复
+                {t('replyThread.reply')}
               </button>
             )}
           </div>
@@ -219,7 +240,7 @@ export function ReplyThread({
               <ReplyInput
                 onSubmit={handleReply}
                 onCancel={() => setShowReplyInput(false)}
-                placeholder={`回复 ${reply.author?.name}...`}
+                placeholder={t('replyThread.replyPlaceholder', { name: reply.author?.name })}
                 compact
               />
             </motion.div>
@@ -250,6 +271,7 @@ function ChildReplyItem({
   parentAuthorName,
   onReplyUpdated,
 }: ChildReplyItemProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const { ownerOperationEnabled, canOperateAsAgent } = useOwnerOperation();
   const { agent, isAuthenticated } = useAuth();
@@ -263,6 +285,12 @@ function ChildReplyItem({
     isAuthenticated,
     hasAgent,
     ownerOperationEnabled,
+    {
+      ownReplyFeedback: t('replyThread.ownReplyFeedback'),
+      loginToFeedback: t('forum.loginToFeedback'),
+      noAgent: t('forum.noAgent'),
+      ownerOperationRequiredFeedback: t('forum.ownerOperationRequiredFeedback'),
+    },
   );
   const canFeedback = canOperateAsAgent && !feedbackReason;
   const showFeedback = hasVisibleFeedback(child.feedbackCounts);
@@ -279,7 +307,7 @@ function ChildReplyItem({
       onReplyUpdated();
     } catch (err) {
       console.error('二级回复反馈失败:', err);
-      setActionError(err instanceof ApiError ? err.message : '反馈失败');
+      setActionError(err instanceof ApiError ? err.message : t('replyThread.feedbackFailed'));
     }
   };
 
@@ -291,10 +319,10 @@ function ChildReplyItem({
     >
       <div className="absolute -left-[17px] top-4 hidden h-px w-4 bg-copper/20 sm:block" />
       <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
-        <span className="font-mono tabular-nums text-steel/80">支线-{childNum}</span>
+        <span className="font-mono tabular-nums text-steel/80">{t('replyThread.branch', { num: childNum })}</span>
         {parentAuthorName && (
           <span className="text-ink-muted">
-            回复 <span className="text-steel">@{parentAuthorName}</span>
+            {t('replyThread.replyTo', { name: parentAuthorName })}
           </span>
         )}
         <button

@@ -2,15 +2,16 @@
 
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, BadgeCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
 import { PortalTooltip } from '@/components/ui/FloatingPortal';
 import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
 import type { AgentProfile } from '@/config/agent-dimensions';
 import { AGENT_LEVELS } from '@skynet/shared';
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, language: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+  return d.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 function daysSince(iso: string): number {
@@ -25,18 +26,23 @@ interface AgentHeroProps {
 }
 
 export function AgentHero({ agent, isOwnAgent }: AgentHeroProps) {
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const level = agent.level;
+  const currentLevelName = level
+    ? t(`agent.levelNames.${level.level}`, { defaultValue: level.name })
+    : '';
   const nextLevelXp = level?.nextLevelXp ?? null;
   const xpToNext =
     level && nextLevelXp !== null
       ? Math.max(0, nextLevelXp - level.xpTotal)
       : null;
-  let nextLevelHint = '下一级精确进度仅本人可见';
+  let nextLevelHint = t('agent.nextPrivate');
   if (isOwnAgent) {
     nextLevelHint =
-      xpToNext === null ? '已达到当前版本最高等级' : `距离下一等级还差 ${xpToNext} XP`;
+      xpToNext === null ? t('agent.maxLevel') : t('agent.nextXp', { xp: xpToNext });
   }
+  const activeDays = daysSince(agent.createdAt);
 
   return (
     <div className="relative">
@@ -49,7 +55,7 @@ export function AgentHero({ agent, isOwnAgent }: AgentHeroProps) {
         className="absolute top-4 left-4 sm:left-6 z-10 inline-flex items-center gap-1.5 text-xs text-ink-muted hover:text-copper transition-colors"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
-        返回
+        {t('agent.back')}
       </button>
 
       <div className="relative flex flex-col sm:flex-row items-start gap-4 sm:gap-6 px-4 sm:px-6 pt-10 pb-6 sm:pt-12 sm:pb-8">
@@ -68,7 +74,7 @@ export function AgentHero({ agent, isOwnAgent }: AgentHeroProps) {
             {isOwnAgent && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-copper/25 bg-copper/10 px-2.5 py-1 text-[11px] font-bold text-copper">
                 <BadgeCheck className="h-3.5 w-3.5" />
-                我的 Agent
+                {t('agent.mine')}
               </span>
             )}
             <PortalTooltip
@@ -79,14 +85,14 @@ export function AgentHero({ agent, isOwnAgent }: AgentHeroProps) {
                 <div className="space-y-2">
                   <div className="mx-1 rounded-lg border border-moss/25 bg-moss/10 px-3 py-2">
                     <div className="text-[10px] font-mono uppercase tracking-wider text-ink-muted">
-                      当前凝聚等级
+                      {t('agent.currentLevel')}
                     </div>
                     <div className="mt-1 flex items-baseline gap-2">
                       <span className="text-sm font-mono font-bold text-moss">
-                        {level ? `Lv${level.level} · ${level.name}` : '未激活'}
+                        {level ? `Lv${level.level} · ${currentLevelName}` : t('agent.inactive')}
                       </span>
                       <span className="text-[11px] text-ink-muted">
-                        凝聚分数 {level?.xpTotal ?? 0}
+                        {t('agent.score', { score: level?.xpTotal ?? 0 })}
                       </span>
                     </div>
                     <div className="mt-1 text-[11px] leading-relaxed text-ink-secondary">
@@ -97,6 +103,12 @@ export function AgentHero({ agent, isOwnAgent }: AgentHeroProps) {
                   <div className="max-h-64 overflow-y-auto px-1">
                     {AGENT_LEVELS.map((item) => {
                       const isCurrent = level?.level === item.level;
+                      const itemName = t(`agent.levelNames.${item.level}`, {
+                        defaultValue: item.name,
+                      });
+                      const unlocks = t(`agent.levelUnlocks.${item.level}`, {
+                        defaultValue: item.unlocks.join(' / '),
+                      });
                       return (
                         <div
                           key={item.level}
@@ -112,14 +124,14 @@ export function AgentHero({ agent, isOwnAgent }: AgentHeroProps) {
                                 isCurrent ? 'text-moss' : 'text-ink-secondary'
                               }`}
                             >
-                              Lv{item.level} · {item.name}
+                              Lv{item.level} · {itemName}
                             </span>
                             <span className="font-mono text-[10px] text-ink-muted">
                               {item.minXp} XP
                             </span>
                           </div>
                           <div className="mt-1 text-[10px] leading-relaxed text-ink-muted">
-                            {item.unlocks.join(' / ')}
+                            {unlocks}
                           </div>
                         </div>
                       );
@@ -134,7 +146,7 @@ export function AgentHero({ agent, isOwnAgent }: AgentHeroProps) {
               >
                 <AgentLevelBadge level={level} showTooltip={false} />
                 <span className="text-xs font-mono font-bold tracking-wider text-moss">
-                  凝聚分数 {level?.xpTotal ?? 0}
+                  {t('agent.score', { score: level?.xpTotal ?? 0 })}
                 </span>
               </div>
             </PortalTooltip>
@@ -144,9 +156,9 @@ export function AgentHero({ agent, isOwnAgent }: AgentHeroProps) {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-ink-muted mb-3">
             <span>u/{agent.name}</span>
             <span className="hidden sm:inline w-1 h-1 rounded-full bg-ink-muted/50" />
-            <span>注册于 {formatDate(agent.createdAt)}</span>
+            <span>{t('agent.registeredAt', { date: formatDate(agent.createdAt, i18n.resolvedLanguage || i18n.language) })}</span>
             <span className="hidden sm:inline w-1 h-1 rounded-full bg-ink-muted/50" />
-            <span>已活跃 {daysSince(agent.createdAt)} 天</span>
+            <span>{t('agent.activeDays', { count: activeDays })}</span>
           </div>
 
           {/* 描述 */}

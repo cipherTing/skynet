@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
 import { Radio } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { AgentInteractionCard } from '@/components/agent/AgentInteractionCard';
 import { forumApi } from '@/lib/api';
 import type { AgentInteractionHistoryItem } from '@skynet/shared';
@@ -12,11 +13,12 @@ interface AgentHistoryTabProps {
 }
 
 export function AgentHistoryTab({ agentId }: AgentHistoryTabProps) {
+  const { t } = useTranslation();
   const [interactions, setInteractions] = useState<AgentInteractionHistoryItem[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
-  const [error, setError] = useState('');
+  const [errorKey, setErrorKey] = useState('');
   const loadingRef = useRef(false);
   const requestSeqRef = useRef(0);
 
@@ -31,7 +33,7 @@ export function AgentHistoryTab({ agentId }: AgentHistoryTabProps) {
       requestSeqRef.current = requestSeq;
       loadingRef.current = true;
       setLoading(true);
-      setError('');
+      setErrorKey('');
 
       try {
         const data = await forumApi.listAgentInteractions(agentId, {
@@ -51,7 +53,7 @@ export function AgentHistoryTab({ agentId }: AgentHistoryTabProps) {
         setHasMore(data.meta.page < data.meta.totalPages);
       } catch {
         if (requestSeqRef.current !== requestSeq) return;
-        setError('加载交互历史失败');
+        setErrorKey('agent.historyLoadFailed');
         setHasMore(false);
       } finally {
         if (requestSeqRef.current === requestSeq) {
@@ -75,19 +77,19 @@ export function AgentHistoryTab({ agentId }: AgentHistoryTabProps) {
     }
   }, [inView, hasMore, page, loadInteractions, interactions.length]);
 
-  if (error && interactions.length === 0 && !loading) {
+  if (errorKey && interactions.length === 0 && !loading) {
     return (
       <div className="signal-bubble p-8 text-center">
         <div className="flex items-center justify-center gap-2 text-sm text-ochre">
           <Radio className="h-4 w-4" />
-          {error}
+          {t(errorKey)}
         </div>
         <button
           type="button"
           onClick={() => loadInteractions(1, true)}
           className="mt-4 rounded-lg border border-copper/25 px-4 py-2 text-xs text-copper transition-colors hover:bg-copper/10"
         >
-          重新加载
+          {t('app.reload')}
         </button>
       </div>
     );
@@ -96,7 +98,7 @@ export function AgentHistoryTab({ agentId }: AgentHistoryTabProps) {
   if (!loading && interactions.length === 0) {
     return (
       <div className="signal-bubble p-8 text-center">
-        <p className="text-sm text-ink-muted">暂无交互记录</p>
+        <p className="text-sm text-ink-muted">{t('agent.noInteractions')}</p>
       </div>
     );
   }
@@ -116,25 +118,25 @@ export function AgentHistoryTab({ agentId }: AgentHistoryTabProps) {
         </div>
       )}
 
-      {error && interactions.length > 0 && (
+      {errorKey && interactions.length > 0 && (
         <div className="py-4 text-center">
           <button
             type="button"
             onClick={() => loadInteractions(page + 1)}
             className="text-xs text-copper transition-colors hover:text-copper-bright"
           >
-            加载更多失败，点击重试
+            {t('agent.loadMoreFailed')}
           </button>
         </div>
       )}
 
-      {hasMore && !loading && !error && <div ref={loaderRef} className="h-8" />}
+      {hasMore && !loading && !errorKey && <div ref={loaderRef} className="h-8" />}
 
       {!hasMore && interactions.length > 0 && (
         <div className="py-6 text-center text-xs tracking-wide text-ink-muted">
           <div className="flex items-center justify-center gap-3">
             <div className="w-8 deck-divider" />
-            <span>交互记录末端</span>
+            <span>{t('agent.historyEnd')}</span>
             <div className="w-8 deck-divider" />
           </div>
         </div>

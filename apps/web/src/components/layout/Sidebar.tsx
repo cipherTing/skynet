@@ -5,15 +5,17 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Radio, LogIn, Shield } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserDropdown } from '@/components/ui/UserDropdown';
 import { FLOATING_Z_INDEX, PortalTooltip } from '@/components/ui/FloatingPortal';
 
 const navItems = [
-  { icon: Radio, label: '信号流', href: '/' },
+  { icon: Radio, labelKey: 'sidebar.feed', href: '/' },
 ];
 
 export function Sidebar() {
+  const { t } = useTranslation();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { isAuthenticated, agent, logout } = useAuth();
   const pathname = usePathname();
@@ -51,10 +53,11 @@ export function Sidebar() {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+              const label = t(item.labelKey);
 
               return (
                 <Link
-                  key={item.label}
+                  key={item.href}
                   href={item.href}
                   className={`relative flex flex-col items-center justify-center w-full py-2 rounded-lg transition-all duration-200 gap-0.5 ${
                     isActive
@@ -71,7 +74,7 @@ export function Sidebar() {
                     />
                   )}
                   <Icon className="w-5 h-5" />
-                  <span className="text-[10px] font-medium tracking-wide">{item.label}</span>
+                  <span className="text-[10px] font-medium tracking-wide">{label}</span>
                 </Link>
               );
             })}
@@ -88,15 +91,15 @@ export function Sidebar() {
                 onLogout={() => setShowLogoutConfirm(true)}
               />
             ) : (
-              <PortalTooltip content="登录" placement="right">
+              <PortalTooltip content={t('sidebar.login')} placement="right">
                 <span className="block w-full">
                   <Link
                     href="/auth"
-                    aria-label="登录"
+                    aria-label={t('sidebar.login')}
                     className="flex flex-col items-center justify-center w-full py-2 rounded-lg text-ink-muted hover:text-copper hover:bg-copper/5 transition-all gap-0.5"
                   >
                     <LogIn className="w-5 h-5" />
-                    <span className="text-[10px] font-medium tracking-wide">登录</span>
+                    <span className="text-[10px] font-medium tracking-wide">{t('sidebar.login')}</span>
                   </Link>
                 </span>
               </PortalTooltip>
@@ -134,17 +137,17 @@ export function Sidebar() {
             >
               <div className="flex items-center gap-2 mb-4">
                 <Shield className="w-5 h-5 text-ochre" />
-                <span id="logout-title" className="text-sm text-ochre font-bold tracking-deck-normal uppercase">确认断开连接</span>
+                <span id="logout-title" className="text-sm text-ochre font-bold tracking-deck-normal uppercase">{t('sidebar.logoutTitle')}</span>
               </div>
               <p className="text-ink-secondary text-sm mb-6 leading-relaxed">
-                确定要退出观测终端吗？
+                {t('sidebar.logoutQuestion')}
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowLogoutConfirm(false)}
                   className="flex-1 px-4 py-2.5 text-sm text-ink-secondary border border-copper/20 hover:border-copper/40 hover:text-ink-primary transition-all rounded-lg tracking-wide"
                 >
-                  取消
+                  {t('app.cancel')}
                 </button>
                 <button
                   onClick={() => {
@@ -153,7 +156,7 @@ export function Sidebar() {
                   }}
                   className="flex-1 px-4 py-2.5 text-sm text-void bg-ochre hover:bg-ochre-dim transition-all rounded-lg tracking-wide font-bold"
                 >
-                  确认断开
+                  {t('sidebar.logoutConfirm')}
                 </button>
               </div>
             </motion.div>

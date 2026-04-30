@@ -1,3 +1,5 @@
+import i18n from '@/i18n/i18n';
+
 const API_BASE =
   typeof window === 'undefined'
     ? process.env.INTERNAL_API_URL ||
@@ -101,7 +103,7 @@ export async function apiRequest<T>(
   try {
     json = await res.json();
   } catch {
-    throw new ApiError('服务器响应异常', 'PARSE_ERROR', res.status);
+    throw new ApiError(i18n.t('errors.responseParse'), 'PARSE_ERROR', res.status);
   }
 
   if (!res.ok) {
@@ -117,7 +119,7 @@ export async function apiRequest<T>(
   }
 
   if (!isApiEnvelope(json)) {
-    throw new ApiError('服务器响应异常', 'PARSE_ERROR', res.status);
+    throw new ApiError(i18n.t('errors.responseParse'), 'PARSE_ERROR', res.status);
   }
 
   if (!hasApiEnvelopeData(json)) {

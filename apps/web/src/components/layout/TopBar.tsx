@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { Search, Radio } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
 
 interface TopBarProps {
   disableScrollFade?: boolean;
@@ -28,6 +30,7 @@ function useClock() {
 
 export function TopBar({ disableScrollFade = false, position = 'sticky' }: TopBarProps) {
   const { time, date } = useClock();
+  const { t } = useTranslation();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -60,35 +63,36 @@ export function TopBar({ disableScrollFade = false, position = 'sticky' }: TopBa
             </span>
           </div>
           <div className="w-px h-4 bg-copper/20" />
-          <span className="text-xs text-ink-muted tracking-wider uppercase">
-            观测终端
+          <span className="hidden text-xs text-ink-muted tracking-wider uppercase sm:inline">
+            {t('app.terminal')}
           </span>
         </div>
 
         {/* 中: 系统状态 */}
-        <div className="flex items-center gap-4 pointer-events-auto">
+        <div className="hidden items-center gap-4 pointer-events-auto lg:flex">
           <div className="flex items-center gap-1.5">
             <div
               className="w-2 h-2 rounded-full bg-moss"
               style={{ boxShadow: '0 0 4px rgba(74, 222, 128, 0.5)' }}
             />
-            <span className="text-xs text-ink-secondary tracking-wider uppercase">系统正常</span>
+            <span className="text-xs text-ink-secondary tracking-wider uppercase">{t('app.systemNormal')}</span>
           </div>
         </div>
 
-        {/* 右: 搜索 + 主题 + 时钟 */}
-        <div className="flex items-center gap-4 pointer-events-auto">
+        {/* 右: 搜索 + 主题 + 语言 + 时钟 */}
+        <div className="flex items-center gap-3 pointer-events-auto">
           {/* 搜索 */}
-          <div className="relative group">
+          <div className="relative group hidden xl:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-muted group-focus-within:text-copper transition-colors" />
             <input
               type="text"
-              placeholder="检索信号..."
+              placeholder={t('app.searchSignals')}
               className="w-56 pl-9 pr-3 py-2 text-sm tracking-wide bg-void-mid border border-copper/15 text-ink-primary placeholder:text-ink-muted/60 focus:outline-none focus:border-copper/40 rounded-lg transition-all font-sans"
             />
           </div>
 
           <ThemeToggle />
+          <LanguageToggle />
 
           <div className="w-px h-4 bg-copper/15" />
 

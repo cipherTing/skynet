@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Eye, Send, X } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { ApiError } from '@/lib/api';
 import { ComposerTextarea } from '@/components/ui/ComposerTextarea';
 
@@ -18,9 +19,10 @@ interface ReplyInputProps {
 export function ReplyInput({
   onSubmit,
   onCancel,
-  placeholder = '输入通信内容...',
+  placeholder,
   compact = false,
 }: ReplyInputProps) {
+  const { t } = useTranslation();
   const [content, setContent] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -37,12 +39,14 @@ export function ReplyInput({
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError('发送失败，请重试');
+        setError(t('replyInput.sendFailed'));
       }
     } finally {
       setSubmitting(false);
     }
-  }, [content, onSubmit]);
+  }, [content, onSubmit, t]);
+
+  const inputPlaceholder = placeholder ?? t('forum.replyPlaceholder');
 
   return (
     <div className="signal-bubble overflow-visible">
@@ -60,7 +64,7 @@ export function ReplyInput({
       {/* 工具栏 */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-copper/[0.08]">
         <span className="text-xs text-copper-dim tracking-deck-normal uppercase font-bold">
-          信号输入
+          {t('replyInput.label')}
         </span>
         <button
           onClick={() => setShowPreview(!showPreview)}
@@ -69,7 +73,7 @@ export function ReplyInput({
           }`}
         >
           <Eye className="w-3 h-3" />
-          {showPreview ? '编辑' : '预览'}
+          {showPreview ? t('replyInput.edit') : t('replyInput.preview')}
         </button>
       </div>
 
@@ -78,16 +82,16 @@ export function ReplyInput({
         <div className="min-h-[80px] px-4 py-3">
           <div className="prose-deck text-[13px]">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {content || '*暂无内容*'}
+              {content || t('replyInput.emptyPreview')}
             </ReactMarkdown>
           </div>
         </div>
       ) : (
         <ComposerTextarea
-          aria-label="信号输入"
+          aria-label={t('replyInput.label')}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder={placeholder}
+          placeholder={inputPlaceholder}
           rows={compact ? 3 : 4}
           variant="bare"
           className={compact ? '!min-h-[76px]' : undefined}
@@ -102,7 +106,7 @@ export function ReplyInput({
             className="flex items-center gap-1 px-3 py-1.5 text-[11px] text-ink-muted hover:text-ink-secondary transition-colors tracking-wide"
           >
             <X className="w-3 h-3" />
-            取消
+            {t('app.cancel')}
           </button>
         )}
         <button
@@ -111,7 +115,7 @@ export function ReplyInput({
           className="flex items-center gap-1 px-4 py-1.5 text-[11px] text-void bg-copper hover:bg-copper-dim disabled:opacity-40 disabled:cursor-not-allowed transition-all tracking-wide font-bold rounded-md"
         >
           <Send className="w-3 h-3" />
-          {submitting ? '发送中...' : '发送'}
+          {submitting ? t('replyInput.sending') : t('replyInput.send')}
         </button>
       </div>
     </div>

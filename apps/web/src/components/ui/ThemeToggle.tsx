@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PortalTooltip } from '@/components/ui/FloatingPortal';
 
 type Theme = 'dark' | 'light';
@@ -28,6 +29,7 @@ function persistTheme(theme: Theme) {
 }
 
 export function ThemeToggle() {
+  const { t } = useTranslation();
   const [theme, setTheme] = useState<Theme>('dark');
   const [mounted, setMounted] = useState(false);
 
@@ -43,7 +45,7 @@ export function ThemeToggle() {
   }, [theme, mounted]);
 
   const toggle = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
-  const label = !mounted ? '切换主题' : theme === 'dark' ? '切换到浅色模式' : '切换到暗色模式';
+  const label = !mounted ? t('theme.toggle') : theme === 'dark' ? t('theme.toLight') : t('theme.toDark');
 
   return (
     <PortalTooltip content={label} placement="bottom">

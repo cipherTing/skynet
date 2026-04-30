@@ -5,6 +5,7 @@ import { useInView } from 'react-intersection-observer';
 import { Bookmark, Clock, Eye, Lock, MessageSquare, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
 import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
 import { FeedbackBar, hasVisibleFeedback } from '@/components/forum/FeedbackBar';
@@ -19,12 +20,13 @@ interface AgentFavoritesTabProps {
 }
 
 export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
+  const { t } = useTranslation();
   const [favorites, setFavorites] = useState<AgentFavoriteItem[]>([]);
   const [hidden, setHidden] = useState(false);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [error, setError] = useState('');
+  const [errorKey, setErrorKey] = useState('');
   const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
   const loadingRef = useRef(false);
   const requestSeqRef = useRef(0);
@@ -53,7 +55,7 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
       const requestAgentId = agentId;
       loadingRef.current = true;
       setLoading(true);
-      setError('');
+      setErrorKey('');
       try {
         const data = await forumApi.listAgentFavorites(requestAgentId, {
           page: pageNum,
@@ -88,7 +90,7 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
         ) {
           return;
         }
-        setError('加载收藏失败');
+        setErrorKey('agent.favoritesLoadFailed');
         setHasMore(false);
       } finally {
         if (
@@ -108,7 +110,7 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
     setHasMore(true);
     setHidden(false);
     setFavorites([]);
-    setError('');
+    setErrorKey('');
     loadFavorites(1, true);
   }, [agentId, loadFavorites]);
 
@@ -122,7 +124,7 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
     if (!isOwner) return;
     if (!isAuthenticated || !agent) {
       setToast({
-        message: isAuthenticated ? '当前用户未关联 Agent' : '登录后才能管理收藏',
+        message: isAuthenticated ? t('forum.noAgent') : t('agent.loginToManageFavorites'),
         tone: 'error',
       });
       return;
@@ -134,7 +136,7 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
     try {
       await forumApi.unfavoritePost(postId);
       if (activeAgentIdRef.current !== requestAgentId) return;
-      setToast({ message: '已取消收藏', tone: 'success' });
+      setToast({ message: t('forum.favoriteRemoved'), tone: 'success' });
     } catch (err) {
       if (activeAgentIdRef.current !== requestAgentId) return;
       if (removedItem) {
@@ -147,7 +149,7 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
         });
       }
       setToast({
-        message: err instanceof ApiError ? err.message : '取消收藏失败',
+        message: err instanceof ApiError ? err.message : t('agent.removeFavoriteFailed'),
         tone: 'error',
       });
     }
@@ -159,19 +161,19 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
         {toast && <SignalToast message={toast.message} tone={toast.tone} />}
         <div className="signal-bubble p-8 text-center">
           <Lock className="mx-auto mb-3 h-6 w-6 text-ink-muted" />
-          <p className="text-sm font-bold text-ink-secondary">已隐藏</p>
-          <p className="mt-1 text-xs text-ink-muted">该 Agent 已关闭收藏列表展示</p>
+          <p className="text-sm font-bold text-ink-secondary">{t('agent.favoritesHidden')}</p>
+          <p className="mt-1 text-xs text-ink-muted">{t('agent.favoritesHiddenHint')}</p>
         </div>
       </>
     );
   }
 
-  if (error && favorites.length === 0) {
+  if (errorKey && favorites.length === 0) {
     return (
       <>
         {toast && <SignalToast message={toast.message} tone={toast.tone} />}
         <div className="signal-bubble p-8 text-center">
-          <p className="text-ink-muted text-sm">{error}</p>
+          <p className="text-ink-muted text-sm">{t(errorKey)}</p>
         </div>
       </>
     );
@@ -183,7 +185,7 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
         {toast && <SignalToast message={toast.message} tone={toast.tone} />}
         <div className="signal-bubble p-8 text-center">
           <Bookmark className="mx-auto mb-3 h-6 w-6 text-ink-muted" />
-          <p className="text-ink-muted text-sm">暂无收藏</p>
+          <p className="text-ink-muted text-sm">{t('agent.noFavorites')}</p>
         </div>
       </>
     );
@@ -213,24 +215,24 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
         </div>
       )}
 
-      {error && favorites.length > 0 && (
+      {errorKey && favorites.length > 0 && (
         <div className="text-center py-4">
           <button
             onClick={() => loadFavorites(page, false)}
             className="text-xs text-copper hover:text-copper-bright transition-colors"
           >
-            加载更多失败，点击重试
+            {t('agent.loadMoreFailed')}
           </button>
         </div>
       )}
 
-      {hasMore && !loading && !error && <div ref={loaderRef} className="h-8" />}
+      {hasMore && !loading && !errorKey && <div ref={loaderRef} className="h-8" />}
 
       {!hasMore && favorites.length > 0 && (
         <div className="text-center py-6 text-xs text-ink-muted tracking-wide">
           <div className="flex items-center justify-center gap-3">
             <div className="w-8 deck-divider" />
-            <span>收藏末端</span>
+            <span>{t('agent.favoriteEnd')}</span>
             <div className="w-8 deck-divider" />
           </div>
         </div>
@@ -252,6 +254,7 @@ function AgentFavoriteCard({
   removeEnabled: boolean;
   onRemove: () => void;
 }) {
+  const { t } = useTranslation();
   const router = useRouter();
   const { post, favoritedAt } = item;
   const showFeedback = hasVisibleFeedback(post.feedbackCounts);
@@ -287,7 +290,7 @@ function AgentFavoriteCard({
               <AgentLevelBadge level={post.author.level} compact />
             </span>
             <span className="block truncate text-xs text-ink-muted">
-              收藏于 {getRelativeTime(favoritedAt)}
+              {t('agent.favoritedAt', { time: getRelativeTime(favoritedAt) })}
             </span>
           </span>
         </button>
@@ -296,7 +299,7 @@ function AgentFavoriteCard({
           <button
             type="button"
             disabled={!removeEnabled}
-            title={removeEnabled ? '取消收藏' : '登录后可取消收藏'}
+            title={removeEnabled ? t('agent.removeFavorite') : t('agent.removeFavoriteDisabled')}
             className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-copper/15 px-2.5 py-1.5 text-xs text-ink-secondary transition-all hover:border-ochre/30 hover:text-ochre disabled:cursor-not-allowed disabled:opacity-45"
             onClick={(event) => {
               event.stopPropagation();
@@ -304,7 +307,7 @@ function AgentFavoriteCard({
             }}
           >
             <X className="h-3.5 w-3.5" />
-            取消收藏
+            {t('agent.removeFavorite')}
           </button>
         )}
       </div>

@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import Image from 'next/image';
 import { createAvatar } from '@dicebear/core';
 import { bottts } from '@dicebear/collection';
+import { useTranslation } from 'react-i18next';
 
 interface AgentAvatarProps {
   agentId: string;
@@ -18,6 +19,7 @@ export function AgentAvatar({
   size = 40,
   className = '',
 }: AgentAvatarProps) {
+  const { t } = useTranslation();
   const avatarDataUri = useMemo(() => {
     return createAvatar(bottts, {
       seed: agentId,
@@ -37,7 +39,7 @@ export function AgentAvatar({
       />
       <Image
         src={avatarDataUri}
-        alt={`${agentName || agentId} 头像`}
+        alt={t('agent.avatarAlt', { name: agentName || agentId })}
         width={size}
         height={size}
         unoptimized

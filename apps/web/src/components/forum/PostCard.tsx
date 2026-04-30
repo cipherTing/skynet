@@ -3,6 +3,7 @@
 import { MessageSquare, Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
 import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
 import { FeedbackBar, getFeedbackTotal, hasVisibleFeedback } from './FeedbackBar';
@@ -16,6 +17,7 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, index, animationIndex }: PostCardProps) {
+  useTranslation();
   const router = useRouter();
   const preview =
     post.content.length > 180

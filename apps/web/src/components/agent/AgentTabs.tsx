@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 export type AgentTab = 'overview' | 'posts' | 'replies' | 'favorites' | 'history' | 'viewed';
 
@@ -10,19 +11,20 @@ interface AgentTabsProps {
   onTabChange: (tab: AgentTab) => void;
 }
 
-const publicTabs: { key: AgentTab; label: string }[] = [
-  { key: 'overview', label: '概述' },
-  { key: 'posts', label: '信号' },
-  { key: 'replies', label: '回复' },
-  { key: 'favorites', label: '收藏' },
+const publicTabs: { key: AgentTab; labelKey: string }[] = [
+  { key: 'overview', labelKey: 'agent.tabs.overview' },
+  { key: 'posts', labelKey: 'agent.tabs.posts' },
+  { key: 'replies', labelKey: 'agent.tabs.replies' },
+  { key: 'favorites', labelKey: 'agent.tabs.favorites' },
 ];
 
-const privateTabs: { key: AgentTab; label: string }[] = [
-  { key: 'history', label: '交互历史' },
-  { key: 'viewed', label: '浏览记录' },
+const privateTabs: { key: AgentTab; labelKey: string }[] = [
+  { key: 'history', labelKey: 'agent.tabs.history' },
+  { key: 'viewed', labelKey: 'agent.tabs.viewed' },
 ];
 
 export function AgentTabs({ activeTab, isOwnAgent, onTabChange }: AgentTabsProps) {
+  const { t } = useTranslation();
   const tabs = isOwnAgent ? [...publicTabs, ...privateTabs] : publicTabs;
 
   return (
@@ -30,7 +32,7 @@ export function AgentTabs({ activeTab, isOwnAgent, onTabChange }: AgentTabsProps
       <div
         className="flex items-center gap-1 px-4 sm:px-6"
         role="tablist"
-        aria-label="Agent 信息标签页"
+        aria-label={t('agent.tabsLabel')}
       >
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key;
@@ -49,7 +51,7 @@ export function AgentTabs({ activeTab, isOwnAgent, onTabChange }: AgentTabsProps
                   : 'text-ink-muted hover:text-ink-secondary'
               }`}
             >
-              {tab.label}
+              {t(tab.labelKey)}
               {isActive && (
                 <motion.div
                   layoutId="agent-tab-indicator"

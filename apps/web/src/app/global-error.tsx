@@ -1,25 +1,60 @@
 'use client';
 
+import { useTranslation } from 'react-i18next';
+import '@/i18n/i18n';
+import { languageToHtmlLang, normalizeLanguage } from '@/i18n/resources';
+
 export default function GlobalError({
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { t, i18n } = useTranslation();
+  const language = normalizeLanguage(i18n.resolvedLanguage || i18n.language) ?? 'en';
+  const themeInitScript = `(function(){try{var t=localStorage.getItem('skynet-theme');if(t!=='light'&&t!=='dark'){t='dark';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();`;
+  const themeVars = `
+:root {
+  --error-bg: #F2F2F5;
+  --error-panel: #FFFFFF;
+  --error-text: #0A0A14;
+  --error-muted: #4A4A5E;
+  --error-accent: #CC5C1A;
+  --error-danger: #CC2E2E;
+  --error-danger-border: rgba(204, 46, 46, 0.32);
+  --error-accent-border: rgba(204, 92, 26, 0.3);
+  --error-accent-soft: rgba(204, 92, 26, 0.1);
+}
+:root[data-theme="dark"] {
+  --error-bg: #0F0E0C;
+  --error-panel: #1D1B18;
+  --error-text: #E8E5E0;
+  --error-muted: #A8A59E;
+  --error-accent: #FF9830;
+  --error-danger: #FF3030;
+  --error-danger-border: rgba(255, 48, 48, 0.35);
+  --error-accent-border: rgba(255, 152, 48, 0.3);
+  --error-accent-soft: rgba(255, 152, 48, 0.1);
+}
+`;
+
   return (
-    // TODO(tech-debt): 浅色模式支持 — global-error 替换整个 HTML，需内联脚本读取 localStorage 选择配色
-    <html lang="zh-CN" className="dark">
-      <body className="min-h-screen bg-[#0F0E0C] text-[#E8E5E0] flex items-center justify-center">
-        <div className="border border-[rgba(255,48,48,0.35)] bg-[#1D1B18] p-8 max-w-md w-full text-center">
-          <div className="text-[48px] font-bold text-[#FF3030] leading-none mb-4" style={{ textShadow: '0 0 6px rgba(255,48,48,0.5)' }}>
+    <html lang={languageToHtmlLang(language)} data-theme="dark" suppressHydrationWarning>
+      <head>
+        <style dangerouslySetInnerHTML={{ __html: themeVars }} />
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
+      <body className="flex min-h-screen items-center justify-center bg-[var(--error-bg)] text-[var(--error-text)]">
+        <div className="w-full max-w-md border border-[var(--error-danger-border)] bg-[var(--error-panel)] p-8 text-center">
+          <div className="mb-4 text-[48px] font-bold leading-none text-[var(--error-danger)] [text-shadow:0_0_6px_rgba(255,48,48,0.5)]">
             500
           </div>
-          <p className="text-[#A8A59E] text-[14px] mb-6">系统错误</p>
+          <p className="mb-6 text-[14px] text-[var(--error-muted)]">{t('errors.systemError')}</p>
           <button
             onClick={() => reset()}
-            className="px-4 py-2 text-[13px] border border-[rgba(255,152,48,0.3)] text-[#FF9830] hover:bg-[rgba(255,152,48,0.1)] transition-colors"
+            className="border border-[var(--error-accent-border)] px-4 py-2 text-[13px] text-[var(--error-accent)] transition-colors hover:bg-[var(--error-accent-soft)]"
           >
-            重试
+            {t('app.retry')}
           </button>
         </div>
       </body>

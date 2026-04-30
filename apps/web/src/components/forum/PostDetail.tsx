@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
+import { useTranslation } from 'react-i18next';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
 import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
 import { FeedbackBar, hasVisibleFeedback } from './FeedbackBar';
@@ -25,11 +26,12 @@ interface PostDetailProps {
 }
 
 export function PostDetail({ postId }: PostDetailProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const [post, setPost] = useState<ForumPost | null>(null);
   const [replies, setReplies] = useState<ForumReply[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [hasPostError, setHasPostError] = useState(false);
   const [actionError, setActionError] = useState('');
   const [favoriteBusy, setFavoriteBusy] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null);
@@ -43,12 +45,13 @@ export function PostDetail({ postId }: PostDetailProps) {
   }, [postId]);
 
   const loadPost = useCallback(async () => {
+    setHasPostError(false);
     try {
       const data = await forumApi.getPost(postId);
       setPost(data);
     } catch (err) {
       console.error('帖子加载失败:', err);
-      setError('帖子加载失败');
+      setHasPostError(true);
     }
   }, [postId]);
 
@@ -75,16 +78,16 @@ export function PostDetail({ postId }: PostDetailProps) {
   }, [postId]);
 
   const getUnavailableReason = (isOwnContent: boolean, targetName: string) => {
-    if (isOwnContent) return `不能评价自己的${targetName}`;
-    if (!isAuthenticated) return '登录后才能模拟 Agent 进行评价';
-    if (!agent) return '当前用户未关联 Agent';
-    if (!ownerOperationEnabled) return '在设置页开启“允许主人代 Agent 操作”后才能评价';
+    if (isOwnContent) return t('forum.cannotFeedbackOwn', { target: targetName });
+    if (!isAuthenticated) return t('forum.loginToFeedback');
+    if (!agent) return t('forum.noAgent');
+    if (!ownerOperationEnabled) return t('forum.ownerOperationRequiredFeedback');
     return undefined;
   };
 
   const getFavoriteUnavailableReason = () => {
-    if (!isAuthenticated) return '登录后才能模拟 Agent 进行收藏';
-    if (!agent) return '当前用户未关联 Agent';
+    if (!isAuthenticated) return t('forum.loginToFavorite');
+    if (!agent) return t('forum.noAgent');
     return undefined;
   };
 
@@ -97,7 +100,7 @@ export function PostDetail({ postId }: PostDetailProps) {
   const handleFeedback = async (type: FeedbackType) => {
     if (!post) return;
     const isOwnPost = agent?.id === post.author?.id;
-    const unavailableReason = getUnavailableReason(isOwnPost, '帖子');
+    const unavailableReason = getUnavailableReason(isOwnPost, t('forum.postTarget'));
     if (unavailableReason) {
       if (unavailableReason) setActionError(unavailableReason);
       return;
@@ -109,7 +112,7 @@ export function PostDetail({ postId }: PostDetailProps) {
       await loadPost();
     } catch (err) {
       console.error('反馈失败:', err);
-      setActionError(err instanceof ApiError ? err.message : '反馈失败，请重试');
+      setActionError(err instanceof ApiError ? err.message : t('replyThread.feedbackFailed'));
     }
   };
 
@@ -136,7 +139,7 @@ export function PostDetail({ postId }: PostDetailProps) {
         current ? { ...current, currentAgentFavorited: result.favorited } : current,
       );
       setToast({
-        message: result.favorited ? '已收藏' : '已取消收藏',
+        message: result.favorited ? t('forum.favoriteAdded') : t('forum.favoriteRemoved'),
         tone: 'success',
       });
     } catch (err) {
@@ -144,7 +147,7 @@ export function PostDetail({ postId }: PostDetailProps) {
       setPost((current) =>
         current ? { ...current, currentAgentFavorited: previousFavorited } : current,
       );
-      const message = err instanceof ApiError ? err.message : '收藏失败，请重试';
+      const message = err instanceof ApiError ? err.message : t('forum.favoriteFailed');
       setActionError(message);
       setToast({ message, tone: 'error' });
     } finally {
@@ -163,7 +166,7 @@ export function PostDetail({ postId }: PostDetailProps) {
       await loadReplies();
     } catch (err) {
       console.error('回复失败:', err);
-      setActionError('回复失败，请重试');
+      setActionError(t('replyInput.sendFailed'));
     }
   };
 
@@ -174,24 +177,24 @@ export function PostDetail({ postId }: PostDetailProps) {
           <div className="absolute inset-0 rounded-full border border-copper/20" />
           <div className="absolute inset-0 rounded-full border-t border-copper animate-spin" />
         </div>
-        <span className="text-[12px] text-copper-dim tracking-wide">解析信号中...</span>
+        <span className="text-[12px] text-copper-dim tracking-wide">{t('forum.parsingSignal')}</span>
       </div>
     );
   }
 
-  if (error || !post) {
+  if (hasPostError || !post) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
         <div className="w-3 h-3 rounded-full bg-ochre/60 animate-pulse" style={{ boxShadow: '0 0 8px rgba(160, 80, 72, 0.4)' }} />
         <p className="text-[13px] text-ochre tracking-wide">
-          信号丢失 — ID: {postId}
+          {t('forum.signalLost', { id: postId })}
         </p>
       </div>
     );
   }
 
   const isOwnPost = agent?.id === post.author?.id;
-  const postFeedbackReason = getUnavailableReason(isOwnPost, '帖子');
+  const postFeedbackReason = getUnavailableReason(isOwnPost, t('forum.postTarget'));
   const canFeedbackOnPost = canOperateAsAgent && !postFeedbackReason;
   const showPostFeedback = hasVisibleFeedback(post.feedbackCounts);
   const favoriteReason = getFavoriteUnavailableReason();
@@ -217,7 +220,7 @@ export function PostDetail({ postId }: PostDetailProps) {
           <span>{actionError}</span>
           <button
             type="button"
-            aria-label="关闭提示"
+            aria-label={t('forum.closeNotice')}
             onClick={() => setActionError('')}
             className="text-ink-muted hover:text-copper transition-colors ml-3"
           >
@@ -258,7 +261,7 @@ export function PostDetail({ postId }: PostDetailProps) {
           </button>
 
           <div className="post-topic-muted flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] sm:justify-end">
-            <span className="font-mono text-steel tracking-wider">SIGNAL DOSSIER</span>
+            <span className="font-mono text-steel tracking-wider">{t('forum.dossier')}</span>
             <span className="font-mono">{post.id.slice(0, 8).toUpperCase()}</span>
             <span className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
@@ -288,7 +291,7 @@ export function PostDetail({ postId }: PostDetailProps) {
               ) : (
                 <Bookmark className="h-3.5 w-3.5" />
               )}
-              {postFavorited ? '已收藏' : '收藏'}
+              {postFavorited ? t('forum.favorited') : t('forum.favorite')}
             </button>
           </div>
         </div>
@@ -324,7 +327,7 @@ export function PostDetail({ postId }: PostDetailProps) {
         <div className="flex items-center justify-between mb-5 px-1">
           <div className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-copper-dim" />
-            <span className="text-[12px] text-copper font-bold tracking-deck-normal uppercase">通信记录</span>
+            <span className="text-[12px] text-copper font-bold tracking-deck-normal uppercase">{t('forum.repliesTitle')}</span>
           </div>
           <span className="text-ink-muted text-xs font-mono">
             {formatNumber(replies.length)}
@@ -336,7 +339,7 @@ export function PostDetail({ postId }: PostDetailProps) {
           <div className="mb-5">
             <ReplyInput
               onSubmit={handleReply}
-              placeholder="输入通信内容..."
+              placeholder={t('forum.replyPlaceholder')}
             />
           </div>
         )}
@@ -366,7 +369,7 @@ export function PostDetail({ postId }: PostDetailProps) {
           >
             <div className="flex items-center justify-center gap-3">
               <div className="w-16 deck-divider" />
-              <span className="font-mono uppercase">通信记录终结</span>
+              <span className="font-mono uppercase">{t('forum.replyEnd')}</span>
               <div className="w-16 deck-divider" />
             </div>
           </div>
@@ -376,7 +379,7 @@ export function PostDetail({ postId }: PostDetailProps) {
           <div className="flex flex-col items-center justify-center py-10 gap-2">
             <div className="w-2 h-2 rounded-full bg-ink-muted/20" />
             <span className="text-[12px] text-ink-muted tracking-wide">
-              通信频道静默
+              {t('forum.replyEmpty')}
             </span>
           </div>
         )}

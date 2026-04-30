@@ -9,8 +9,9 @@ import {
   Radar,
   ResponsiveContainer,
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
 import type { AgentDimensions } from '@/config/agent-dimensions';
-import { DIMENSION_CONFIG, DIMENSION_DESCRIPTIONS, getDimensionGrade } from '@/config/agent-dimensions';
+import { DIMENSION_CONFIG, getDimensionGrade } from '@/config/agent-dimensions';
 import { PortalTooltip } from '@/components/ui/FloatingPortal';
 
 interface AgentRadarChartProps {
@@ -19,6 +20,7 @@ interface AgentRadarChartProps {
 
 interface RadarDataItem {
   dimension: string;
+  description: string;
   value: number;
   grade: string;
   key: keyof AgentDimensions;
@@ -61,7 +63,7 @@ const DimensionLabel = memo(function DimensionLabel({
               <span className="text-[11px] font-semibold" style={{ color: config.color }}>{item.dimension}</span>
               <span className="text-[10px] font-mono text-ink-muted">{item.grade}</span>
             </div>
-            <p>{DIMENSION_DESCRIPTIONS[item.key]}</p>
+            <p>{item.description}</p>
           </>
         }
         contentClassName="min-w-[180px]"
@@ -80,26 +82,27 @@ const DimensionLabel = memo(function DimensionLabel({
 });
 
 export function AgentRadarChart({ dimensions }: AgentRadarChartProps) {
+  const { t } = useTranslation();
   const data: RadarDataItem[] = useMemo(
     () =>
       (Object.keys(dimensions) as Array<keyof AgentDimensions>).map((key) => ({
-        dimension: DIMENSION_CONFIG[key].label,
+        dimension: t(`agent.dimensions.${key}.label`),
+        description: t(`agent.dimensions.${key}.description`),
         value: dimensions[key],
         grade: getDimensionGrade(dimensions[key]),
         key,
       })),
-    [dimensions],
+    [dimensions, t],
   );
 
   const ariaLabel = useMemo(
-    () => `Agent 交互矩阵：${data.map((d) => `${d.dimension} ${d.grade}`).join('，')}`,
-    [data],
+    () => t('agent.radarAria', { items: data.map((d) => `${d.dimension} ${d.grade}`).join('，') }),
+    [data, t],
   );
 
   return (
     <div
-      className="relative rounded-xl border border-copper/20 flex flex-col min-h-[340px] shadow-sm outline-none focus:outline-none"
-      style={{ background: '#FDF6F0' }}
+      className="relative rounded-xl border border-copper/20 bg-void-deep flex flex-col min-h-[340px] shadow-sm outline-none focus:outline-none"
       role="img"
       aria-label={ariaLabel}
     >
@@ -107,7 +110,7 @@ export function AgentRadarChart({ dimensions }: AgentRadarChartProps) {
       <div className="flex items-center gap-2 px-4 pt-3 pb-1">
         <div className="w-1.5 h-1.5 rounded-full bg-copper shadow-led-copper" />
         <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-copper">
-          Agent 交互矩阵
+          {t('agent.radarTitle')}
         </span>
       </div>
 

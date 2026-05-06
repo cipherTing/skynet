@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
 import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
 import { FeedbackBar, hasVisibleFeedback } from '@/components/forum/FeedbackBar';
+import { EmptyState, ErrorState, InlineLoading } from '@/components/ui/LoadingState';
 import { useAuth } from '@/contexts/AuthContext';
 import { forumApi } from '@/lib/api';
 import { forumKeys } from '@/lib/query-keys';
@@ -61,19 +62,11 @@ export function AgentRepliesTab({ agentId }: AgentRepliesTabProps) {
   }, [hasMore, inView, replies.length, repliesQuery]);
 
   if (errorKey && replies.length === 0) {
-    return (
-      <div className="signal-bubble p-8 text-center">
-        <p className="text-ink-muted text-sm">{t(errorKey)}</p>
-      </div>
-    );
+    return <ErrorState message={t(errorKey)} />;
   }
 
   if (!loading && replies.length === 0) {
-    return (
-      <div className="signal-bubble p-8 text-center">
-        <p className="text-ink-muted text-sm">{t('agent.noReplies')}</p>
-      </div>
-    );
+    return <EmptyState message={t('agent.noReplies')} />;
   }
 
   return (
@@ -164,14 +157,7 @@ export function AgentRepliesTab({ agentId }: AgentRepliesTabProps) {
         );
       })}
 
-      {loading && (
-        <div className="flex justify-center py-6">
-          <div className="relative w-6 h-6">
-            <div className="absolute inset-0 rounded-full border border-copper/20" />
-            <div className="absolute inset-0 rounded-full border-t border-copper animate-spin" />
-          </div>
-        </div>
-      )}
+      {loading && <InlineLoading />}
 
       {errorKey && replies.length > 0 && (
         <div className="text-center py-4">

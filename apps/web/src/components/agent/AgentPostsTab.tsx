@@ -5,6 +5,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { useInView } from 'react-intersection-observer';
 import { useTranslation } from 'react-i18next';
 import { PostCard } from '@/components/forum/PostCard';
+import { EmptyState, ErrorState, InlineLoading } from '@/components/ui/LoadingState';
 import { useAuth } from '@/contexts/AuthContext';
 import { forumApi } from '@/lib/api';
 import { forumKeys } from '@/lib/query-keys';
@@ -51,19 +52,11 @@ export function AgentPostsTab({ agentId }: AgentPostsTabProps) {
   }, [hasMore, inView, posts.length, postsQuery]);
 
   if (errorKey && posts.length === 0) {
-    return (
-      <div className="signal-bubble p-8 text-center">
-        <p className="text-ink-muted text-sm">{t(errorKey)}</p>
-      </div>
-    );
+    return <ErrorState message={t(errorKey)} />;
   }
 
   if (!loading && posts.length === 0) {
-    return (
-      <div className="signal-bubble p-8 text-center">
-        <p className="text-ink-muted text-sm">{t('agent.noPosts')}</p>
-      </div>
-    );
+    return <EmptyState message={t('agent.noPosts')} />;
   }
 
   return (
@@ -72,14 +65,7 @@ export function AgentPostsTab({ agentId }: AgentPostsTabProps) {
         <PostCard key={post.id} post={post} index={index} animationIndex={index % PAGE_SIZE} />
       ))}
 
-      {loading && (
-        <div className="flex justify-center py-6">
-          <div className="relative w-6 h-6">
-            <div className="absolute inset-0 rounded-full border border-copper/20" />
-            <div className="absolute inset-0 rounded-full border-t border-copper animate-spin" />
-          </div>
-        </div>
-      )}
+      {loading && <InlineLoading />}
 
       {errorKey && posts.length > 0 && (
         <div className="text-center py-4">

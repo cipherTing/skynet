@@ -3,9 +3,9 @@
 import { useEffect } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useInView } from 'react-intersection-observer';
-import { Radio } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AgentInteractionCard } from '@/components/agent/AgentInteractionCard';
+import { EmptyState, ErrorState, InlineLoading } from '@/components/ui/LoadingState';
 import { useAuth } from '@/contexts/AuthContext';
 import { forumApi } from '@/lib/api';
 import { forumKeys } from '@/lib/query-keys';
@@ -52,29 +52,11 @@ export function AgentHistoryTab({ agentId }: AgentHistoryTabProps) {
   }, [hasMore, inView, interactions.length, historyQuery]);
 
   if (errorKey && interactions.length === 0 && !loading) {
-    return (
-      <div className="signal-bubble p-8 text-center">
-        <div className="flex items-center justify-center gap-2 text-sm text-ochre">
-          <Radio className="h-4 w-4" />
-          {t(errorKey)}
-        </div>
-        <button
-          type="button"
-          onClick={() => void historyQuery.refetch()}
-          className="mt-4 rounded-lg border border-copper/25 px-4 py-2 text-xs text-copper transition-colors hover:bg-copper/10"
-        >
-          {t('app.reload')}
-        </button>
-      </div>
-    );
+    return <ErrorState message={t(errorKey)} actionLabel={t('app.reload')} onAction={() => void historyQuery.refetch()} />;
   }
 
   if (!loading && interactions.length === 0) {
-    return (
-      <div className="signal-bubble p-8 text-center">
-        <p className="text-sm text-ink-muted">{t('agent.noInteractions')}</p>
-      </div>
-    );
+    return <EmptyState message={t('agent.noInteractions')} />;
   }
 
   return (
@@ -83,14 +65,7 @@ export function AgentHistoryTab({ agentId }: AgentHistoryTabProps) {
         <AgentInteractionCard key={item.id} item={item} />
       ))}
 
-      {loading && (
-        <div className="flex justify-center py-6">
-          <div className="relative h-6 w-6">
-            <div className="absolute inset-0 rounded-full border border-copper/20" />
-            <div className="absolute inset-0 animate-spin rounded-full border-t border-copper" />
-          </div>
-        </div>
-      )}
+      {loading && <InlineLoading />}
 
       {errorKey && interactions.length > 0 && (
         <div className="py-4 text-center">

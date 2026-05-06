@@ -1,56 +1,62 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { I18nextProvider } from 'react-i18next';
-import i18n, {
-  applyDocumentLanguage,
+import { AppBootstrapLoading } from '@/components/ui/AppBootstrapLoading';
+import {
+  default as appI18n,
   detectInitialLanguage,
-  getCurrentLanguage,
-  persistLanguage,
+  setAppLanguage,
 } from '@/i18n/i18n';
-import { LANGUAGE_STORAGE_KEY, normalizeLanguage, type SupportedLanguage } from '@/i18n/resources';
+import { LANGUAGE_STORAGE_KEY, normalizeLanguage } from '@/i18n/resources';
 
 interface AppI18nProviderProps {
   children: ReactNode;
 }
 
 export function AppI18nProvider({ children }: AppI18nProviderProps) {
+  const [bootstrapping, setBootstrapping] = useState(true);
+
   useEffect(() => {
-    const initialLanguage = detectInitialLanguage();
+    let active = true;
 
-    const syncLanguage = (language: SupportedLanguage) => {
-      applyDocumentLanguage(language);
-      persistLanguage(language);
-    };
-
-    void i18n.changeLanguage(initialLanguage).then(() => {
-      syncLanguage(getCurrentLanguage());
-    });
-
-    const handleLanguageChanged = (language: string) => {
-      const normalized = normalizeLanguage(language) ?? 'en';
-      syncLanguage(normalized);
-    };
+    void (async () => {
+      try {
+        await setAppLanguage(detectInitialLanguage(), appI18n);
+      } catch (error: unknown) {
+        console.error('Failed to initialize language:', error);
+        try {
+          await setAppLanguage('en', appI18n);
+        } catch (fallbackError: unknown) {
+          console.error('Failed to fall back to English:', fallbackError);
+        }
+      } finally {
+        if (active) setBootstrapping(false);
+      }
+    })();
 
     const handleStorage = (event: StorageEvent) => {
       if (event.key !== LANGUAGE_STORAGE_KEY) return;
-      const nextLanguage = normalizeLanguage(event.newValue) ?? detectInitialLanguage();
-      if (nextLanguage === getCurrentLanguage()) return;
-      void i18n.changeLanguage(nextLanguage);
+      if (event.newValue === null) return;
+      const nextLanguage = normalizeLanguage(event.newValue);
+      if (!nextLanguage) return;
+      void setAppLanguage(nextLanguage, appI18n)
+        .catch((error: unknown) => {
+          console.error('Failed to sync stored language:', error);
+        });
     };
 
-    i18n.on('languageChanged', handleLanguageChanged);
     window.addEventListener('storage', handleStorage);
 
     return () => {
-      i18n.off('languageChanged', handleLanguageChanged);
+      active = false;
       window.removeEventListener('storage', handleStorage);
     };
   }, []);
 
   return (
-    <I18nextProvider i18n={i18n}>
-      {children}
+    <I18nextProvider i18n={appI18n}>
+      {bootstrapping ? <AppBootstrapLoading /> : children}
     </I18nextProvider>
   );
 }

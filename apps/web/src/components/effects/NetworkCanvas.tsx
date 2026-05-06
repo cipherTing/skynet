@@ -12,10 +12,24 @@ interface Node {
   pulsePhase: number;
 }
 
-const NODE_COUNT = 25;
-const CONNECTION_DISTANCE = 180;
+const NODE_COUNT = 34;
+const CONNECTION_DISTANCE = 210;
 const MOUSE_REPEL_RADIUS = 150;
 const MOUSE_REPEL_FORCE = 0.8;
+const THEME_PALETTE = {
+  dark: {
+    node: '255, 153, 85',
+    line: '255, 122, 46',
+    nodeAlpha: 0.92,
+    lineAlpha: 0.22,
+  },
+  light: {
+    node: '3, 105, 161',
+    line: '204, 92, 26',
+    nodeAlpha: 0.72,
+    lineAlpha: 0.18,
+  },
+} as const;
 
 function createNode(width: number, height: number): Node {
   return {
@@ -24,7 +38,7 @@ function createNode(width: number, height: number): Node {
     vx: (Math.random() - 0.5) * 0.3,
     vy: (Math.random() - 0.5) * 0.3,
     radius: Math.random() * 1.5 + 0.5,
-    opacity: Math.random() * 0.3 + 0.1,
+    opacity: Math.random() * 0.35 + 0.18,
     pulsePhase: Math.random() * Math.PI * 2,
   };
 }
@@ -43,6 +57,10 @@ export function NetworkCanvas() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    const readTheme = () =>
+      document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    themeRef.current = readTheme();
 
     // Check reduced motion preference
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -95,8 +113,7 @@ export function NetworkCanvas() {
 
     // Observe theme changes
     const observer = new MutationObserver(() => {
-      const theme = document.documentElement.getAttribute('data-theme');
-      themeRef.current = theme === 'light' ? 'light' : 'dark';
+      themeRef.current = readTheme();
     });
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
@@ -105,6 +122,7 @@ export function NetworkCanvas() {
       const height = window.innerHeight;
       const mouse = mouseRef.current;
       const isDark = themeRef.current === 'dark';
+      const palette = isDark ? THEME_PALETTE.dark : THEME_PALETTE.light;
       const reduced = reducedMotionRef.current;
       const visible = visibleRef.current;
 
@@ -145,10 +163,8 @@ export function NetworkCanvas() {
       }
 
       // Draw connections
-      ctx.strokeStyle = isDark
-        ? 'rgba(184, 152, 106, 0.06)'
-        : 'rgba(139, 115, 85, 0.05)';
-      ctx.lineWidth = 0.5;
+      ctx.strokeStyle = `rgba(${palette.line}, 0.08)`;
+      ctx.lineWidth = isDark ? 0.65 : 0.55;
 
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
@@ -159,10 +175,8 @@ export function NetworkCanvas() {
           const dist = Math.sqrt(dx * dx + dy * dy);
 
           if (dist < CONNECTION_DISTANCE) {
-            const alpha = (1 - dist / CONNECTION_DISTANCE) * 0.12;
-            ctx.strokeStyle = isDark
-              ? `rgba(184, 152, 106, ${alpha})`
-              : `rgba(139, 115, 85, ${alpha})`;
+            const alpha = (1 - dist / CONNECTION_DISTANCE) * palette.lineAlpha;
+            ctx.strokeStyle = `rgba(${palette.line}, ${alpha})`;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
@@ -174,14 +188,17 @@ export function NetworkCanvas() {
       // Draw nodes
       for (const node of nodes) {
         const pulse = reduced ? 1 : Math.sin(node.pulsePhase) * 0.15 + 0.85;
-        const alpha = node.opacity * pulse;
+        const alpha = node.opacity * pulse * palette.nodeAlpha;
 
         // Core
-        ctx.fillStyle = isDark
-          ? `rgba(184, 152, 106, ${alpha})`
-          : `rgba(139, 115, 85, ${alpha * 0.7})`;
+        ctx.fillStyle = `rgba(${palette.node}, ${alpha})`;
         ctx.beginPath();
         ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = `rgba(${palette.node}, ${alpha * 0.2})`;
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, node.radius * 3.2, 0, Math.PI * 2);
         ctx.fill();
       }
 

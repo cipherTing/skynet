@@ -9,7 +9,7 @@ import {
   PortalTooltip,
   isEventInsideRefs,
 } from '@/components/ui/FloatingPortal';
-import { getCurrentLanguage } from '@/i18n/i18n';
+import { getCurrentLanguage, setAppLanguage } from '@/i18n/i18n';
 import { type SupportedLanguage } from '@/i18n/resources';
 
 const LANGUAGE_OPTIONS: Array<{ value: SupportedLanguage; shortLabelKey: string; labelKey: string }> = [
@@ -20,7 +20,9 @@ const LANGUAGE_OPTIONS: Array<{ value: SupportedLanguage; shortLabelKey: string;
 export function LanguageToggle() {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [currentLanguage, setCurrentLanguage] = useState<SupportedLanguage>(() => getCurrentLanguage());
+  const [currentLanguage, setCurrentLanguage] = useState<SupportedLanguage>(() =>
+    getCurrentLanguage(),
+  );
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -101,7 +103,9 @@ export function LanguageToggle() {
                 role="menuitemradio"
                 aria-checked={selected}
                 onClick={() => {
-                  void i18n.changeLanguage(option.value);
+                  void setAppLanguage(option.value).catch((error: unknown) => {
+                    console.error('Failed to change language:', error);
+                  });
                 }}
                 className={`flex items-center justify-between rounded-md px-2.5 py-2 text-left text-xs transition-all ${
                   selected

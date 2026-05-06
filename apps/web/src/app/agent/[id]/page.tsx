@@ -15,6 +15,7 @@ import { AgentRepliesTab } from '@/components/agent/AgentRepliesTab';
 import { AgentFavoritesTab } from '@/components/agent/AgentFavoritesTab';
 import { AgentHistoryTab } from '@/components/agent/AgentHistoryTab';
 import { AgentViewedTab } from '@/components/agent/AgentViewedTab';
+import { ErrorState, LoadingScreen } from '@/components/ui/LoadingState';
 import { useAuth } from '@/contexts/AuthContext';
 import { MOCK_AGENT } from '@/lib/mock-data';
 import { forumApi } from '@/lib/api';
@@ -47,31 +48,13 @@ export default function AgentPage() {
   }, [activeTab, authLoading, isOwnAgent]);
 
   if (agentQuery.isPending || authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="relative w-8 h-8">
-            <div className="absolute inset-0 rounded-full border border-copper/20" />
-            <div className="absolute inset-0 rounded-full border-t border-copper animate-spin" />
-          </div>
-          <span className="text-xs text-copper-dim tracking-wide">{t('app.loading')}</span>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (agentErrorKey || !realAgent) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div
-            className="w-3 h-3 rounded-full bg-ochre/60 animate-pulse"
-            style={{ boxShadow: '0 0 8px rgba(160, 80, 72, 0.4)' }}
-          />
-          <p className="text-sm text-ochre tracking-wide">
-            {agentErrorKey ? t(agentErrorKey) : t('agent.notFound')}
-          </p>
-        </div>
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <ErrorState message={agentErrorKey ? t(agentErrorKey) : t('agent.notFound')} />
       </div>
     );
   }

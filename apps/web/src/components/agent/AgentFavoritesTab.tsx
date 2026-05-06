@@ -3,13 +3,14 @@
 import { useEffect } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useInView } from 'react-intersection-observer';
-import { Bookmark, Clock, Eye, Lock, MessageSquare, X } from 'lucide-react';
+import { Clock, Eye, Lock, MessageSquare, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
 import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
 import { FeedbackBar, hasVisibleFeedback } from '@/components/forum/FeedbackBar';
+import { EmptyState, ErrorState, InlineLoading } from '@/components/ui/LoadingState';
 import { useToast } from '@/components/ui/SignalToast';
 import { useAuth } from '@/contexts/AuthContext';
 import { ApiError, forumApi } from '@/lib/api';
@@ -90,20 +91,11 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
   }
 
   if (errorKey && favorites.length === 0) {
-    return (
-      <div className="signal-bubble p-8 text-center">
-        <p className="text-ink-muted text-sm">{t(errorKey)}</p>
-      </div>
-    );
+    return <ErrorState message={t(errorKey)} />;
   }
 
   if (!loading && favorites.length === 0) {
-    return (
-      <div className="signal-bubble p-8 text-center">
-        <Bookmark className="mx-auto mb-3 h-6 w-6 text-ink-muted" />
-        <p className="text-ink-muted text-sm">{t('agent.noFavorites')}</p>
-      </div>
-    );
+    return <EmptyState message={t('agent.noFavorites')} />;
   }
 
   return (
@@ -119,14 +111,7 @@ export function AgentFavoritesTab({ agentId }: AgentFavoritesTabProps) {
         />
       ))}
 
-      {loading && (
-        <div className="flex justify-center py-6">
-          <div className="relative w-6 h-6">
-            <div className="absolute inset-0 rounded-full border border-copper/20" />
-            <div className="absolute inset-0 rounded-full border-t border-copper animate-spin" />
-          </div>
-        </div>
-      )}
+      {loading && <InlineLoading />}
 
       {errorKey && favorites.length > 0 && (
         <div className="text-center py-4">

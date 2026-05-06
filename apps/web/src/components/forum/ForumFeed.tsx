@@ -3,11 +3,12 @@
 import { useState, useCallback, useEffect, useRef, type UIEvent } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useInView } from 'react-intersection-observer';
-import { Flame, Clock, Plus, Radio, RefreshCw } from 'lucide-react';
+import { Flame, Clock, Plus, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { PostCard } from './PostCard';
 import { CreatePostModal } from './CreatePostModal';
+import { EmptyState, ErrorState, InlineLoading } from '@/components/ui/LoadingState';
 import { forumApi } from '@/lib/api';
 import { forumKeys } from '@/lib/query-keys';
 import { useOwnerOperation } from '@/contexts/OwnerOperationContext';
@@ -30,6 +31,7 @@ export function ForumFeed() {
   const [scrollRoot, setScrollRoot] = useState<HTMLDivElement | null>(null);
   const scrollRootRef = useRef<HTMLDivElement | null>(null);
   const lastRestoredKeyRef = useRef('');
+  const [refreshingFeed, setRefreshingFeed] = useState(false);
   const { ownerOperationEnabled, canOperateAsAgent } = useOwnerOperation();
   const { isAuthenticated, isLoading: authLoading, user, agent } = useAuth();
   const toast = useToast();
@@ -58,6 +60,7 @@ export function ForumFeed() {
   const posts = postsQuery.data?.pages.flatMap((page) => page.posts) ?? [];
   const firstPostId = posts[0]?.id ?? 'empty';
   const loading = postsQuery.isPending || postsQuery.isFetchingNextPage;
+  const showingRefreshLoading = refreshingFeed && postsQuery.isFetching;
   const hasMore = postsQuery.hasNextPage === true;
   const errorKey = postsQuery.isError ? 'forum.signalLoadFailed' : '';
 
@@ -107,9 +110,12 @@ export function ForumFeed() {
   );
 
   const handleRefresh = () => {
+    setRefreshingFeed(true);
     resetScrollTop(sortMode);
     scrollRootRef.current?.scrollTo({ top: 0, behavior: 'auto' });
-    void postsQuery.refetch();
+    void postsQuery.refetch().finally(() => {
+      setRefreshingFeed(false);
+    });
   };
 
   const handlePostCreated = (created: ForumPost) => {
@@ -217,28 +223,23 @@ export function ForumFeed() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="flex min-h-full flex-col items-center justify-center gap-4 py-16"
+              className="flex min-h-full items-center justify-center py-16"
             >
-              <div className="w-12 h-12 flex items-center justify-center border border-ochre/30 bg-ochre/10 rounded-full">
-                <Radio className="w-5 h-5 text-ochre" />
-              </div>
-              <div className="text-center">
-                <p className="text-ochre text-sm font-bold tracking-wide mb-2">
-                  {t('forum.signalReceiveError')}
-                </p>
-                <p className="text-ink-muted text-xs tracking-wide mb-4">{t(errorKey)}</p>
-                <button
-                  onClick={handleRefresh}
-                  className="px-4 py-2 text-sm text-copper border border-copper/25 hover:bg-copper/10 transition-all rounded-lg tracking-wide"
-                >
-                  {t('forum.rescan')}
-                </button>
-              </div>
+              <ErrorState
+                title={t('forum.signalReceiveError')}
+                message={t(errorKey)}
+                actionLabel={t('forum.rescan')}
+                onAction={handleRefresh}
+              />
             </motion.div>
           )}
         </AnimatePresence>
 
-        {posts.length > 0 && (
+        {showingRefreshLoading && (
+          <FeedLoadingState label={t('forum.intercepting')} />
+        )}
+
+        {!showingRefreshLoading && posts.length > 0 && (
           <div className="space-y-4">
             {posts.map((post, index) => (
               <PostCard
@@ -251,15 +252,13 @@ export function ForumFeed() {
           </div>
         )}
 
-        {loading && (
-          <div className="flex justify-center py-10">
-            <LoadingIndicator />
-          </div>
+        {!showingRefreshLoading && loading && (
+          <FeedLoadingState label={t('forum.intercepting')} />
         )}
 
-        {hasMore && !loading && !errorKey && <div ref={loaderRef} className="h-8" />}
+        {hasMore && !showingRefreshLoading && !loading && !errorKey && <div ref={loaderRef} className="h-8" />}
 
-        {!hasMore && posts.length > 0 && (
+        {!showingRefreshLoading && !hasMore && posts.length > 0 && (
           <div className="text-center py-8 text-xs text-ink-muted tracking-wide">
             <div className="flex items-center justify-center gap-3">
               <div className="w-8 deck-divider" />
@@ -269,10 +268,9 @@ export function ForumFeed() {
           </div>
         )}
 
-        {isEmpty && (
-          <div className="flex min-h-full flex-col items-center justify-center gap-3 py-16">
-            <div className="w-3 h-3 rounded-full bg-ink-muted/30" />
-            <span className="text-sm text-ink-muted tracking-wide">{t('forum.emptyFeed')}</span>
+        {!showingRefreshLoading && isEmpty && (
+          <div className="flex min-h-full items-center justify-center py-16">
+            <EmptyState message={t('forum.emptyFeed')} />
           </div>
         )}
       </div>
@@ -287,6 +285,14 @@ export function ForumFeed() {
           />
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function FeedLoadingState({ label }: { label: string }) {
+  return (
+    <div className="flex min-h-full items-center justify-center py-16">
+      <InlineLoading label={label} />
     </div>
   );
 }
@@ -321,20 +327,5 @@ function SortTab({
       <span className="relative z-10">{icon}</span>
       <span className="relative z-10">{label}</span>
     </button>
-  );
-}
-
-function LoadingIndicator() {
-  const { t } = useTranslation();
-
-  return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="relative w-8 h-8">
-        <div className="absolute inset-0 rounded-full border border-copper/20" />
-        <div className="absolute inset-0 rounded-full border-t border-copper animate-spin" />
-        <div className="absolute inset-[6px] rounded-full bg-copper/20 animate-pulse" />
-      </div>
-      <span className="text-sm text-copper-dim tracking-wide">{t('forum.intercepting')}</span>
-    </div>
   );
 }

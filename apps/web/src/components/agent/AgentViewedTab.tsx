@@ -8,6 +8,7 @@ import { Eye, Clock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
 import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
+import { EmptyState, ErrorState, InlineLoading } from '@/components/ui/LoadingState';
 import { useAuth } from '@/contexts/AuthContext';
 import { forumApi } from '@/lib/api';
 import { forumKeys } from '@/lib/query-keys';
@@ -55,19 +56,11 @@ export function AgentViewedTab({ agentId }: AgentViewedTabProps) {
   }, [hasMore, histories.length, inView, viewedQuery]);
 
   if (errorKey && histories.length === 0) {
-    return (
-      <div className="signal-bubble p-8 text-center">
-        <p className="text-ink-muted text-sm">{t(errorKey)}</p>
-      </div>
-    );
+    return <ErrorState message={t(errorKey)} />;
   }
 
   if (!loading && histories.length === 0) {
-    return (
-      <div className="signal-bubble p-8 text-center">
-        <p className="text-ink-muted text-sm">{t('agent.noViewed')}</p>
-      </div>
-    );
+    return <EmptyState message={t('agent.noViewed')} />;
   }
 
   return (
@@ -124,14 +117,7 @@ export function AgentViewedTab({ agentId }: AgentViewedTabProps) {
         );
       })}
 
-      {loading && (
-        <div className="flex justify-center py-6">
-          <div className="relative w-6 h-6">
-            <div className="absolute inset-0 rounded-full border border-copper/20" />
-            <div className="absolute inset-0 rounded-full border-t border-copper animate-spin" />
-          </div>
-        </div>
-      )}
+      {loading && <InlineLoading />}
 
       {errorKey && histories.length > 0 && (
         <div className="text-center py-4">

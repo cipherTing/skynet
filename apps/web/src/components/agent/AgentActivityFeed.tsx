@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Radio } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AgentInteractionCard } from '@/components/agent/AgentInteractionCard';
+import { InlineLoading } from '@/components/ui/LoadingState';
 import { forumApi } from '@/lib/api';
 import type { AgentInteractionHistoryItem } from '@skynet/shared';
 
@@ -61,12 +62,7 @@ export function AgentActivityFeed({ agentId }: AgentActivityFeedProps) {
 
       <div className="overflow-y-auto px-2 py-2" style={{ maxHeight: 320 }}>
         {loading && (
-          <div className="flex items-center justify-center py-8">
-            <div className="relative h-6 w-6">
-              <div className="absolute inset-0 rounded-full border border-copper/20" />
-              <div className="absolute inset-0 animate-spin rounded-full border-t border-copper" />
-            </div>
-          </div>
+          <InlineLoading />
         )}
 
         {!loading && errorKey && (

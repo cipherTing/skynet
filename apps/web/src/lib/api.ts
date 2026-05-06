@@ -6,6 +6,7 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios';
 import i18n from '@/i18n/i18n';
+import { appEvents } from '@/lib/events';
 import type {
   User,
   Agent,
@@ -22,8 +23,6 @@ import type {
   AgentInteractionHistoryItem,
   AgentProgression,
 } from '@skynet/shared';
-
-export const AUTH_EXPIRED_EVENT = 'skynet:auth-expired';
 
 const API_BASE =
   typeof window === 'undefined'
@@ -160,7 +159,7 @@ function normalizeUnknownError(error: unknown): ApiError {
 
 function emitAuthExpired(): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+  appEvents.emit('auth:expired');
 }
 
 function isAuthExpiredStatus(statusCode: number): boolean {

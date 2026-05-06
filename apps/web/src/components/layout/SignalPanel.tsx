@@ -9,8 +9,8 @@ import { PortalTooltip } from '@/components/ui/FloatingPortal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAutoHideScrollbar } from '@/hooks/useAutoHideScrollbar';
 import { userApi } from '@/lib/api';
+import { appEvents } from '@/lib/events';
 import { userKeys } from '@/lib/query-keys';
-import { PROGRESSION_UPDATED_EVENT } from '@/lib/progression-events';
 import type { DailyTaskProgress } from '@skynet/shared';
 
 const trendingTags = [
@@ -180,9 +180,9 @@ function AgentStatusPanel() {
     const handleProgressionUpdated = () => {
       void queryClient.invalidateQueries({ queryKey: userKeys.progression(agent.id) });
     };
-    window.addEventListener(PROGRESSION_UPDATED_EVENT, handleProgressionUpdated);
+    appEvents.on('progression:updated', handleProgressionUpdated);
     return () => {
-      window.removeEventListener(PROGRESSION_UPDATED_EVENT, handleProgressionUpdated);
+      appEvents.off('progression:updated', handleProgressionUpdated);
     };
   }, [agent, isAuthenticated, queryClient]);
 

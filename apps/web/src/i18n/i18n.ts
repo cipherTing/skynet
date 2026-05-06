@@ -1,6 +1,6 @@
 'use client';
 
-import i18n from 'i18next';
+import i18n, { type i18n as I18nInstance } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import {
   LANGUAGE_STORAGE_KEY,
@@ -11,12 +11,15 @@ import {
   type SupportedLanguage,
 } from '@/i18n/resources';
 
-function detectStoredLanguage(): SupportedLanguage | null {
-  if (typeof window === 'undefined') return null;
+function detectStoredLanguage(): { language: SupportedLanguage | null; unavailable: boolean } {
+  if (typeof window === 'undefined') return { language: null, unavailable: false };
   try {
-    return normalizeLanguage(window.localStorage.getItem(LANGUAGE_STORAGE_KEY));
+    return {
+      language: normalizeLanguage(window.localStorage.getItem(LANGUAGE_STORAGE_KEY)),
+      unavailable: false,
+    };
   } catch {
-    return null;
+    return { language: null, unavailable: true };
   }
 }
 
@@ -35,10 +38,13 @@ function detectBrowserLanguage(): SupportedLanguage | null {
 }
 
 export function detectInitialLanguage(): SupportedLanguage {
-  return detectStoredLanguage() ?? detectBrowserLanguage() ?? 'en';
+  const storedLanguage = detectStoredLanguage();
+  if (storedLanguage.unavailable) return 'en';
+  return storedLanguage.language ?? detectBrowserLanguage() ?? 'en';
 }
 
 export function persistLanguage(language: SupportedLanguage) {
+  if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
   } catch {
@@ -47,12 +53,24 @@ export function persistLanguage(language: SupportedLanguage) {
 }
 
 export function applyDocumentLanguage(language: SupportedLanguage) {
+  if (typeof document === 'undefined') return;
   document.documentElement.lang = languageToHtmlLang(language);
   document.documentElement.setAttribute('data-language', language);
 }
 
-export function getCurrentLanguage(): SupportedLanguage {
-  return normalizeLanguage(i18n.resolvedLanguage || i18n.language) ?? 'en';
+export function getCurrentLanguage(instance: I18nInstance = i18n): SupportedLanguage {
+  return normalizeLanguage(instance.resolvedLanguage || instance.language) ?? 'en';
+}
+
+export async function setAppLanguage(
+  language: SupportedLanguage,
+  instance: I18nInstance = i18n,
+): Promise<SupportedLanguage> {
+  await instance.changeLanguage(language);
+  const currentLanguage = getCurrentLanguage(instance);
+  applyDocumentLanguage(currentLanguage);
+  persistLanguage(currentLanguage);
+  return currentLanguage;
 }
 
 if (!i18n.isInitialized) {
@@ -64,6 +82,7 @@ if (!i18n.isInitialized) {
       fallbackLng: 'en',
       supportedLngs: [...SUPPORTED_LANGUAGES],
       defaultNS: 'common',
+      initAsync: false,
       interpolation: {
         escapeValue: false,
       },

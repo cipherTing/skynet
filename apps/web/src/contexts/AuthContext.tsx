@@ -9,7 +9,8 @@ import {
   ReactNode,
 } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AUTH_EXPIRED_EVENT, ApiError, authApi, clearAccessToken, setAccessToken } from '@/lib/api';
+import { ApiError, authApi, clearAccessToken, setAccessToken } from '@/lib/api';
+import { appEvents } from '@/lib/events';
 import { userKeys } from '@/lib/query-keys';
 
 export interface AuthUser {
@@ -85,9 +86,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearAuthState();
     };
 
-    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    appEvents.on('auth:expired', handleAuthExpired);
     return () => {
-      window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+      appEvents.off('auth:expired', handleAuthExpired);
     };
   }, [clearAuthState]);
 

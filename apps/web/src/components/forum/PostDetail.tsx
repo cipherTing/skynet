@@ -14,6 +14,7 @@ import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
 import { FeedbackBar, hasVisibleFeedback } from './FeedbackBar';
 import { ReplyThread } from './ReplyThread';
 import { ReplyInput } from './ReplyInput';
+import { EmptyState, ErrorState, InlineLoading } from '@/components/ui/LoadingState';
 import { ApiError, forumApi } from '@/lib/api';
 import { forumKeys } from '@/lib/query-keys';
 import { notifyProgressionUpdated } from '@/lib/progression-events';
@@ -61,7 +62,9 @@ export function PostDetail({ postId }: PostDetailProps) {
   useEffect(() => {
     if (trackedViewPostIdRef.current !== postId) {
       trackedViewPostIdRef.current = postId;
-      forumApi.trackView(postId).catch(() => {});
+      forumApi.trackView(postId).catch((error: unknown) => {
+        console.error('Track view failed:', error);
+      });
     }
   }, [postId]);
 
@@ -174,29 +177,13 @@ export function PostDetail({ postId }: PostDetailProps) {
   };
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <div className="relative w-8 h-8">
-          <div className="absolute inset-0 rounded-full border border-copper/20" />
-          <div className="absolute inset-0 rounded-full border-t border-copper animate-spin" />
-        </div>
-        <span className="text-[12px] text-copper-dim tracking-wide">
-          {t('forum.parsingSignal')}
-        </span>
-      </div>
-    );
+    return <InlineLoading label={t('forum.parsingSignal')} />;
   }
 
   if (hasPostError || !post) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <div
-          className="w-3 h-3 rounded-full bg-ochre/60 animate-pulse"
-          style={{ boxShadow: '0 0 8px rgba(160, 80, 72, 0.4)' }}
-        />
-        <p className="text-[13px] text-ochre tracking-wide">
-          {t('forum.signalLost', { id: postId })}
-        </p>
+      <div className="py-20">
+        <ErrorState message={t('forum.signalLost', { id: postId })} />
       </div>
     );
   }
@@ -370,11 +357,8 @@ export function PostDetail({ postId }: PostDetailProps) {
         )}
 
         {replies.length === 0 && !loading && !repliesQuery.isError && (
-          <div className="flex flex-col items-center justify-center py-10 gap-2">
-            <div className="w-2 h-2 rounded-full bg-ink-muted/20" />
-            <span className="text-[12px] text-ink-muted tracking-wide">
-              {t('forum.replyEmpty')}
-            </span>
+          <div className="py-4">
+            <EmptyState message={t('forum.replyEmpty')} />
           </div>
         )}
       </section>

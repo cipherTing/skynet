@@ -22,7 +22,10 @@ import { useTranslation } from 'react-i18next';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { TopBar } from '@/components/layout/TopBar';
 import { AgentAvatar } from '@/components/ui/AgentAvatar';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { PortalTooltip } from '@/components/ui/FloatingPortal';
+import { LoadingScreen } from '@/components/ui/LoadingState';
+import { useToast } from '@/components/ui/SignalToast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOwnerOperation } from '@/contexts/OwnerOperationContext';
 import { userApi, ApiError } from '@/lib/api';
@@ -32,16 +35,14 @@ export default function SettingsPage() {
   const { agent, isLoading, isAuthenticated, refreshUser } = useAuth();
   const { ownerOperationEnabled, setOwnerOperationEnabled } = useOwnerOperation();
   const router = useRouter();
+  const toast = useToast();
 
   const [agentName, setAgentName] = useState('');
   const [agentDescription, setAgentDescription] = useState('');
   const [favoritesPublic, setFavoritesPublic] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saveMsg, setSaveMsg] = useState('');
   const [privacySaving, setPrivacySaving] = useState(false);
-  const [privacyMsg, setPrivacyMsg] = useState('');
   const [ownerOperationSaving, setOwnerOperationSaving] = useState(false);
-  const [ownerOperationMsg, setOwnerOperationMsg] = useState('');
 
   const [keyInfo, setKeyInfo] = useState<{
     prefix: string;
@@ -53,8 +54,7 @@ export default function SettingsPage() {
   const [keyCopied, setKeyCopied] = useState(false);
   const [keyInfoCopied, setKeyInfoCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
-  const [keyError, setKeyError] = useState('');
-  const errorPrefix = t('settings.errorPrefix', { message: '' });
+  const [regenerateConfirmOpen, setRegenerateConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -87,24 +87,22 @@ export default function SettingsPage() {
 
   const handleSaveProfile = async () => {
     if (!agentName.trim()) {
-      setSaveMsg(t('settings.agentNameRequired'));
+      toast.error(t('settings.agentNameRequired'));
       return;
     }
     setSaving(true);
-    setSaveMsg('');
     try {
       await userApi.updateAgent({
         name: agentName.trim(),
         description: agentDescription.trim(),
       });
       await refreshUser();
-      setSaveMsg(t('settings.saveSuccess'));
-      setTimeout(() => setSaveMsg(''), 3000);
+      toast.success(t('settings.saveSuccess'));
     } catch (err) {
       if (err instanceof ApiError) {
-        setSaveMsg(t('settings.errorPrefix', { message: err.message }));
+        toast.error(t('settings.errorPrefix', { message: err.message }));
       } else {
-        setSaveMsg(t('settings.saveFailed'));
+        toast.error(t('settings.saveFailed'));
       }
     } finally {
       setSaving(false);
@@ -115,18 +113,16 @@ export default function SettingsPage() {
     const previous = favoritesPublic;
     setFavoritesPublic(next);
     setPrivacySaving(true);
-    setPrivacyMsg('');
     try {
       await userApi.updateAgent({ favoritesPublic: next });
       await refreshUser();
-      setPrivacyMsg(t('settings.saved'));
-      setTimeout(() => setPrivacyMsg(''), 2500);
+      toast.success(t('settings.saved'));
     } catch (err) {
       setFavoritesPublic(previous);
       if (err instanceof ApiError) {
-        setPrivacyMsg(t('settings.errorPrefix', { message: err.message }));
+        toast.error(t('settings.errorPrefix', { message: err.message }));
       } else {
-        setPrivacyMsg(t('settings.saveFailed'));
+        toast.error(t('settings.saveFailed'));
       }
     } finally {
       setPrivacySaving(false);
@@ -135,64 +131,61 @@ export default function SettingsPage() {
 
   const handleOwnerOperationChange = async (next: boolean) => {
     setOwnerOperationSaving(true);
-    setOwnerOperationMsg('');
     try {
       await setOwnerOperationEnabled(next);
-      setOwnerOperationMsg(t('settings.saved'));
-      setTimeout(() => setOwnerOperationMsg(''), 2500);
+      toast.success(t('settings.saved'));
     } catch (err) {
       if (err instanceof ApiError) {
-        setOwnerOperationMsg(t('settings.errorPrefix', { message: err.message }));
+        toast.error(t('settings.errorPrefix', { message: err.message }));
       } else {
-        setOwnerOperationMsg(t('settings.saveFailed'));
+        toast.error(t('settings.saveFailed'));
       }
     } finally {
       setOwnerOperationSaving(false);
     }
   };
 
-  const handleRegenerateKey = async () => {
-    if (keyInfo && !confirm(t('settings.regenerateConfirm'))) return;
+  const regenerateKey = async () => {
     setRegenerating(true);
-    setKeyError('');
     setNewKey('');
     try {
       const data = await userApi.regenerateKey();
       setNewKey(data.secretKey);
       await loadKeyInfo();
+      toast.success(t('settings.keyGenerated'));
     } catch (err) {
       if (err instanceof ApiError) {
-        setKeyError(err.message);
+        toast.error(err.message);
       } else {
-        setKeyError(t('settings.generateFailed'));
+        toast.error(t('settings.generateFailed'));
       }
     } finally {
       setRegenerating(false);
+      setRegenerateConfirmOpen(false);
     }
+  };
+
+  const handleRegenerateKey = () => {
+    if (keyInfo) {
+      setRegenerateConfirmOpen(true);
+      return;
+    }
+    void regenerateKey();
   };
 
   const copyKey = async () => {
     try {
       await navigator.clipboard.writeText(newKey);
       setKeyCopied(true);
+      toast.success(t('app.copied'));
       setTimeout(() => setKeyCopied(false), 2000);
     } catch {
-      alert(t('settings.copyFailed'));
+      toast.error(t('settings.copyFailed'));
     }
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="relative w-8 h-8">
-            <div className="absolute inset-0 rounded-full border border-copper/20" />
-            <div className="absolute inset-0 rounded-full border-t border-copper animate-spin" />
-          </div>
-          <span className="text-xs text-copper-dim tracking-wide">{t('app.loading')}</span>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (!isAuthenticated) return null;
@@ -287,11 +280,6 @@ export default function SettingsPage() {
                         <Save className="w-4 h-4" />
                         {saving ? t('settings.saving') : t('settings.saveChanges')}
                       </button>
-                      {saveMsg && (
-                        <span className={`text-xs ${saveMsg.startsWith(errorPrefix) ? 'text-ochre' : 'text-moss'}`}>
-                          {saveMsg}
-                        </span>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -317,15 +305,6 @@ export default function SettingsPage() {
                     <p className="text-xs text-ink-secondary mt-1">
                       {t('settings.ownerOperationHint')}
                     </p>
-                    {ownerOperationMsg && (
-                      <p
-                        className={`mt-2 text-xs ${
-                          ownerOperationMsg.startsWith(errorPrefix) ? 'text-ochre' : 'text-moss'
-                        }`}
-                      >
-                        {ownerOperationMsg}
-                      </p>
-                    )}
                   </div>
                   <button
                     type="button"
@@ -371,15 +350,6 @@ export default function SettingsPage() {
                     <p className="text-xs text-ink-secondary mt-1">
                       {t('settings.favoritesPublicHint')}
                     </p>
-                    {privacyMsg && (
-                      <p
-                        className={`mt-2 text-xs ${
-                          privacyMsg.startsWith(errorPrefix) ? 'text-ochre' : 'text-moss'
-                        }`}
-                      >
-                        {privacyMsg}
-                      </p>
-                    )}
                   </div>
                   <button
                     type="button"
@@ -433,8 +403,11 @@ export default function SettingsPage() {
                               try {
                                 await navigator.clipboard.writeText(`${keyInfo.prefix}...${keyInfo.lastFour}`);
                                 setKeyInfoCopied(true);
+                                toast.success(t('app.copied'));
                                 setTimeout(() => setKeyInfoCopied(false), 2000);
-                              } catch { /* noop */ }
+                              } catch {
+                                toast.error(t('settings.copyFailed'));
+                              }
                             }}
                             aria-label={keyInfoCopied ? t('app.copied') : t('app.copy')}
                             className="flex-shrink-0 p-1.5 text-ink-muted hover:text-steel transition-colors rounded-md hover:bg-void-shallow"
@@ -493,12 +466,6 @@ export default function SettingsPage() {
                     </motion.div>
                   )}
 
-                  {keyError && (
-                    <div className="px-4 py-2.5 border border-ochre/20 bg-ochre/10 text-ochre text-sm rounded-lg">
-                      {keyError}
-                    </div>
-                  )}
-
                   <button
                     onClick={handleRegenerateKey}
                     disabled={regenerating}
@@ -513,6 +480,16 @@ export default function SettingsPage() {
           </div>
         </div>
       </main>
+      <ConfirmDialog
+        open={regenerateConfirmOpen}
+        title={t('settings.regenerateTitle')}
+        description={t('settings.regenerateConfirm')}
+        confirmLabel={t('settings.regenerateKey')}
+        loading={regenerating}
+        tone="danger"
+        onOpenChange={setRegenerateConfirmOpen}
+        onConfirm={() => void regenerateKey()}
+      />
     </div>
   );
 }

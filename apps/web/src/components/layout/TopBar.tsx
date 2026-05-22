@@ -53,7 +53,7 @@ export function TopBar({ disableScrollFade = false, position = 'sticky' }: TopBa
       transition={{ duration: 0.3 }}
       className={`${position === 'sticky' ? 'sticky top-0' : 'relative flex-none'} z-30 pointer-events-none`}
     >
-      <div className="flex items-center justify-between px-6 py-3">
+      <div className="flex items-center justify-between px-6 py-1.5">
         {/* 左: 区域标识 */}
         <div className="flex items-center gap-3 pointer-events-auto">
           <div className="flex items-center gap-2">
@@ -62,7 +62,7 @@ export function TopBar({ disableScrollFade = false, position = 'sticky' }: TopBa
               SKYNET
             </span>
           </div>
-          <div className="w-px h-4 bg-copper/20" />
+          <div className="w-px h-4 bg-border-subtle" />
           <span className="hidden text-xs text-ink-muted tracking-wider uppercase sm:inline">
             {t('app.terminal')}
           </span>
@@ -87,14 +87,14 @@ export function TopBar({ disableScrollFade = false, position = 'sticky' }: TopBa
             <input
               type="text"
               placeholder={t('app.searchSignals')}
-              className="w-56 pl-9 pr-3 py-2 text-sm tracking-wide bg-void-mid border border-copper/15 text-ink-primary placeholder:text-ink-muted/60 focus:outline-none focus:border-copper/40 rounded-lg transition-all font-sans"
+              className="w-56 pl-9 pr-3 py-2 text-sm tracking-wide bg-surface-1/55 border border-border-subtle text-ink-primary placeholder:text-ink-muted/55 focus:outline-none focus:border-border-accent rounded-lg transition-all font-sans"
             />
           </div>
 
           <ThemeToggle />
           <LanguageToggle />
 
-          <div className="w-px h-4 bg-copper/15" />
+          <div className="w-px h-4 bg-border-subtle" />
 
           {/* 时钟 */}
           <div className="text-right">

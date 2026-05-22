@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef, type UIEvent } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useInView } from 'react-intersection-observer';
 import { Flame, Clock, Plus, RefreshCw } from 'lucide-react';
-import { motion, AnimatePresence, useReducedMotion, useScroll, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValueEvent, useReducedMotion, useScroll } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { PostCard } from './PostCard';
 import { CreatePostModal } from './CreatePostModal';
@@ -24,7 +24,7 @@ type ForumPostListPage = {
 };
 
 const PAGE_SIZE = 20;
-const HEADER_COLLAPSE_RANGE = 72;
+const OVERLAY_BAR_SCROLL_THRESHOLD = 8;
 
 export function ForumFeed() {
   const { t } = useTranslation();
@@ -34,17 +34,25 @@ export function ForumFeed() {
   const scrollRootRef = useRef<HTMLDivElement | null>(null);
   const lastRestoredKeyRef = useRef('');
   const [refreshingFeed, setRefreshingFeed] = useState(false);
+  const [toolbarVisible, setToolbarVisible] = useState(true);
   const { ownerOperationEnabled, canOperateAsAgent } = useOwnerOperation();
   const { isAuthenticated, isLoading: authLoading, user, agent } = useAuth();
   const toast = useToast();
   const queryClient = useQueryClient();
   const { isScrolling, handleScroll } = useAutoHideScrollbar();
   const { scrollY } = useScroll({ container: scrollRootRef });
-  const toolbarHeight = useTransform(scrollY, [0, HEADER_COLLAPSE_RANGE], [42, 24]);
-  const toolbarMarginBottom = useTransform(scrollY, [0, HEADER_COLLAPSE_RANGE], [12, 3]);
-  const toolbarOpacity = useTransform(scrollY, [0, HEADER_COLLAPSE_RANGE], [1, 0.78]);
-  const toolbarScale = useTransform(scrollY, [0, HEADER_COLLAPSE_RANGE], [1, 0.98]);
-  const toolbarY = useTransform(scrollY, [0, HEADER_COLLAPSE_RANGE], [0, -4]);
+  useMotionValueEvent(scrollY, 'change', (latest) => {
+    const previous = scrollY.getPrevious() ?? 0;
+    const delta = latest - previous;
+
+    if (latest <= OVERLAY_BAR_SCROLL_THRESHOLD) {
+      setToolbarVisible(true);
+      return;
+    }
+
+    if (Math.abs(delta) < OVERLAY_BAR_SCROLL_THRESHOLD) return;
+    setToolbarVisible(delta < 0);
+  });
   const sortMode = useForumFeedStore((state) => state.sortMode);
   const setSortMode = useForumFeedStore((state) => state.setSortMode);
   const savedScrollTop = useForumFeedStore((state) => state.scrollTopBySortMode[sortMode]);
@@ -161,21 +169,16 @@ export function ForumFeed() {
   const isEmpty = !loading && posts.length === 0 && !errorKey;
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="feed-overlay-shell">
       {/* 排序标签 + 创建按钮 */}
       <motion.div
         className="home-feed-toolbar"
-        style={
-          prefersReducedMotion
-            ? undefined
-            : {
-                height: toolbarHeight,
-                marginBottom: toolbarMarginBottom,
-                opacity: toolbarOpacity,
-                scale: toolbarScale,
-                y: toolbarY,
-              }
+        animate={
+          prefersReducedMotion || toolbarVisible
+            ? { opacity: 1, y: 0, pointerEvents: 'auto' }
+            : { opacity: 0, y: '-115%', pointerEvents: 'none' }
         }
+        transition={{ duration: prefersReducedMotion ? 0 : 0.18, ease: 'easeOut' }}
       >
         <div className="flex max-w-full flex-wrap items-center gap-0.5 rounded-md border border-copper/10 bg-void-deep/60 p-0.5 backdrop-blur-sm">
           <SortTab
@@ -232,7 +235,7 @@ export function ForumFeed() {
       <div
         ref={bindScrollRoot}
         onScroll={handleFeedScroll}
-        className={`skynet-auto-hide-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain pb-6 pr-3 pt-1 [scrollbar-gutter:stable] ${
+        className={`feed-overlay-scroll skynet-auto-hide-scrollbar ${
           isScrolling ? 'is-scrolling' : ''
         }`}
       >

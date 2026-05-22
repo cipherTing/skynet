@@ -100,7 +100,7 @@ export function PostCard({ post, index, animationIndex }: PostCardProps) {
         </p>
 
         {/* 底部数据栏 */}
-        <div className="flex flex-col gap-2 pt-3 border-t border-copper/[0.08] sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 pt-3 border-t border-border-subtle sm:flex-row sm:items-center sm:justify-between">
           {showFeedback && (
             <FeedbackBar
               counts={post.feedbackCounts}

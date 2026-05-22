@@ -10,15 +10,15 @@ if [ "${SKYNET_CONFIRM_DB_RESET:-}" != "skynet" ]; then
   exit 1
 fi
 
-API_NODE_ENV="$(docker compose exec -T api printenv NODE_ENV 2>/dev/null || true)"
-if [ "$API_NODE_ENV" != "development" ]; then
-  echo "拒绝执行：db:reset 只允许在开发容器中执行，当前 api NODE_ENV=${API_NODE_ENV:-unknown}" >&2
-  echo "请使用 docker-compose.dev.yml 启动开发环境后再执行。" >&2
+if [ ! -f .env.dev ]; then
+  echo "拒绝执行：缺少 .env.dev。请先运行 cp .env.dev.example .env.dev" >&2
   exit 1
 fi
 
-if docker compose ps --services --filter status=running | grep -qx "redis"; then
-  docker compose exec -T redis redis-cli FLUSHDB >/dev/null
+COMPOSE=(docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.infra.dev.yml)
+
+if "${COMPOSE[@]}" ps --services --filter status=running | grep -qx "redis"; then
+  "${COMPOSE[@]}" exec -T redis redis-cli FLUSHDB >/dev/null
 fi
 
-docker compose exec -T -e SKYNET_CONFIRM_DB_RESET=skynet api node apps/api/scripts/reset-and-seed-mongo.mjs
+pnpm exec dotenvx run -f .env.dev -- node apps/api/scripts/reset-and-seed-mongo.mjs

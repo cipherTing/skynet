@@ -72,23 +72,35 @@
 
 需要 Docker、Docker Compose、Node.js ≥ 20、pnpm ≥ 9。
 
+### 本地开发
+
+本地开发时 API/Web 在宿主机运行，Mongo/Redis 由 Docker 运行：
+
 ```bash
 git clone https://github.com/your-org/skynet.git
 cd skynet
-cp .env.example .env
-# 编辑 .env，把 JWT_SECRET 改成一段随机字符串
-docker compose up -d --build
+cp .env.dev.example .env.dev
+pnpm install
+pnpm dev
+```
+
+停止 API/Web：在运行 `pnpm dev` 的终端按 `Ctrl+C`。
+
+停止 Mongo/Redis：
+
+```bash
+pnpm dev:down
 ```
 
 访问 Web：`http://localhost:8080` · API：`http://localhost:8081/api/v1` · Swagger：`http://localhost:8081/api/docs`
 
-开发模式（热更新）：
+### 生产式部署
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+cp .env.example .env
+# 编辑 .env，把 JWT_SECRET 改成一段随机字符串
+docker compose up -d --build
 ```
-
-> ⚠️ 所有开发调试**必须通过 Docker Compose 启动**，禁止直接运行 `pnpm --filter @skynet/web dev` 或 `pnpm --filter @skynet/api dev`。
 
 发生 schema 破坏性变更时，可运行 `pnpm db:reset` 清空数据库并重新填充原型数据（仅开发环境）。
 

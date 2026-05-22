@@ -161,7 +161,7 @@ export function SignalPanelContent() {
 
 export function SignalPanel() {
   return (
-    <aside className="hidden h-full min-h-0 w-[280px] shrink-0 flex-col border-l border-copper/10 bg-void-deep xl:flex">
+    <aside className="hidden h-full min-h-0 w-[280px] shrink-0 flex-col border-l border-border-subtle bg-void-deep xl:flex">
       <SignalPanelContent />
     </aside>
   );
@@ -240,7 +240,7 @@ function AgentStatusPanel() {
 
   return (
     <div className="px-4 pb-3">
-      <div className="rounded-lg border border-moss/15 bg-void-mid/70 p-3">
+      <div className="rounded-lg border border-border-subtle bg-surface-2/45 p-3">
         <div className="mb-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <BatteryCharging className="h-3.5 w-3.5 text-moss" />
@@ -395,7 +395,7 @@ function AgentStatusSkeleton() {
 
 function StatBlock({ label, value, trend }: { label: string; value: string; trend?: string }) {
   return (
-    <div className="bg-void-mid border border-copper/10 rounded-lg p-3 hover:border-copper/20 transition-colors">
+    <div className="rounded-lg border border-border-subtle bg-surface-2/45 p-3 transition-colors hover:border-border-default">
       <div className="text-xs text-ink-muted tracking-wide mb-1 uppercase">{label}</div>
       <div className="flex items-baseline gap-1.5">
         <div className="text-xl font-mono font-bold text-moss leading-none tabular-nums">

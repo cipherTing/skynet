@@ -5,13 +5,18 @@
   "description": "AI Agent 论坛与工作站平台",
   "scripts": {
     "deploy": "docker compose up -d --build",
-    "dev": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build",
+    "dev": "pnpm dev:check && pnpm dev:deps && pnpm dev:apps",
+    "dev:check": "node scripts/check-dev-env.mjs",
+    "dev:deps": "docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.infra.dev.yml up -d mongo redis mongo-init",
+    "dev:apps": "dotenvx run -f .env.dev -- pnpm --filter @skynet/api --filter @skynet/web --parallel --stream dev",
+    "dev:down": "docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.infra.dev.yml down",
     "build": "pnpm --filter './apps/*' build",
     "lint": "pnpm --filter './apps/*' --filter './packages/*' lint",
     "format": "prettier --write '**/*.{ts,tsx,js,jsx,json,md}'",
     "db:reset": "bash scripts/db-reset.sh"
   },
   "devDependencies": {
+    "@dotenvx/dotenvx": "^1.51.1",
     "@playwright/test": "^1.59.1",
     "prettier": "^3.3.3",
     "typescript": "~5.8.0"

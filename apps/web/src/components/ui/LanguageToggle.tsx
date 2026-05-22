@@ -76,7 +76,7 @@ export function LanguageToggle() {
           aria-haspopup="menu"
           aria-expanded={open}
           onClick={() => setOpen((nextOpen) => !nextOpen)}
-          className="inline-flex h-8 min-w-12 items-center justify-center gap-1 rounded-lg border border-copper/15 px-2 text-[11px] font-bold text-ink-muted transition-all hover:border-copper/35 hover:bg-copper/5 hover:text-copper"
+          className="inline-flex h-8 min-w-12 items-center justify-center gap-1 rounded-lg border border-border-subtle bg-surface-1/35 px-2 text-[11px] font-bold text-ink-muted transition-all hover:border-border-accent hover:bg-accent-muted hover:text-copper"
         >
           <Languages className="h-3.5 w-3.5" />
           <span>{t(currentOption.shortLabelKey)}</span>
@@ -91,7 +91,7 @@ export function LanguageToggle() {
         offset={8}
         zIndex={FLOATING_Z_INDEX.menu}
         role="menu"
-        className="w-36 rounded-lg border border-copper/20 bg-void-deep p-1.5 shadow-[0_18px_48px_rgba(0,0,0,0.42)]"
+        className="w-36 rounded-lg border border-border-subtle bg-surface-1 p-1.5 shadow-[0_18px_48px_rgba(0,0,0,0.32)]"
       >
         <div ref={menuRef} className="grid gap-1">
           {LANGUAGE_OPTIONS.map((option) => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
+import { AnimatePresence, motion, useMotionValueEvent, useReducedMotion, useScroll } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { GovernanceResultFeedItem } from '@skynet/shared';
@@ -14,7 +14,7 @@ import { GovernanceResultDetailModal } from './GovernanceResultDetailModal';
 const BATCH_SIZE = 10;
 const AUTO_REFRESH_MS = 60_000;
 const COUNTDOWN_TICK_MS = 1_000;
-const HEADER_COLLAPSE_RANGE = 72;
+const OVERLAY_BAR_SCROLL_THRESHOLD = 8;
 
 export function GovernanceResultGrid() {
   const { t } = useTranslation();
@@ -24,14 +24,22 @@ export function GovernanceResultGrid() {
   const [isDocumentVisible, setIsDocumentVisible] = useState(true);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [nextRefreshAt, setNextRefreshAt] = useState(() => Date.now() + AUTO_REFRESH_MS);
+  const [toolbarVisible, setToolbarVisible] = useState(true);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const scrollRootRef = useRef<HTMLDivElement | null>(null);
   const { scrollY } = useScroll({ container: scrollRootRef });
-  const toolbarHeight = useTransform(scrollY, [0, HEADER_COLLAPSE_RANGE], [24, 10]);
-  const toolbarMarginBottom = useTransform(scrollY, [0, HEADER_COLLAPSE_RANGE], [8, 1]);
-  const toolbarOpacity = useTransform(scrollY, [0, HEADER_COLLAPSE_RANGE], [1, 0.64]);
-  const toolbarScale = useTransform(scrollY, [0, HEADER_COLLAPSE_RANGE], [1, 0.97]);
-  const toolbarY = useTransform(scrollY, [0, HEADER_COLLAPSE_RANGE], [0, -4]);
+  useMotionValueEvent(scrollY, 'change', (latest) => {
+    const previous = scrollY.getPrevious() ?? 0;
+    const delta = latest - previous;
+
+    if (latest <= OVERLAY_BAR_SCROLL_THRESHOLD) {
+      setToolbarVisible(true);
+      return;
+    }
+
+    if (Math.abs(delta) < OVERLAY_BAR_SCROLL_THRESHOLD) return;
+    setToolbarVisible(delta < 0);
+  });
 
   const query = useQuery({
     queryKey: ['governance', 'results', 'random-batch', BATCH_SIZE],
@@ -104,20 +112,15 @@ export function GovernanceResultGrid() {
         : t('governance.autoRefresh.active', { seconds: remainingSeconds });
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="feed-overlay-shell">
       <motion.div
         className="governance-plaza-toolbar"
-        style={
-          prefersReducedMotion
-            ? undefined
-            : {
-                height: toolbarHeight,
-                marginBottom: toolbarMarginBottom,
-                opacity: toolbarOpacity,
-                scale: toolbarScale,
-                y: toolbarY,
-              }
+        animate={
+          prefersReducedMotion || toolbarVisible
+            ? { opacity: 1, y: 0, pointerEvents: 'auto' }
+            : { opacity: 0, y: '-115%', pointerEvents: 'none' }
         }
+        transition={{ duration: prefersReducedMotion ? 0 : 0.18, ease: 'easeOut' }}
       >
         <p className="governance-plaza-toolbar__title">{t('governance.plazaTitle')}</p>
         {isAuthLoading || requiresLogin ? null : (
@@ -161,7 +164,7 @@ export function GovernanceResultGrid() {
           {t('governance.emptyResults')}
         </div>
       ) : (
-        <div ref={scrollRootRef} className="skynet-auto-hide-scrollbar min-h-0 flex-1 overflow-y-auto pr-2 [scrollbar-gutter:stable]">
+        <div ref={scrollRootRef} className="feed-overlay-scroll skynet-auto-hide-scrollbar">
           <AnimatePresence mode="wait">
             <motion.div
               key={data?.sampledAt ?? 'governance-batch'}

@@ -21,7 +21,7 @@ export function ThemeToggle() {
         type="button"
         onClick={toggle}
         aria-label={label}
-        className="p-1.5 rounded-lg border border-copper/15 text-ink-muted hover:text-copper hover:border-copper/35 hover:bg-copper/5 transition-all"
+        className="p-1.5 rounded-lg border border-border-subtle bg-surface-1/35 text-ink-muted hover:text-copper hover:border-border-accent hover:bg-accent-muted transition-all"
       >
         {theme === 'dark' ? (
           <Sun className="w-3.5 h-3.5" />

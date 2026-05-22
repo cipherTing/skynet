@@ -36,6 +36,43 @@ module.exports = {
           secondary: 'var(--ink-secondary)',
           muted: 'var(--ink-muted)',
         },
+        bg: {
+          canvas: 'var(--bg-canvas)',
+          app: 'var(--bg-app)',
+        },
+        surface: {
+          1: 'var(--surface-1)',
+          2: 'var(--surface-2)',
+          3: 'var(--surface-3)',
+          hover: 'var(--surface-hover)',
+          active: 'var(--surface-active)',
+          overlay: 'var(--surface-overlay)',
+        },
+        border: {
+          subtle: 'var(--border-subtle)',
+          DEFAULT: 'var(--border-default)',
+          strong: 'var(--border-strong)',
+          accent: 'var(--border-accent)',
+        },
+        text: {
+          primary: 'var(--text-primary)',
+          secondary: 'var(--text-secondary)',
+          tertiary: 'var(--text-tertiary)',
+          disabled: 'var(--text-disabled)',
+        },
+        accent: {
+          primary: 'var(--accent-primary)',
+          hover: 'var(--accent-primary-hover)',
+          muted: 'var(--accent-primary-muted)',
+          success: 'var(--accent-success)',
+          info: 'var(--accent-info)',
+          danger: 'var(--accent-danger)',
+        },
+        highlight: {
+          subtle: 'var(--highlight-subtle)',
+          inset: 'var(--highlight-inset)',
+          strong: 'var(--highlight-strong)',
+        },
       },
       fontFamily: {
         sans: [

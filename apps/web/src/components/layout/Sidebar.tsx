@@ -45,7 +45,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   return (
     <>
       <aside className="fixed left-0 top-0 z-40 flex h-screen w-16 flex-col items-center py-4">
-        <div className="absolute inset-0 border-r border-copper/10 bg-void-deep" />
+        <div className="absolute inset-0 border-r border-border-subtle bg-void-deep" />
 
         <div className="relative flex h-full w-full flex-col items-center px-2">
           {onSectionChange ? (
@@ -55,7 +55,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
               aria-label={t('sidebar.feed')}
               onClick={() => onSectionChange('feed')}
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-copper/40">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border-subtle bg-surface-1/60">
                 <span className="font-display text-sm font-black tracking-deck-wide text-copper">S</span>
               </div>
             </button>
@@ -66,7 +66,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
               aria-label={t('sidebar.feed')}
               onClick={() => setHomeActiveSection('feed')}
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-copper/40">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border-subtle bg-surface-1/60">
                 <span className="font-display text-sm font-black tracking-deck-wide text-copper">S</span>
               </div>
             </Link>
@@ -84,7 +84,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
                   {isActive && (
                     <motion.div
                       layoutId="sidebar-active"
-                      className="absolute left-0 top-1/2 h-6 w-[2px] -translate-y-1/2 rounded-r-full bg-copper shadow-[0_0_6px_rgba(255,122,191,0.5)]"
+                      className="absolute left-0 top-1/2 h-6 w-[2px] -translate-y-1/2 rounded-r-full bg-copper/70 shadow-[0_0_4px_rgba(232,111,53,0.16)]"
                       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                     />
                   )}
@@ -180,7 +180,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
                 <button
                   type="button"
                   onClick={() => setShowLogoutConfirm(false)}
-                  className="flex-1 rounded-lg border border-copper/20 px-4 py-2.5 text-sm tracking-wide text-ink-secondary transition-all hover:border-copper/40 hover:text-ink-primary"
+                  className="flex-1 rounded-lg border border-border-subtle px-4 py-2.5 text-sm tracking-wide text-ink-secondary transition-all hover:border-border-accent hover:text-ink-primary"
                 >
                   {t('app.cancel')}
                 </button>

@@ -69,13 +69,14 @@
 
 ## 开发环境约定
 
-### 统一使用 Docker 进行部署和开发
+### 本地开发与生产部署
 
-- **默认部署方式**：正式部署必须通过 `docker compose up -d --build` 启动
-- **唯一开发方式**：所有开发调试必须通过 `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build` 启动，禁止同时运行本地 `pnpm --filter @skynet/web dev` 或 `pnpm --filter @skynet/api dev`
-- **端口竞争处理**：若 Docker 容器因端口被占用而启动失败，**不得偷偷更换端口**。应排查并停止占用端口的本地进程，确保 Docker 为唯一服务提供者
-- **代码改动**：必须重新构建 Docker 镜像
-- **配置改动**：必须重启 Docker 服务
+- **本地开发**：使用 `pnpm dev`；API/Web 必须在宿主机运行，Mongo/Redis/mongo-init 必须通过 Docker Compose 运行
+- **本地验证**：测试页面、接口联调或浏览器检查前，必须通过 `pnpm dev` 启动完整本地开发环境；禁止绕过项目脚本手写 `next dev`、`nest start`、`dotenvx ...` 等临时启动命令，除非正在调试脚本本身
+- **停止本地依赖**：使用 `pnpm dev:down` 停止 Docker 依赖服务
+- **禁止 Docker dev**：仓库不保留 Docker 运行 API/Web dev server 的入口；不得恢复 `docker-compose.dev.yml`、`next dev` 容器或 `nest start --watch` 容器
+- **生产部署**：必须通过 `docker compose up -d --build` 构建并启动全量服务
+- **本地环境文件**：真实 `.env.dev` 禁止提交，只提交 `.env.dev.example`
 
 ### ⚠️ Playwright 截图规范（强制）
 

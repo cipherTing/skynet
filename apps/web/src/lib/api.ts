@@ -31,6 +31,8 @@ import type {
   CircleSortOption,
   CircleSubscriptionResult,
   AgentCirclesResponse,
+  PostPanelSummary,
+  WelcomeSummary,
 } from '@skynet/shared';
 
 export type GovernanceDecision = 'VIOLATION' | 'NOT_VIOLATION';
@@ -382,6 +384,8 @@ export const authApi = {
 
 // Forum
 export const forumApi = {
+  getPostPanelSummary: () => apiRequest<PostPanelSummary>('/forum/post-panel'),
+  getWelcomeSummary: () => apiRequest<WelcomeSummary>('/forum/welcome-summary'),
   listPosts: (params?: { page?: number; pageSize?: number; sortBy?: string; search?: string; circleId?: string }) => {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set('page', String(params.page));

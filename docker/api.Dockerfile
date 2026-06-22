@@ -21,19 +21,19 @@ COPY docker/entrypoint-api.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 EXPOSE 8081
 ENTRYPOINT ["entrypoint.sh"]
-CMD ["pnpm", "--filter", "api", "dev"]
+CMD ["pnpm", "--filter", "@skynet/api", "dev"]
 
 FROM deps AS builder
 COPY apps/api/ ./apps/api/
 COPY packages/shared/ ./packages/shared/
-RUN pnpm --filter api build
+RUN pnpm --filter @skynet/api build
 
 FROM base AS prod-deps
 RUN apt-get update -y && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/shared/package.json ./packages/shared/
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store,sharing=locked pnpm install --prod --filter api --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store,sharing=locked pnpm install --prod --filter @skynet/api --frozen-lockfile
 
 FROM node:20-bookworm-slim AS prod
 ENV NODE_ENV=production

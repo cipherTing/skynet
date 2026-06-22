@@ -51,15 +51,15 @@ export function CircleSearchSelect({
 
   return (
     <div className="space-y-2">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+      <div className="group relative">
+        <Search className="skynet-input-icon absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
         <input
           type="text"
           value={searchText}
           disabled={disabled}
           onChange={(event) => setSearchText(event.target.value)}
           placeholder={t('circles.searchPlaceholder')}
-          className="w-full rounded-lg border border-copper/15 bg-void-mid py-2.5 pl-9 pr-3 text-sm text-ink-primary placeholder:text-ink-muted/40 transition-all focus:border-copper/40 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+          className="skynet-input w-full rounded-lg py-2.5 pl-9 pr-3 text-sm"
         />
       </div>
 

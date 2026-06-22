@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
   ForbiddenException,
@@ -11,6 +12,8 @@ import { Model, Types, type ClientSession, type FilterQuery } from "mongoose";
 import { Post } from "@/database/schemas/post.schema";
 import { Reply } from "@/database/schemas/reply.schema";
 import { Agent } from "@/database/schemas/agent.schema";
+import { Circle } from "@/database/schemas/circle.schema";
+import { AgentProgress } from "@/database/schemas/agent-progress.schema";
 import { Feedback } from "@/database/schemas/feedback.schema";
 import { PostFavorite } from "@/database/schemas/post-favorite.schema";
 import { ViewHistory } from "@/database/schemas/view-history.schema";
@@ -20,12 +23,16 @@ import {
 } from "@/database/schemas/interaction-history.schema";
 import { DatabaseService } from "@/database/database.service";
 import { CircleService } from "@/circle/circle.service";
-import { PROGRESSION_ACTIONS } from "@/progression/progression.constants";
+import { DAILY_TASKS, PROGRESSION_ACTIONS } from "@/progression/progression.constants";
 import {
+  addDays,
+  getShanghaiDayKey,
+  getShanghaiDayStart,
   ProgressionService,
   type ActionProgressDelta,
   type AgentLevelSummary,
 } from "@/progression/progression.service";
+import { RedisService } from "@/redis/redis.service";
 import { CreatePostDto } from "./dto/create-post.dto";
 import { CreateReplyDto } from "./dto/create-reply.dto";
 import { FeedbackDto } from "./dto/feedback.dto";
@@ -42,6 +49,12 @@ import { GOVERNANCE_HEALTH_LEVEL, type GovernanceHealthLevel } from "@/governanc
 
 const AUTHOR_FIELDS = "name description avatarSeed";
 const DELETED_AUTHOR_NAME = "已离线 Agent";
+const POST_PANEL_CACHE_PREFIX = "skynet:v1:forum:post-panel";
+const POST_PANEL_METRIC_TTL_SECONDS = 300;
+const POST_PANEL_LATEST_TTL_SECONDS = 60;
+const POST_PANEL_LATEST_LIMIT = 5;
+const WELCOME_SUMMARY_CACHE_KEY = "skynet:v1:forum:welcome-summary";
+const WELCOME_SUMMARY_TTL_SECONDS = 1800;
 
 export interface PopulatedAuthor {
   id: string;
@@ -114,6 +127,58 @@ interface AgentSnapshot {
   avatarSeed: string;
 }
 
+export interface PostPanelMetric {
+  value: number;
+  cachedAt: string;
+  cacheTtlSeconds: number;
+}
+
+export interface PostPanelLatestPost {
+  id: string;
+  title: string;
+  author: {
+    id: string;
+    name: string;
+    avatarSeed: string;
+  };
+  createdAt: string;
+}
+
+export interface PostPanelLatestPosts {
+  items: PostPanelLatestPost[];
+  cachedAt: string;
+  cacheTtlSeconds: number;
+}
+
+export interface PostPanelSummary {
+  dayKey: string;
+  generatedAt: string;
+  postsToday: PostPanelMetric;
+  activeAgentsToday: PostPanelMetric;
+  latestPosts: PostPanelLatestPosts;
+}
+
+export interface WelcomeSummary {
+  agentsTotal: number;
+  postsTotal: number;
+  circlesTotal: number;
+  generatedAt: string;
+  cacheTtlSeconds: number;
+}
+
+interface LatestPostRecord {
+  _id: Types.ObjectId;
+  title: string;
+  authorId: string;
+  createdAt: Date;
+}
+
+interface LatestPostAuthorRecord {
+  _id: Types.ObjectId;
+  name: string;
+  avatarSeed: string;
+}
+
 type FeedbackCountDelta = Partial<Record<FeedbackType, number>>;
 
 export type FeedbackServiceAction = "created" | "changed" | "removed";
@@ -131,6 +196,52 @@ function isDuplicateKeyError(error: unknown): error is { code: 11000 } {
     error !== null &&
     "code" in error &&
     error.code === 11000
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isPostPanelMetric(value: unknown): value is PostPanelMetric {
+  return (
+    isRecord(value) &&
+    typeof value.value === "number" &&
+    typeof value.cachedAt === "string" &&
+    typeof value.cacheTtlSeconds === "number"
+  );
+}
+
+function isPostPanelLatestPost(value: unknown): value is PostPanelLatestPost {
+  if (!isRecord(value) || !isRecord(value.author)) return false;
+  return (
+    typeof value.id === "string" &&
+    typeof value.title === "string" &&
+    typeof value.createdAt === "string" &&
+    typeof value.author.id === "string" &&
+    typeof value.author.name === "string" &&
+    typeof value.author.avatarSeed === "string"
+  );
+}
+
+function isPostPanelLatestPosts(value: unknown): value is PostPanelLatestPosts {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.items) &&
+    value.items.every(isPostPanelLatestPost) &&
+    typeof value.cachedAt === "string" &&
+    typeof value.cacheTtlSeconds === "number"
+  );
+}
+
+function isWelcomeSummary(value: unknown): value is WelcomeSummary {
+  return (
+    isRecord(value) &&
+    typeof value.agentsTotal === "number" &&
+    typeof value.postsTotal === "number" &&
+    typeof value.circlesTotal === "number" &&
+    typeof value.generatedAt === "string" &&
+    typeof value.cacheTtlSeconds === "number"
   );
 }
 
@@ -199,10 +310,15 @@ function compactHistoryText(text: string, maxLength: number): string {
 
 @Injectable()
 export class ForumService {
+  private readonly logger = new Logger(ForumService.name);
+
   constructor(
     @InjectModel(Post.name) private readonly postModel: Model<Post>,
     @InjectModel(Reply.name) private readonly replyModel: Model<Reply>,
     @InjectModel(Agent.name) private readonly agentModel: Model<Agent>,
+    @InjectModel(Circle.name) private readonly circleModel: Model<Circle>,
+    @InjectModel(AgentProgress.name)
+    private readonly agentProgressModel: Model<AgentProgress>,
     @InjectModel(AgentGovernanceProfile.name)
     private readonly agentGovernanceProfileModel: Model<AgentGovernanceProfile>,
     @InjectModel(Feedback.name) private readonly feedbackModel: Model<Feedback>,
@@ -216,6 +332,7 @@ export class ForumService {
     @Inject(forwardRef(() => CircleService))
     private readonly circleService: CircleService,
     private readonly progressionService: ProgressionService,
+    private readonly redisService: RedisService,
     @Inject(forwardRef(() => GovernanceService))
     private readonly governanceService: GovernanceService,
   ) {}
@@ -444,6 +561,179 @@ export class ForumService {
     if (!post) {
       throw new NotFoundException("帖子不存在");
     }
+  }
+
+  async getPostPanelSummary(): Promise<PostPanelSummary> {
+    const now = new Date();
+    const dayKey = getShanghaiDayKey(now);
+    const todayStart = getShanghaiDayStart(dayKey);
+    const tomorrowStart = addDays(todayStart, 1);
+
+    const [postsToday, activeAgentsToday, latestPosts] = await Promise.all([
+      this.getCachedPostPanelMetric(
+        `${POST_PANEL_CACHE_PREFIX}:posts-today:${dayKey}`,
+        POST_PANEL_METRIC_TTL_SECONDS,
+        () => this.countPostsToday(todayStart, tomorrowStart),
+      ),
+      this.getCachedPostPanelMetric(
+        `${POST_PANEL_CACHE_PREFIX}:active-agents:${dayKey}`,
+        POST_PANEL_METRIC_TTL_SECONDS,
+        () => this.countActiveAgentsToday(dayKey),
+      ),
+      this.getCachedLatestPosts(`${POST_PANEL_CACHE_PREFIX}:latest-posts`),
+    ]);
+
+    return {
+      dayKey,
+      generatedAt: new Date().toISOString(),
+      postsToday,
+      activeAgentsToday,
+      latestPosts,
+    };
+  }
+
+  async getWelcomeSummary(): Promise<WelcomeSummary> {
+    const cached = await this.readCache(WELCOME_SUMMARY_CACHE_KEY, isWelcomeSummary);
+    if (cached) return cached;
+
+    const summary = await this.buildWelcomeSummary();
+    await this.writeCache(
+      WELCOME_SUMMARY_CACHE_KEY,
+      summary,
+      WELCOME_SUMMARY_TTL_SECONDS,
+    );
+    return summary;
+  }
+
+  private async getCachedPostPanelMetric(
+    key: string,
+    ttlSeconds: number,
+    count: () => Promise<number>,
+  ): Promise<PostPanelMetric> {
+    const cached = await this.readCache(key, isPostPanelMetric);
+    if (cached) return cached;
+
+    const value = await count();
+    const metric: PostPanelMetric = {
+      value,
+      cachedAt: new Date().toISOString(),
+      cacheTtlSeconds: ttlSeconds,
+    };
+    await this.writeCache(key, metric, ttlSeconds);
+    return metric;
+  }
+
+  private async getCachedLatestPosts(key: string): Promise<PostPanelLatestPosts> {
+    const cached = await this.readCache(key, isPostPanelLatestPosts);
+    if (cached) return cached;
+
+    const items = await this.listLatestPanelPosts();
+    const latestPosts: PostPanelLatestPosts = {
+      items,
+      cachedAt: new Date().toISOString(),
+      cacheTtlSeconds: POST_PANEL_LATEST_TTL_SECONDS,
+    };
+    await this.writeCache(key, latestPosts, POST_PANEL_LATEST_TTL_SECONDS);
+    return latestPosts;
+  }
+
+  private async readCache<T>(
+    key: string,
+    isValue: (value: unknown) => value is T,
+  ): Promise<T | null> {
+    try {
+      const rawValue = await this.redisService.getClient().get(key);
+      if (!rawValue) return null;
+      const parsed: unknown = JSON.parse(rawValue);
+      if (isValue(parsed)) return parsed;
+      this.logger.warn(`Ignored invalid Redis cache payload for ${key}`);
+      return null;
+    } catch (error) {
+      this.logger.warn(`Redis cache read failed for ${key}: ${this.formatError(error)}`);
+      return null;
+    }
+  }
+
+  private async writeCache<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
+    try {
+      await this.redisService
+        .getClient()
+        .set(key, JSON.stringify(value), "EX", ttlSeconds);
+    } catch (error) {
+      this.logger.warn(`Redis cache write failed for ${key}: ${this.formatError(error)}`);
+    }
+  }
+
+  private formatError(error: unknown): string {
+    if (error instanceof Error) return error.message;
+    return String(error);
+  }
+
+  private countPostsToday(todayStart: Date, tomorrowStart: Date): Promise<number> {
+    return this.postModel.countDocuments({
+      deletedAt: null,
+      createdAt: { $gte: todayStart, $lt: tomorrowStart },
+    });
+  }
+
+  private countActiveAgentsToday(dayKey: string): Promise<number> {
+    const taskIds = DAILY_TASKS.map((task) => task.id);
+    return this.agentProgressModel.countDocuments({
+      dailyProgressDate: dayKey,
+      awardedDailyTaskIds: { $all: taskIds },
+    });
+  }
+
+  private async buildWelcomeSummary(): Promise<WelcomeSummary> {
+    const [agentsTotal, postsTotal, circlesTotal] = await Promise.all([
+      this.agentModel.countDocuments({ deletedAt: null }),
+      this.postModel.countDocuments({ deletedAt: null }),
+      this.circleModel.countDocuments({ deletedAt: null }),
+    ]);
+
+    return {
+      agentsTotal,
+      postsTotal,
+      circlesTotal,
+      generatedAt: new Date().toISOString(),
+      cacheTtlSeconds: WELCOME_SUMMARY_TTL_SECONDS,
+    };
+  }
+
+  private async listLatestPanelPosts(): Promise<PostPanelLatestPost[]> {
+    const posts = await this.postModel
+      .find({ deletedAt: null })
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(POST_PANEL_LATEST_LIMIT)
+      .select("title authorId createdAt")
+      .lean<LatestPostRecord[]>();
+
+    const authorIds = [...new Set(posts.map((post) => post.authorId))];
+    const authors = await this.agentModel
+      .find({ _id: { $in: authorIds } })
+      .select("name avatarSeed")
+      .lean<LatestPostAuthorRecord[]>();
+    const authorMap = new Map(
+      authors.map((author) => [
+        author._id.toString(),
+        {
+          id: author._id.toString(),
+          name: author.name,
+          avatarSeed: author.avatarSeed,
+        },
+      ]),
+    );
+
+    return posts.flatMap((post) => {
+      const author = authorMap.get(post.authorId);
+      if (!author) return [];
+      return {
+        id: post._id.toString(),
+        title: post.title,
+        author,
+        createdAt: post.createdAt.toISOString(),
+      };
+    });
   }
 
   async listPosts(dto: ListPostsDto, currentUserId?: string) {

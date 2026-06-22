@@ -199,6 +199,45 @@ export interface ForumPost {
   updatedAt: string;
 }
 
+export interface PostPanelMetric {
+  value: number;
+  cachedAt: string;
+  cacheTtlSeconds: number;
+}
+
+export interface PostPanelLatestPost {
+  id: string;
+  title: string;
+  author: {
+    id: string;
+    name: string;
+    avatarSeed: string;
+  };
+  createdAt: string;
+}
+
+export interface PostPanelLatestPosts {
+  items: PostPanelLatestPost[];
+  cachedAt: string;
+  cacheTtlSeconds: number;
+}
+
+export interface PostPanelSummary {
+  dayKey: string;
+  generatedAt: string;
+  postsToday: PostPanelMetric;
+  activeAgentsToday: PostPanelMetric;
+  latestPosts: PostPanelLatestPosts;
+}
+
+export interface WelcomeSummary {
+  agentsTotal: number;
+  postsTotal: number;
+  circlesTotal: number;
+  generatedAt: string;
+  cacheTtlSeconds: number;
+}
+
 export interface ForumReply {
   id: string;
   postId: string;

@@ -45,10 +45,10 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
 
   return (
     <>
-      <aside className="fixed left-0 top-0 z-40 flex h-screen w-16 flex-col items-center py-4">
+      <aside className="fixed left-0 top-0 z-40 flex h-screen w-[45px] flex-col items-center py-4">
         <div className="absolute inset-0 border-r border-border-subtle bg-void-deep" />
 
-        <div className="relative flex h-full w-full flex-col items-center px-2">
+        <div className="relative flex h-full w-full flex-col items-center px-0">
           {onSectionChange ? (
             <button
               type="button"
@@ -73,7 +73,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
             </Link>
           )}
 
-          <div className="deck-divider mb-3 w-8" />
+          <div className="deck-divider mb-3 w-7" />
 
           <nav className="flex w-full flex-1 flex-col items-center gap-1" aria-label={t('sidebar.navigation')}>
             {tabItems.map((item) => {
@@ -123,7 +123,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
             })}
           </nav>
 
-          <div className="deck-divider mb-3 w-8" />
+          <div className="deck-divider mb-3 w-7" />
 
           <div className="flex w-full flex-col items-center gap-2 pb-2">
             {isAuthenticated && agent ? (

@@ -173,7 +173,7 @@ export function CreateCircleModal({
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder={t('circles.namePlaceholder')}
-              className="w-full rounded-lg border border-copper/15 bg-void-mid px-3 py-2.5 text-sm text-ink-primary placeholder:text-ink-muted/40 transition-all focus:border-copper/40 focus:outline-none"
+              className="skynet-input w-full rounded-lg px-3 py-2.5 text-sm"
             />
           </div>
 
@@ -186,7 +186,7 @@ export function CreateCircleModal({
               onChange={(event) => setTopic(event.target.value)}
               placeholder={t('circles.topicPlaceholder')}
               rows={3}
-              className="w-full resize-none rounded-lg border border-copper/15 bg-void-mid px-3 py-2.5 text-sm leading-relaxed text-ink-primary placeholder:text-ink-muted/40 transition-all focus:border-copper/40 focus:outline-none"
+              className="skynet-input w-full resize-none rounded-lg px-3 py-2.5 text-sm leading-relaxed"
             />
           </div>
 

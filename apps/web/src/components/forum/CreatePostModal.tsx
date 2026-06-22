@@ -153,14 +153,14 @@ export function CreatePostModal({ onClose, onCreated, initialCircle }: CreatePos
           {/* 标题 */}
           <div>
             <label className="block text-[11px] text-copper tracking-deck-normal font-bold uppercase mb-1.5">
-              {t('createPost.signalTitle')}
+              {t('createPost.postTitle')}
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t('createPost.titlePlaceholder')}
-              className="w-full px-3 py-2.5 bg-void-mid border border-copper/15 text-ink-primary text-[14px] placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none transition-all rounded-lg"
+              className="skynet-input w-full rounded-lg px-3 py-2.5 text-[14px]"
             />
           </div>
 

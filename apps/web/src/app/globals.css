@@ -45,6 +45,8 @@
     --highlight-subtle: rgba(226, 232, 240, 0.018);
     --highlight-inset: rgba(226, 232, 240, 0.035);
     --highlight-strong: rgba(226, 232, 240, 0.055);
+    --focus-ring: color-mix(in srgb, var(--copper) 32%, transparent);
+    --focus-ring-offset: var(--void);
 
     --void: var(--bg-canvas);
     --void-deep: var(--surface-1);
@@ -78,6 +80,13 @@
     --card-border-hover: var(--border-accent);
     --card-shadow: var(--shadow-card);
     --card-shadow-hover: var(--shadow-card-hover);
+
+    --input-bg: color-mix(in srgb, var(--surface-2) 90%, transparent);
+    --input-bg-focus: color-mix(in srgb, var(--surface-3) 92%, transparent);
+    --input-border: var(--border-default);
+    --input-border-focus: var(--border-accent);
+    --input-placeholder: color-mix(in srgb, var(--ink-muted) 48%, transparent);
+    --input-icon: var(--ink-muted);
 
     --post-topic-bg: linear-gradient(145deg, rgba(21, 27, 38, 0.98) 0%, var(--surface-1) 52%, rgba(22, 35, 49, 0.98) 100%);
     --post-topic-bg: linear-gradient(145deg, color-mix(in srgb, var(--surface-2) 94%, var(--copper) 6%) 0%, var(--surface-1) 52%, color-mix(in srgb, var(--surface-2) 90%, var(--steel) 10%) 100%);
@@ -146,6 +155,8 @@
     --highlight-subtle: rgba(255, 255, 255, 0.70);
     --highlight-inset: rgba(255, 255, 255, 0.82);
     --highlight-strong: rgba(255, 255, 255, 0.92);
+    --focus-ring: color-mix(in srgb, var(--copper) 30%, transparent);
+    --focus-ring-offset: var(--void);
 
     --void: var(--bg-canvas);
     --void-deep: var(--surface-1);
@@ -179,6 +190,13 @@
     --card-border-hover: var(--accent-primary-hover);
     --card-shadow: var(--shadow-card);
     --card-shadow-hover: var(--shadow-card-hover);
+
+    --input-bg: color-mix(in srgb, var(--surface-1) 88%, transparent);
+    --input-bg-focus: color-mix(in srgb, var(--surface-1) 96%, var(--accent-primary) 4%);
+    --input-border: var(--border-default);
+    --input-border-focus: var(--border-accent);
+    --input-placeholder: color-mix(in srgb, var(--ink-muted) 54%, transparent);
+    --input-icon: var(--ink-muted);
 
     --post-topic-bg: linear-gradient(145deg, rgba(238, 250, 244, 0.98) 0%, rgba(255, 255, 255, 0.98) 48%, rgba(239, 247, 255, 0.98) 100%);
     --post-topic-border: rgba(21, 128, 61, 0.22);
@@ -222,7 +240,7 @@
 
   input:focus, textarea:focus, button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(232, 111, 53, 0.32), 0 0 0 4px var(--void);
+    box-shadow: 0 0 0 2px var(--focus-ring), 0 0 0 4px var(--focus-ring-offset);
   }
 
   ::-webkit-scrollbar {
@@ -241,6 +259,183 @@
 }
 
 @layer components {
+  .skynet-input {
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--ink-primary);
+    transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .skynet-input::placeholder {
+    color: var(--input-placeholder);
+  }
+
+  .skynet-input:focus {
+    border-color: var(--input-border-focus);
+    background: var(--input-bg-focus);
+    outline: none;
+  }
+
+  .skynet-input:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .skynet-input-icon {
+    color: var(--input-icon);
+    transition: color 0.18s ease;
+  }
+
+  .group:focus-within .skynet-input-icon,
+  .skynet-input:focus + .skynet-input-icon {
+    color: var(--copper);
+  }
+
+  .welcome-landing {
+    --welcome-bg-radial: radial-gradient(circle at 50% 24%, rgba(16, 28, 42, 0.26), transparent 34%), radial-gradient(circle at 12% 78%, rgba(214, 111, 53, 0.08), transparent 28%), radial-gradient(circle at 88% 18%, rgba(88, 211, 255, 0.07), transparent 26%);
+    --welcome-bg-linear: linear-gradient(180deg, rgba(5, 7, 12, 0.12) 0%, rgba(5, 7, 12, 0.34) 72%, rgba(5, 7, 12, 0.46) 100%);
+    --welcome-vignette: inset 0 0 120px rgba(0, 0, 0, 0.42);
+    --welcome-panel-bg: linear-gradient(135deg, rgba(20, 25, 36, 0.82), rgba(8, 12, 20, 0.72));
+    --welcome-command-bg: linear-gradient(135deg, rgba(8, 12, 20, 0.92), rgba(17, 25, 37, 0.78));
+    --welcome-stat-bg: linear-gradient(135deg, rgba(19, 25, 37, 0.80), rgba(7, 11, 18, 0.66));
+    --welcome-panel-border: color-mix(in srgb, var(--copper) 18%, transparent);
+    --welcome-command-border: color-mix(in srgb, var(--steel-bright) 16%, transparent);
+    --welcome-panel-shadow: 0 24px 100px rgba(0, 0, 0, 0.44), 0 0 42px color-mix(in srgb, var(--copper) 10%, transparent);
+    --welcome-command-shadow: inset 0 -18px 42px rgba(0, 0, 0, 0.24), 0 0 28px color-mix(in srgb, var(--steel-bright) 5%, transparent);
+    --welcome-stat-shadow: 0 22px 86px rgba(0, 0, 0, 0.36);
+    --welcome-title-glow: rgba(134, 211, 255, 0.08);
+    --welcome-cta-bg: linear-gradient(135deg, var(--copper-bright), var(--copper));
+    --welcome-cta-border: color-mix(in srgb, var(--copper-bright) 42%, transparent);
+    --welcome-cta-text: #080A0F;
+    --welcome-cta-shadow: 0 18px 44px color-mix(in srgb, var(--copper) 24%, transparent), inset 0 1px 0 color-mix(in srgb, var(--highlight-strong) 45%, transparent);
+    --welcome-stat-skeleton: linear-gradient(90deg, color-mix(in srgb, var(--welcome-stat-tone) 42%, transparent), color-mix(in srgb, var(--welcome-stat-tone) 14%, transparent), color-mix(in srgb, var(--welcome-stat-tone) 42%, transparent));
+  }
+
+  :root[data-theme="light"] .welcome-landing {
+    --welcome-bg-radial: radial-gradient(circle at 50% 22%, rgba(255, 255, 255, 0.78), transparent 36%), radial-gradient(circle at 10% 78%, rgba(204, 92, 26, 0.12), transparent 30%), radial-gradient(circle at 88% 16%, rgba(3, 105, 161, 0.10), transparent 28%);
+    --welcome-bg-linear: linear-gradient(180deg, rgba(248, 248, 251, 0.06) 0%, rgba(242, 242, 245, 0.30) 72%, rgba(232, 232, 240, 0.44) 100%);
+    --welcome-vignette: inset 0 0 130px rgba(15, 23, 42, 0.10);
+    --welcome-panel-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(239, 243, 249, 0.76));
+    --welcome-command-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.90), rgba(235, 241, 248, 0.82));
+    --welcome-stat-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(237, 242, 248, 0.72));
+    --welcome-panel-border: color-mix(in srgb, var(--copper) 22%, rgba(15, 23, 42, 0.10));
+    --welcome-command-border: color-mix(in srgb, var(--steel) 20%, rgba(15, 23, 42, 0.10));
+    --welcome-panel-shadow: 0 24px 90px rgba(15, 23, 42, 0.12), 0 0 34px color-mix(in srgb, var(--copper) 9%, transparent);
+    --welcome-command-shadow: inset 0 -14px 34px rgba(15, 23, 42, 0.04), 0 0 24px color-mix(in srgb, var(--steel) 7%, transparent);
+    --welcome-stat-shadow: 0 22px 70px rgba(15, 23, 42, 0.10);
+    --welcome-title-glow: rgba(3, 105, 161, 0.10);
+    --welcome-cta-bg: linear-gradient(180deg, #A64A14, #7C2D12);
+    --welcome-cta-border: rgba(124, 45, 18, 0.38);
+    --welcome-cta-text: #FFFFFF;
+    --welcome-cta-shadow: 0 16px 36px rgba(166, 74, 20, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    --welcome-stat-skeleton: linear-gradient(90deg, color-mix(in srgb, var(--welcome-stat-tone) 58%, transparent), color-mix(in srgb, var(--welcome-stat-tone) 18%, transparent), color-mix(in srgb, var(--welcome-stat-tone) 58%, transparent));
+  }
+
+  .welcome-title {
+    filter: drop-shadow(0 0 44px var(--welcome-title-glow));
+  }
+
+  .welcome-landing__radial {
+    background: var(--welcome-bg-radial);
+  }
+
+  .welcome-landing__linear {
+    background: var(--welcome-bg-linear);
+  }
+
+  .welcome-landing__vignette {
+    box-shadow: var(--welcome-vignette);
+  }
+
+  .welcome-panel {
+    border: 1px solid var(--welcome-panel-border);
+    background: var(--welcome-panel-bg);
+    box-shadow: var(--welcome-panel-shadow);
+  }
+
+  .welcome-panel__accent {
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--copper) 45%, transparent), transparent);
+  }
+
+  .welcome-command {
+    border: 1px solid var(--welcome-command-border);
+    background: var(--welcome-command-bg);
+    box-shadow: var(--welcome-command-shadow);
+  }
+
+  .welcome-command--copied {
+    border-color: color-mix(in srgb, var(--moss) 28%, transparent);
+    box-shadow: inset 0 -18px 42px rgba(0, 0, 0, 0.20), 0 0 30px color-mix(in srgb, var(--moss) 12%, transparent);
+  }
+
+  .welcome-copy-button {
+    background: color-mix(in srgb, var(--copper) 12%, transparent);
+    color: var(--copper);
+    box-shadow: 0 0 22px color-mix(in srgb, var(--copper) 8%, transparent);
+  }
+
+  .welcome-copy-button:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--copper) 16%, transparent);
+    box-shadow: 0 0 28px color-mix(in srgb, var(--copper) 13%, transparent);
+  }
+
+  .welcome-cta {
+    border: 1px solid var(--welcome-cta-border);
+    background: var(--welcome-cta-bg);
+    color: var(--welcome-cta-text);
+    box-shadow: var(--welcome-cta-shadow);
+  }
+
+  .welcome-stat__loading {
+    display: block;
+    width: 82px;
+    height: 14px;
+    border-radius: 999px;
+    background: var(--welcome-stat-skeleton);
+    background-size: 220% 100%;
+    animation: welcome-stat-loading 1.25s ease-in-out infinite;
+  }
+
+  @keyframes welcome-stat-loading {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+  }
+
+  .welcome-stat__number {
+    color: var(--welcome-stat-tone);
+  }
+
+  .welcome-stat {
+    background: var(--welcome-stat-bg);
+    box-shadow: var(--welcome-stat-shadow), 0 0 38px color-mix(in srgb, var(--welcome-stat-tone) 7%, transparent);
+    border: 1px solid color-mix(in srgb, var(--welcome-stat-tone) 18%, transparent);
+  }
+
+  .welcome-stat:hover {
+    box-shadow: var(--welcome-stat-shadow), 0 0 48px color-mix(in srgb, var(--welcome-stat-tone) 13%, transparent);
+    border-color: color-mix(in srgb, var(--welcome-stat-tone) 30%, transparent);
+  }
+
+  .welcome-stat__accent {
+    background: linear-gradient(90deg, color-mix(in srgb, var(--welcome-stat-tone) 70%, transparent), color-mix(in srgb, var(--welcome-stat-tone) 28%, transparent), transparent);
+  }
+
+  .welcome-stat--copper {
+    --welcome-stat-tone: var(--copper);
+  }
+
+  .welcome-stat--steel {
+    --welcome-stat-tone: var(--steel-bright);
+  }
+
+  :root[data-theme="light"] .welcome-stat--steel {
+    --welcome-stat-tone: var(--steel);
+  }
+
+  .welcome-stat--moss {
+    --welcome-stat-tone: var(--moss);
+  }
+
   .signal-bubble {
     background: var(--card-bg);
     border: 1px solid var(--card-border);

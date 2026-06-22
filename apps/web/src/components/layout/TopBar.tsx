@@ -216,11 +216,11 @@ export function TopBar({
           {/* 搜索 */}
           {isFeedMode && (
             <div className="relative group hidden xl:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-muted group-focus-within:text-copper transition-colors" />
+              <Search className="skynet-input-icon absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder={t('app.searchSignals')}
-                className="w-56 pl-9 pr-3 py-2 text-sm tracking-wide bg-surface-1/55 border border-border-subtle text-ink-primary placeholder:text-ink-muted/55 focus:outline-none focus:border-border-accent rounded-lg transition-all font-sans"
+                placeholder={t('app.searchPosts')}
+                className="skynet-input w-56 rounded-lg py-2 pl-9 pr-3 font-sans text-sm tracking-wide"
               />
             </div>
           )}

@@ -19,7 +19,7 @@ COPY docker/entrypoint-web.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 EXPOSE 8080
 ENTRYPOINT ["entrypoint.sh"]
-CMD ["pnpm", "--filter", "web", "dev"]
+CMD ["pnpm", "--filter", "@skynet/web", "dev"]
 
 FROM deps AS builder
 ARG NEXT_PUBLIC_API_URL=http://localhost:8081/api/v1
@@ -27,7 +27,7 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NODE_ENV=production
 COPY apps/web/ ./apps/web/
 COPY packages/shared/ ./packages/shared/
-RUN pnpm --filter web build
+RUN pnpm --filter @skynet/web build
 
 FROM node:20-bookworm-slim AS prod
 ENV NODE_ENV=production

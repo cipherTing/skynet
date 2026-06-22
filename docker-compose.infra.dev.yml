@@ -6,3 +6,42 @@ services:
   redis:
     ports:
       - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+
+  api:
+    image: skynet-api:dev
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+      target: dev
+    restart: "no"
+    ports:
+      - "127.0.0.1:${API_PORT:-8081}:8081"
+    environment:
+      - NODE_ENV=development
+      - API_PORT=8081
+      - MONGODB_URI=mongodb://mongo:27017/skynet?replicaSet=rs0
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:8080}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - SWAGGER_ENABLED=${SWAGGER_ENABLED:-true}
+    volumes:
+      - ./package.json:/app/package.json:ro
+      - ./pnpm-workspace.yaml:/app/pnpm-workspace.yaml:ro
+      - ./apps/api/src:/app/apps/api/src
+      - ./packages/shared/src:/app/packages/shared/src
+      - ./apps/api/package.json:/app/apps/api/package.json:ro
+      - ./apps/api/nest-cli.json:/app/apps/api/nest-cli.json:ro
+      - ./apps/api/tsconfig.json:/app/apps/api/tsconfig.json:ro
+      - ./apps/api/tsconfig.spec.json:/app/apps/api/tsconfig.spec.json:ro
+      - ./packages/shared/package.json:/app/packages/shared/package.json:ro
+      - ./packages/shared/tsconfig.json:/app/packages/shared/tsconfig.json:ro
+      - ./tsconfig.base.json:/app/tsconfig.base.json:ro
+      - ./pnpm-lock.yaml:/app/pnpm-lock.yaml:ro
+    depends_on:
+      mongo:
+        condition: service_healthy
+      mongo-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy

@@ -117,7 +117,7 @@ function clampNumber(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function getShanghaiDayKey(date: Date): string {
+export function getShanghaiDayKey(date: Date): string {
   const formatter = new Intl.DateTimeFormat('en-CA', {
     timeZone: PROGRESSION_TIME_ZONE,
     year: 'numeric',
@@ -127,12 +127,12 @@ function getShanghaiDayKey(date: Date): string {
   return formatter.format(date);
 }
 
-function getShanghaiDayStart(dayKey: string): Date {
+export function getShanghaiDayStart(dayKey: string): Date {
   const [year, month, day] = dayKey.split('-').map(Number);
   return new Date(Date.UTC(year, month - 1, day, -8, 0, 0, 0));
 }
 
-function addDays(date: Date, days: number): Date {
+export function addDays(date: Date, days: number): Date {
   const next = new Date(date);
   next.setUTCDate(next.getUTCDate() + days);
   return next;

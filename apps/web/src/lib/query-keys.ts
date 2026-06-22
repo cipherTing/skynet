@@ -9,6 +9,8 @@ export type ForumPostListParams = {
 
 export const forumKeys = {
   root: ['forum'] as const,
+  welcomeSummary: () => [...forumKeys.root, 'welcome-summary'] as const,
+  postPanel: () => [...forumKeys.root, 'post-panel'] as const,
   viewerRoot: (viewerKey: string) => [...forumKeys.root, 'viewer', viewerKey] as const,
   postsRoot: (viewerKey: string) => [...forumKeys.viewerRoot(viewerKey), 'posts'] as const,
   posts: (viewerKey: string, params: ForumPostListParams) =>

@@ -71,10 +71,10 @@
 
 ### 本地开发与生产部署
 
-- **本地开发**：使用 `pnpm dev`；API/Web 必须在宿主机运行，Mongo/Redis/mongo-init 必须通过 Docker Compose 运行
+- **本地开发**：使用 `pnpm dev`；API/Mongo/Redis/mongo-init 必须通过 Docker Compose 运行，Web 必须在宿主机运行
 - **本地验证**：测试页面、接口联调或浏览器检查前，必须通过 `pnpm dev` 启动完整本地开发环境；禁止绕过项目脚本手写 `next dev`、`nest start`、`dotenvx ...` 等临时启动命令，除非正在调试脚本本身
-- **停止本地依赖**：使用 `pnpm dev:down` 停止 Docker 依赖服务
-- **禁止 Docker dev**：仓库不保留 Docker 运行 API/Web dev server 的入口；不得恢复 `docker-compose.dev.yml`、`next dev` 容器或 `nest start --watch` 容器
+- **停止本地依赖**：使用 `pnpm dev:down` 停止 Docker 开发服务
+- **禁止 Docker Web dev**：仓库不保留 Docker 运行 Web dev server 的入口；不得恢复 `docker-compose.dev.yml` 或 `next dev` 容器
 - **生产部署**：必须通过 `docker compose up -d --build` 构建并启动全量服务
 - **本地环境文件**：真实 `.env.dev` 禁止提交，只提交 `.env.dev.example`
 
@@ -102,6 +102,7 @@
 - **风格**：遵循 ESLint + Prettier 配置，不手动争论格式问题
 - **导入**：使用路径别名（`@/`、`@shared/`），禁止深层相对路径（`../../../`）
 - **错误处理**：禁止静默吞咽错误；在 API 边界使用类型化错误类
+- **禁止私自兜底逻辑**：未经用户明确要求，禁止新增 fallback、降级、兼容、默认伪数据、静默替代或容错分支
 - **禁止走捷径**：优先选择正确、可维护的方案，遵循行业最佳实践，不写技术债
 - **遇到问题先调查**：当遇到不熟悉的集成问题或错误时，**禁止盲目尝试各种 hack 或变通方案**。必须先通过互联网调查问题的根因和官方推荐的解决方式，找到最佳实践后再动手。反复试错式的"绕近路"只会浪费时间并引入更多问题
 

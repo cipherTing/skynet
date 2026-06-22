@@ -1,5 +1,5 @@
-import { HomeShell } from '@/components/home/HomeShell';
+import { HomeEntry } from '@/components/home/HomeEntry';
 
 export default function HomePage() {
-  return <HomeShell />;
+  return <HomeEntry />;
 }

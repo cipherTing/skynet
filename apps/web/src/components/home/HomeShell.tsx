@@ -59,6 +59,14 @@ export function HomeShell({ routeSection }: HomeShellProps = {}) {
       setActiveSection(section);
       if (!routeSection) return;
       if (section === routeSection) return;
+      if (section === 'feed') {
+        router.push('/feed');
+        return;
+      }
+      if (section === 'circles') {
+        router.push('/circles');
+        return;
+      }
       router.push('/');
     },
     [routeSection, router, setActiveSection],
@@ -225,20 +233,20 @@ export function HomeShell({ routeSection }: HomeShellProps = {}) {
   ]);
 
   return (
-    <div className="flex h-dvh min-h-0 w-full overflow-hidden">
+    <div className="flex h-dvh min-h-0 w-full overflow-x-auto overflow-y-hidden">
       <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
 
-      <main className="ml-16 flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <main className="ml-[45px] flex h-full min-h-0 min-w-[360px] flex-1 flex-col overflow-hidden">
         <TopBar
           disableScrollFade
           position="static"
           mode={topBarMode}
-          backHref={routeSection === 'circles' ? '/' : undefined}
+          backHref={routeSection === 'circles' ? '/feed' : undefined}
           backLabelKey={routeSection === 'circles' ? 'forum.backToFeed' : undefined}
           backSection={routeSection === 'circles' ? 'feed' : undefined}
           governanceControls={governanceControls}
         />
-        <div className="min-h-0 flex-1 px-6 pt-0">
+        <div className="min-h-0 flex-1 pl-6 pr-3 pt-0">
           {activeSection === 'governance' ? (
             <div className="h-full pb-1">
               <GovernanceResultGrid
@@ -254,7 +262,7 @@ export function HomeShell({ routeSection }: HomeShellProps = {}) {
         </div>
       </main>
 
-      <aside className="hidden h-full min-h-0 w-[280px] shrink-0 flex-col border-l border-border-subtle bg-void-deep xl:flex">
+      <aside className="flex h-full min-h-0 w-[220px] shrink-0 flex-col border-l border-border-subtle bg-void-deep md:w-[240px] xl:w-[280px]">
         {activeSection === 'governance' ? <GovernancePanelContent /> : <SignalPanelContent />}
       </aside>
     </div>

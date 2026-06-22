@@ -319,16 +319,15 @@ try {
   assertLocalHttpUrl(env.CORS_ORIGIN, ports.WEB_PORT, '', 'CORS_ORIGIN');
   assertLocalHttpUrl(env.NEXT_PUBLIC_API_URL, ports.API_PORT, '/api/v1', 'NEXT_PUBLIC_API_URL');
 
-  for (const name of ['API_PORT', 'WEB_PORT']) {
-    await maybeTerminatePortListeners(name, ports[name]);
-  }
+  await maybeTerminatePortListeners('WEB_PORT', ports.WEB_PORT);
 
-  const infraPorts = [
+  const composePorts = [
+    ['API_PORT', 'api', 8081],
     ['MONGO_PORT', 'mongo', 27017],
     ['REDIS_PORT', 'redis', 6379],
   ];
 
-  for (const [portName, serviceName, containerPort] of infraPorts) {
+  for (const [portName, serviceName, containerPort] of composePorts) {
     if (await isPortOpen(ports[portName])) {
       const publishedPort = getComposePublishedPort(serviceName, containerPort);
       if (!isComposeServiceRunning(serviceName) || publishedPort !== ports[portName]) {

@@ -12,8 +12,8 @@ export default function PostLayout({
           disableScrollFade
           position="static"
           mode="detail"
-          detailTitleKey="forum.signalDetailTitle"
-          backHref="/"
+          detailTitleKey="forum.postDetailTitle"
+          backHref="/feed"
           backLabelKey="forum.backToFeed"
           backSection="feed"
         />

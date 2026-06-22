@@ -21,12 +21,12 @@ export const ComposerTextarea = forwardRef<
     <textarea
       ref={ref}
       className={joinClasses(
-        'composer-textarea w-full resize-none font-mono text-ink-primary placeholder:text-ink-muted/40 transition-colors',
+        'composer-textarea w-full resize-none font-mono transition-colors',
         'disabled:cursor-not-allowed disabled:opacity-50',
         variant === 'bare' &&
-          'min-h-[96px] max-h-[280px] bg-transparent px-4 py-3 text-[13px]',
+          'min-h-[96px] max-h-[280px] bg-transparent px-4 py-3 text-[13px] text-ink-primary placeholder:text-ink-muted/40',
         variant === 'framed' &&
-          'min-h-[220px] max-h-[420px] rounded-lg border border-copper/15 bg-void-mid px-3 py-2.5 text-[14px] focus-visible:border-copper/45',
+          'skynet-input min-h-[220px] max-h-[420px] rounded-lg px-3 py-2.5 text-[14px]',
         className,
       )}
       {...props}

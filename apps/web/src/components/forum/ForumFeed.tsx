@@ -8,6 +8,7 @@ import { motion, AnimatePresence, useMotionValueEvent, useReducedMotion, useScro
 import { useTranslation } from 'react-i18next';
 import { PostCard } from './PostCard';
 import { CreatePostModal } from './CreatePostModal';
+import { ForumFeedContextProvider } from './ForumFeedContext';
 import { EmptyState, ErrorState, InlineLoading } from '@/components/ui/LoadingState';
 import { forumApi } from '@/lib/api';
 import { forumKeys } from '@/lib/query-keys';
@@ -36,10 +37,10 @@ interface ForumFeedProps {
 
 export function ForumFeed({
   circle,
-  loadingLabelKey = 'forum.intercepting',
-  emptyMessageKey = 'forum.emptyFeed',
-  loadFailedKey = 'forum.signalLoadFailed',
-  receiveErrorTitleKey = 'forum.signalReceiveError',
+  loadingLabelKey = 'forum.loadingPosts',
+  emptyMessageKey = 'forum.emptyPosts',
+  loadFailedKey = 'forum.postsLoadFailed',
+  receiveErrorTitleKey = 'forum.postsReceiveError',
 }: ForumFeedProps = {}) {
   const { t } = useTranslation();
   const prefersReducedMotion = useReducedMotion();
@@ -200,67 +201,68 @@ export function ForumFeed({
   const isEmpty = !loading && posts.length === 0 && !errorKey;
 
   return (
-    <div className="feed-overlay-shell">
-      {/* 排序标签 + 创建按钮 */}
-      <motion.div
-        className="home-feed-toolbar"
-        animate={
-          prefersReducedMotion || toolbarVisible
-            ? { opacity: 1, y: 0, pointerEvents: 'auto' }
-            : { opacity: 0, y: '-115%', pointerEvents: 'none' }
-        }
-        transition={{ duration: prefersReducedMotion ? 0 : 0.18, ease: 'easeOut' }}
-      >
-        <div className="flex max-w-full flex-wrap items-center gap-0.5 rounded-md border border-copper/10 bg-void-deep/60 p-0.5 backdrop-blur-sm">
-          <SortTab
-            icon={<Flame className="w-3.5 h-3.5" />}
-            label={t('forum.hot')}
-            active={sortMode === SORT_OPTIONS.HOT}
-            onClick={() => handleSortChange(SORT_OPTIONS.HOT)}
-          />
-          <SortTab
-            icon={<Clock className="w-3.5 h-3.5" />}
-            label={t('forum.latest')}
-            active={sortMode === SORT_OPTIONS.LATEST}
-            onClick={() => handleSortChange(SORT_OPTIONS.LATEST)}
-          />
+    <ForumFeedContextProvider isCircleFeed={Boolean(circle)}>
+      <div className="feed-overlay-shell">
+        {/* 排序标签 + 创建按钮 */}
+        <motion.div
+          className="home-feed-toolbar"
+          animate={
+            prefersReducedMotion || toolbarVisible
+              ? { opacity: 1, y: 0, pointerEvents: 'auto' }
+              : { opacity: 0, y: '-115%', pointerEvents: 'none' }
+          }
+          transition={{ duration: prefersReducedMotion ? 0 : 0.18, ease: 'easeOut' }}
+        >
+          <div className="flex max-w-full flex-wrap items-center gap-0.5 rounded-md border border-copper/10 bg-void-deep/60 p-0.5 backdrop-blur-sm">
+            <SortTab
+              icon={<Flame className="w-3.5 h-3.5" />}
+              label={t('forum.hot')}
+              active={sortMode === SORT_OPTIONS.HOT}
+              onClick={() => handleSortChange(SORT_OPTIONS.HOT)}
+            />
+            <SortTab
+              icon={<Clock className="w-3.5 h-3.5" />}
+              label={t('forum.latest')}
+              active={sortMode === SORT_OPTIONS.LATEST}
+              onClick={() => handleSortChange(SORT_OPTIONS.LATEST)}
+            />
+            <button
+              type="button"
+              aria-label={t('forum.refreshPosts')}
+              disabled={postsQuery.isFetching}
+              onClick={handleRefresh}
+              className="ml-0.5 flex h-7 w-7 items-center justify-center rounded border-l border-copper/10 text-ink-muted transition-all hover:bg-void-hover hover:text-copper disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${postsQuery.isFetching ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+
           <button
             type="button"
-            aria-label={t('forum.refreshPosts')}
-            disabled={postsQuery.isFetching}
-            onClick={handleRefresh}
-            className="ml-0.5 flex h-7 w-7 items-center justify-center rounded border-l border-copper/10 text-ink-muted transition-all hover:bg-void-hover hover:text-copper disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={handleCreateClick}
+            className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs tracking-wide transition-all ${
+              canOperateAsAgent
+                ? 'border-copper/25 text-copper hover:border-copper/40 hover:bg-copper/10'
+                : 'border-copper/10 text-ink-muted hover:border-copper/25 hover:text-copper'
+            }`}
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${postsQuery.isFetching ? 'animate-spin' : ''}`} />
+            <Plus className="w-3 h-3" />
+            {t('forum.createPost')}
           </button>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleCreateClick}
-          className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs tracking-wide transition-all ${
-            canOperateAsAgent
-              ? 'border-copper/25 text-copper hover:border-copper/40 hover:bg-copper/10'
-              : 'border-copper/10 text-ink-muted hover:border-copper/25 hover:text-copper'
-          }`}
-        >
-          <Plus className="w-3 h-3" />
-          {t('forum.createSignal')}
-        </button>
-      </motion.div>
-      {errorKey && posts.length > 0 && (
-        <div className="mb-4 flex flex-none items-center justify-between rounded-lg border border-ochre/20 bg-ochre/10 px-4 py-3 text-[12px] tracking-wide text-ochre">
-          <span>
-            {t(receiveErrorTitleKey)}: {t(errorKey)}
-          </span>
-          <button
-            onClick={() => void (hasMore ? fetchNextPage() : refetch())}
-            className="text-copper hover:text-copper-bright transition-colors ml-3"
-          >
-            {t('app.retry')}
-          </button>
-        </div>
-      )}
+        </motion.div>
+        {errorKey && posts.length > 0 && (
+          <div className="mb-4 flex flex-none items-center justify-between rounded-lg border border-ochre/20 bg-ochre/10 px-4 py-3 text-[12px] tracking-wide text-ochre">
+            <span>
+              {t(receiveErrorTitleKey)}: {t(errorKey)}
+            </span>
+            <button
+              onClick={() => void (hasMore ? fetchNextPage() : refetch())}
+              className="text-copper hover:text-copper-bright transition-colors ml-3"
+            >
+              {t('app.retry')}
+            </button>
+          </div>
+        )}
 
       {/* 帖子列表 */}
       <div
@@ -315,7 +317,7 @@ export function ForumFeed({
           <div className="text-center py-8 text-xs text-ink-muted tracking-wide">
             <div className="flex items-center justify-center gap-3">
               <div className="w-8 deck-divider" />
-              <span>{t('forum.feedEnd')}</span>
+              <span>{t('forum.postsEnd')}</span>
               <div className="w-8 deck-divider" />
             </div>
           </div>
@@ -339,7 +341,8 @@ export function ForumFeed({
           />
         )}
       </AnimatePresence>
-    </div>
+      </div>
+    </ForumFeedContextProvider>
   );
 }
 

@@ -390,7 +390,7 @@ function RegisterPanel({
             onChange={(event) => setAgentName(event.target.value)}
             placeholder={t('auth.agentNamePlaceholder')}
             required
-            className="w-full rounded-lg border border-copper/15 bg-void-mid px-3 py-2.5 text-[14px] text-ink-primary transition-all placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none"
+            className="skynet-input w-full rounded-lg px-3 py-2.5 text-[14px]"
           />
         </div>
 
@@ -404,7 +404,7 @@ function RegisterPanel({
             value={agentDescription}
             onChange={(event) => setAgentDescription(event.target.value)}
             placeholder={t('auth.agentDescriptionPlaceholder')}
-            className="w-full rounded-lg border border-copper/15 bg-void-mid px-3 py-2.5 text-[14px] text-ink-primary transition-all placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none"
+            className="skynet-input w-full rounded-lg px-3 py-2.5 text-[14px]"
           />
         </div>
 
@@ -458,7 +458,7 @@ function CredentialsFields({
           placeholder={t('auth.usernamePlaceholder')}
           required
           minLength={3}
-          className="w-full rounded-lg border border-copper/15 bg-void-mid px-3 py-2.5 text-[14px] text-ink-primary transition-all placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none"
+          className="skynet-input w-full rounded-lg px-3 py-2.5 text-[14px]"
         />
       </div>
 
@@ -473,7 +473,7 @@ function CredentialsFields({
           placeholder={t('auth.passwordPlaceholder')}
           required
           minLength={6}
-          className="w-full rounded-lg border border-copper/15 bg-void-mid px-3 py-2.5 text-[14px] text-ink-primary transition-all placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none"
+          className="skynet-input w-full rounded-lg px-3 py-2.5 text-[14px]"
         />
       </div>
     </>

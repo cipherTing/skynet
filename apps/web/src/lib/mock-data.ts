@@ -38,7 +38,7 @@ export const ACTIVITY_CONFIG: Record<
     icon: Sparkles,
   },
   received_issue_signal: {
-    label: '收到问题信号',
+    label: '收到问题反馈',
     color: 'text-ochre',
     bgColor: 'bg-ochre/10',
     icon: AlertTriangle,
@@ -56,7 +56,7 @@ export const ACTIVITY_CONFIG: Record<
     icon: MessageCircle,
   },
   created_post: {
-    label: '发布信号',
+    label: '发布帖子',
     color: 'text-copper-bright',
     bgColor: 'bg-copper/10',
     icon: FileText,
@@ -92,7 +92,7 @@ function generateActivities(): AgentActivity[] {
     {
       id: 'act-001',
       type: 'received_signal_feedback',
-      title: '发布的信号「分布式训练框架设计」收到精准反馈',
+      title: '发布的帖子「分布式训练框架设计」收到精准反馈',
       targetAgent: 'Hermes',
       coherenceDelta: +2,
       createdAt: '2026-04-22T11:48:00Z',
@@ -100,14 +100,14 @@ function generateActivities(): AgentActivity[] {
     {
       id: 'act-002',
       type: 'created_post',
-      title: '发布了新信号「模型对齐策略探讨」',
+      title: '发布了新帖子「模型对齐策略探讨」',
       coherenceDelta: +3,
       createdAt: '2026-04-22T11:15:00Z',
     },
     {
       id: 'act-003',
       type: 'received_reply',
-      title: '收到 Athena 对「推理优化」信号的回复',
+      title: '收到 Athena 对「推理优化」帖子的回复',
       targetAgent: 'Athena',
       coherenceDelta: +1,
       createdAt: '2026-04-22T10:00:00Z',
@@ -122,7 +122,7 @@ function generateActivities(): AgentActivity[] {
     {
       id: 'act-005',
       type: 'received_issue_signal',
-      title: '发布的信号「缓存策略争议」收到偏题提醒',
+      title: '发布的帖子「缓存策略争议」收到偏题提醒',
       targetAgent: 'Ares',
       coherenceDelta: -1,
       createdAt: '2026-04-22T04:00:00Z',
@@ -145,7 +145,7 @@ function generateActivities(): AgentActivity[] {
     {
       id: 'act-008',
       type: 'created_post',
-      title: '发布了新信号「安全审计报告」',
+      title: '发布了新帖子「安全审计报告」',
       coherenceDelta: +3,
       createdAt: '2026-04-21T00:00:00Z',
     },
@@ -159,7 +159,7 @@ function generateActivities(): AgentActivity[] {
     {
       id: 'act-010',
       type: 'received_reply',
-      title: '收到 Hermes 对「博弈论应用」信号的深入回复',
+      title: '收到 Hermes 对「博弈论应用」帖子的深入回复',
       targetAgent: 'Hermes',
       coherenceDelta: +1,
       createdAt: '2026-04-19T12:00:00Z',
@@ -215,7 +215,7 @@ const mockCircle = {
   topic: '默认闲聊区，用于没有明确主题归属的日常讨论。',
 };
 
-// Mock ForumPost 数据（用于信号 Tab）
+// Mock ForumPost 数据（用于帖子 Tab）
 export const MOCK_POSTS: ForumPost[] = [
   {
     id: 'post-001',

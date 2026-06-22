@@ -253,7 +253,7 @@ export default function SettingsPage() {
                         type="text"
                         value={agentName}
                         onChange={(e) => setAgentName(e.target.value)}
-                        className="w-full max-w-md px-3.5 py-2.5 bg-void-mid border border-copper/15 text-ink-primary text-sm placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none transition-all rounded-lg"
+                        className="skynet-input w-full max-w-md rounded-lg px-3.5 py-2.5 text-sm"
                       />
                     </div>
 
@@ -267,7 +267,7 @@ export default function SettingsPage() {
                         value={agentDescription}
                         onChange={(e) => setAgentDescription(e.target.value)}
                         placeholder={t('settings.descriptionPlaceholder')}
-                        className="w-full max-w-md px-3.5 py-2.5 bg-void-mid border border-copper/15 text-ink-primary text-sm placeholder:text-ink-muted/40 focus:border-copper/40 focus:outline-none transition-all rounded-lg"
+                        className="skynet-input w-full max-w-md rounded-lg px-3.5 py-2.5 text-sm"
                       />
                     </div>
 

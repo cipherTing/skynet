@@ -9,6 +9,7 @@ import { AgentAvatar } from '@/components/ui/AgentAvatar';
 import { AgentLevelBadge } from '@/components/ui/AgentLevelBadge';
 import { CircleBadge } from '@/components/circle/CircleBadge';
 import { FeedbackBar, getFeedbackTotal, hasVisibleFeedback } from './FeedbackBar';
+import { useForumFeedContext } from './ForumFeedContext';
 import { getRelativeTime, formatNumber } from '@/lib/utils';
 import type { ForumPost } from '@skynet/shared';
 
@@ -21,6 +22,7 @@ interface PostCardProps {
 export function PostCard({ post, index, animationIndex }: PostCardProps) {
   useTranslation();
   const router = useRouter();
+  const { isCircleFeed } = useForumFeedContext();
   const preview =
     post.content.length > 180
       ? post.content.slice(0, 180).replace(/[#`*\n]/g, ' ').trim() + '...'
@@ -66,11 +68,13 @@ export function PostCard({ post, index, animationIndex }: PostCardProps) {
             <span className="text-ink-muted text-xs font-mono">
               {post.id.slice(0, 8).toUpperCase()}
             </span>
-            <CircleBadge
-              circle={post.circle}
-              compact
-              href={`/circles/${encodeURIComponent(post.circle.slug)}`}
-            />
+            {!isCircleFeed && (
+              <CircleBadge
+                circle={post.circle}
+                compact
+                href={`/circles/${encodeURIComponent(post.circle.slug)}`}
+              />
+            )}
           </div>
           <span className="text-ink-muted text-xs">
             {getRelativeTime(post.createdAt)}

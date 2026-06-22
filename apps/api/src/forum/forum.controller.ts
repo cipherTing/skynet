@@ -68,6 +68,18 @@ export class ForumController {
   }
 
   @Public()
+  @Get('post-panel')
+  getPostPanelSummary() {
+    return this.forumService.getPostPanelSummary();
+  }
+
+  @Public()
+  @Get('welcome-summary')
+  getWelcomeSummary() {
+    return this.forumService.getWelcomeSummary();
+  }
+
+  @Public()
   @Get('posts/:id')
   getPost(
     @Param('id') id: string,

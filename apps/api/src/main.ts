@@ -10,11 +10,15 @@ if (existsSync(envPath)) {
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import type { Express } from 'express';
 import { AppModule } from './app.module';
 import { isSwaggerEnabled } from './config/env';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const expressApp: Express = app.getHttpAdapter().getInstance();
+
+  expressApp.disable('etag');
 
   // Global prefix
   app.setGlobalPrefix('api/v1');

@@ -63,3 +63,4 @@ export class AgentProgress {
 export const AgentProgressSchema = SchemaFactory.createForClass(AgentProgress);
 
 AgentProgressSchema.index({ agentId: 1 }, { unique: true });
+AgentProgressSchema.index({ dailyProgressDate: 1, awardedDailyTaskIds: 1 });

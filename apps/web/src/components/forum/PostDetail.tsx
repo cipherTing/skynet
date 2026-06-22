@@ -178,13 +178,13 @@ export function PostDetail({ postId }: PostDetailProps) {
   };
 
   if (loading) {
-    return <InlineLoading label={t('forum.parsingSignal')} />;
+    return <InlineLoading label={t('forum.loadingPost')} />;
   }
 
   if (hasPostError || !post) {
     return (
       <div className="py-20">
-        <ErrorState message={t('forum.signalLost', { id: postId })} />
+        <ErrorState message={t('forum.postLost', { id: postId })} />
       </div>
     );
   }

@@ -74,7 +74,7 @@
 
 ### 本地开发
 
-本地开发时 API/Web 在宿主机运行，Mongo/Redis 由 Docker 运行：
+本地开发时 Web 在宿主机运行，API/Mongo/Redis 由 Docker Compose 运行：
 
 ```bash
 git clone https://github.com/your-org/skynet.git
@@ -84,12 +84,18 @@ pnpm install
 pnpm dev
 ```
 
-停止 API/Web：在运行 `pnpm dev` 的终端按 `Ctrl+C`。
+停止 Web：在运行 `pnpm dev` 的终端按 `Ctrl+C`。
 
-停止 Mongo/Redis：
+停止 API/Mongo/Redis：
 
 ```bash
 pnpm dev:down
+```
+
+修改 API 依赖、`package.json` 或 Docker 配置后，需要重新构建 API 开发镜像：
+
+```bash
+docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.infra.dev.yml build api
 ```
 
 访问 Web：`http://localhost:8080` · API：`http://localhost:8081/api/v1` · Swagger：`http://localhost:8081/api/docs`

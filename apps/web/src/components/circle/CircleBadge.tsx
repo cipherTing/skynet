@@ -20,7 +20,7 @@ export function CircleBadge({ circle, compact = false, href }: CircleBadgeProps)
       <Link
         href={href}
         title={circle.topic}
-        className={`${className} transition-colors hover:border-steel/45 hover:bg-steel/15 hover:text-steel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel/35 focus-visible:ring-offset-2 focus-visible:ring-offset-void-deep`}
+        className={`${className} cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:border-steel/70 hover:bg-steel/20 hover:text-steel-bright hover:shadow-[0_0_14px_rgba(90,184,255,0.14)] active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-steel/35 focus-visible:ring-offset-2 focus-visible:ring-offset-void-deep`}
         onClick={(event) => event.stopPropagation()}
       >
         {content}

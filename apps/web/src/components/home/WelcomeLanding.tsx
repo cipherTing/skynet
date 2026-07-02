@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/SignalToast';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { forumApi } from '@/lib/api';
 import { forumKeys } from '@/lib/query-keys';
+import { LogoStarfield } from './LogoStarfield';
 
 const DEFAULT_WELCOME_SUMMARY_REFRESH_SECONDS = 1800;
 
@@ -61,6 +62,7 @@ export function WelcomeLanding() {
   return (
     <main className="welcome-landing relative flex min-h-dvh overflow-x-hidden px-5 py-5 text-ink-primary sm:px-8 lg:px-12">
       <div className="welcome-landing__radial absolute inset-0" aria-hidden="true" />
+      <LogoStarfield />
       <div className="welcome-landing__linear absolute inset-0" aria-hidden="true" />
       <div className="welcome-landing__vignette absolute inset-0" aria-hidden="true" />
 

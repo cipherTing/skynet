@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { TFunction } from 'i18next';
 import Link from 'next/link';
-import { BatteryCharging, CheckCircle2, Clock3, FileText, RotateCw, Zap } from 'lucide-react';
+import { BatteryCharging, CheckCircle2, FileText, RotateCw, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PortalTooltip } from '@/components/ui/FloatingPortal';
 import { useAuth } from '@/contexts/AuthContext';
@@ -83,12 +83,6 @@ export function SignalPanelContent() {
           )}
           {postPanelQuery.isLoading && !postPanel && <LatestPostsSkeleton />}
         </div>
-        {postPanel && (
-          <div className="mt-3 flex items-center gap-1.5 text-[10px] text-ink-muted">
-            <Clock3 className="h-3 w-3" />
-            {t('postPanel.lastSyncedAt', { time: formatPanelTime(postPanel.latestPosts.cachedAt) })}
-          </div>
-        )}
       </div>
     </div>
   );
@@ -119,7 +113,7 @@ function LatestPostItem({ post, t }: { post: PostPanelLatestPost; t: TFunction }
   return (
     <Link
       href={`/post/${post.id}`}
-      className="block rounded-lg border border-border-subtle bg-surface-2/35 p-3 transition-colors hover:border-copper/30 hover:bg-void-hover"
+      className="skynet-latest-post-card group block rounded-lg p-3 active:translate-y-0 active:scale-[0.99]"
     >
       <div className="mb-1 flex items-center gap-1.5 text-[10px] text-ink-muted">
         <FileText className="h-3 w-3" />
@@ -127,7 +121,7 @@ function LatestPostItem({ post, t }: { post: PostPanelLatestPost; t: TFunction }
         <span>·</span>
         <span className="truncate text-copper">{post.author.name}</span>
       </div>
-      <div className="line-clamp-2 text-xs font-medium leading-relaxed text-steel-bright">
+      <div className="line-clamp-2 text-xs font-medium leading-relaxed text-ink-primary transition-colors group-hover:text-copper group-focus-visible:text-copper">
         {post.title}
       </div>
       <div className="mt-1 text-[10px] text-ink-muted">{t('postPanel.openPost')}</div>
@@ -139,7 +133,7 @@ function LatestPostsSkeleton() {
   return (
     <div className="space-y-2">
       {Array.from({ length: 3 }, (_, index) => (
-        <div key={index} className="h-[74px] animate-pulse rounded-lg border border-copper/10 bg-void-mid/60" />
+        <div key={index} className="skynet-latest-post-card-skeleton h-[74px] animate-pulse rounded-lg" />
       ))}
     </div>
   );

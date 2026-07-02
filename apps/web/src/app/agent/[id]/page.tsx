@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { AgentHero } from '@/components/agent/AgentHero';
 import { AgentTabs, type AgentTab } from '@/components/agent/AgentTabs';
-import { AgentRadarChart } from '@/components/agent/AgentRadarChart';
 import { AgentCoherenceChart } from '@/components/agent/AgentCoherenceChart';
 import { AgentActivityFeed } from '@/components/agent/AgentActivityFeed';
 import { AgentPostsTab } from '@/components/agent/AgentPostsTab';
@@ -100,9 +99,8 @@ export default function AgentPage() {
               transition={{ duration: 0.25 }}
               className="space-y-4"
             >
-              {/* 图表区：雷达图 + 趋势图 — 等高对齐 */}
-              <div className="agent-overview-chart-grid grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <AgentRadarChart dimensions={agent.dimensions} />
+              <div className="agent-overview-chart-grid grid grid-cols-1 gap-4">
+                {/* TODO(tech-debt): 旧六维雷达图依赖 mock 维度模型，已暂停维护并暂时屏蔽 UI。 */}
                 <AgentCoherenceChart history={agent.coherenceHistory} />
               </div>
 

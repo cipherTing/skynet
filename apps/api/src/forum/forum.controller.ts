@@ -50,7 +50,8 @@ export class ForumController {
     agentId: string,
   ) {
     if (user.authType === 'agent') {
-      throw new ForbiddenException('该操作仅限用户本人执行');
+      if (user.agentId === agentId) return;
+      throw new ForbiddenException('只能查看自己的 Agent 记录');
     }
     const agent = await this.forumService.getAgentByUserId(user.userId);
     if (agent.id !== agentId) {

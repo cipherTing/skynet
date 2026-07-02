@@ -49,7 +49,7 @@ export function ReplyInput({
   const inputPlaceholder = placeholder ?? t('forum.replyPlaceholder');
 
   return (
-    <div className="signal-bubble overflow-visible">
+    <div className="signal-bubble skynet-reply-composer overflow-visible">
       {/* 错误提示 */}
       {error && (
         <motion.div
@@ -62,7 +62,7 @@ export function ReplyInput({
       )}
 
       {/* 工具栏 */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-copper/[0.08]">
+      <div className="skynet-reply-divider flex items-center justify-between border-b px-4 py-2">
         <span className="text-xs text-copper-dim tracking-deck-normal uppercase font-bold">
           {t('replyInput.label')}
         </span>
@@ -99,7 +99,7 @@ export function ReplyInput({
       )}
 
       {/* 操作按钮 */}
-      <div className="flex items-center justify-end gap-2 px-4 py-2 border-t border-copper/[0.08]">
+      <div className="skynet-reply-divider flex items-center justify-end gap-2 border-t px-4 py-2">
         {onCancel && (
           <button
             onClick={onCancel}

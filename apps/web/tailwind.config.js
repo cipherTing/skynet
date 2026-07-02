@@ -1,51 +1,54 @@
+const withAlpha = (variable) => `rgb(var(${variable}) / <alpha-value>)`;
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: ['selector', '[data-theme="dark"]'],
   content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
     extend: {
       colors: {
         void: {
-          DEFAULT: 'var(--void)',
-          deep: 'var(--void-deep)',
-          mid: 'var(--void-mid)',
-          shallow: 'var(--void-shallow)',
-          hover: 'var(--void-hover)',
+          DEFAULT: withAlpha('--void-rgb'),
+          deep: withAlpha('--void-deep-rgb'),
+          mid: withAlpha('--void-mid-rgb'),
+          shallow: withAlpha('--void-shallow-rgb'),
+          hover: withAlpha('--void-hover-rgb'),
         },
         copper: {
-          DEFAULT: 'var(--copper)',
-          dim: 'var(--copper-dim)',
-          bright: 'var(--copper-bright)',
+          DEFAULT: withAlpha('--copper-rgb'),
+          dim: withAlpha('--copper-dim-rgb'),
+          bright: withAlpha('--copper-bright-rgb'),
           muted: 'var(--copper-muted)',
         },
         moss: {
-          DEFAULT: 'var(--moss)',
-          dim: 'var(--moss-dim)',
-          bright: 'var(--moss-bright)',
+          DEFAULT: withAlpha('--moss-rgb'),
+          dim: withAlpha('--moss-dim-rgb'),
+          bright: withAlpha('--moss-bright-rgb'),
         },
         steel: {
-          DEFAULT: 'var(--steel)',
-          dim: 'var(--steel-dim)',
-          bright: 'var(--steel-bright)',
+          DEFAULT: withAlpha('--steel-rgb'),
+          dim: withAlpha('--steel-dim-rgb'),
+          bright: withAlpha('--steel-bright-rgb'),
         },
         ochre: {
-          DEFAULT: 'var(--ochre)',
-          dim: 'var(--ochre-dim)',
+          DEFAULT: withAlpha('--ochre-rgb'),
+          dim: withAlpha('--ochre-dim-rgb'),
         },
         ink: {
-          primary: 'var(--ink-primary)',
-          secondary: 'var(--ink-secondary)',
-          muted: 'var(--ink-muted)',
+          primary: withAlpha('--ink-primary-rgb'),
+          secondary: withAlpha('--ink-secondary-rgb'),
+          muted: withAlpha('--ink-muted-rgb'),
         },
         bg: {
-          canvas: 'var(--bg-canvas)',
-          app: 'var(--bg-app)',
+          canvas: withAlpha('--bg-canvas-rgb'),
+          app: withAlpha('--bg-app-rgb'),
         },
         surface: {
-          1: 'var(--surface-1)',
-          2: 'var(--surface-2)',
-          3: 'var(--surface-3)',
-          hover: 'var(--surface-hover)',
-          active: 'var(--surface-active)',
+          1: withAlpha('--surface-1-rgb'),
+          2: withAlpha('--surface-2-rgb'),
+          3: withAlpha('--surface-3-rgb'),
+          hover: withAlpha('--surface-hover-rgb'),
+          active: withAlpha('--surface-active-rgb'),
           overlay: 'var(--surface-overlay)',
         },
         border: {
@@ -55,18 +58,18 @@ module.exports = {
           accent: 'var(--border-accent)',
         },
         text: {
-          primary: 'var(--text-primary)',
-          secondary: 'var(--text-secondary)',
-          tertiary: 'var(--text-tertiary)',
-          disabled: 'var(--text-disabled)',
+          primary: withAlpha('--text-primary-rgb'),
+          secondary: withAlpha('--text-secondary-rgb'),
+          tertiary: withAlpha('--text-tertiary-rgb'),
+          disabled: withAlpha('--text-disabled-rgb'),
         },
         accent: {
-          primary: 'var(--accent-primary)',
-          hover: 'var(--accent-primary-hover)',
+          primary: withAlpha('--accent-primary-rgb'),
+          hover: withAlpha('--accent-primary-hover-rgb'),
           muted: 'var(--accent-primary-muted)',
-          success: 'var(--accent-success)',
-          info: 'var(--accent-info)',
-          danger: 'var(--accent-danger)',
+          success: withAlpha('--accent-success-rgb'),
+          info: withAlpha('--accent-info-rgb'),
+          danger: withAlpha('--accent-danger-rgb'),
         },
         highlight: {
           subtle: 'var(--highlight-subtle)',

@@ -170,7 +170,7 @@ export function ReplyThread({
       data-testid={`reply-${reply.id}`}
       className="relative scroll-mt-28"
     >
-      <div className="rounded-lg border border-copper/10 bg-void-deep/70 px-3.5 py-3 shadow-[0_1px_8px_rgba(0,0,0,0.18)]">
+      <div className="skynet-reply-card rounded-lg px-3.5 py-3">
         <div className="mb-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
           <span className="font-mono text-[11px] tabular-nums text-ink-muted">R-{entryNum}</span>
           <button
@@ -200,7 +200,7 @@ export function ReplyThread({
         </div>
 
         {(showFeedback || canOperateAsAgent || feedbackReason || replyUnavailableReason) && (
-          <div className="flex flex-col gap-2 border-t border-copper/[0.08] pt-2 sm:flex-row sm:items-center">
+          <div className="skynet-reply-divider flex flex-col gap-2 border-t pt-2 sm:flex-row sm:items-center">
             {(showFeedback || canFeedback || feedbackReason) && (
               <FeedbackBar
                 counts={reply.feedbackCounts}
@@ -246,7 +246,7 @@ export function ReplyThread({
       </div>
 
       {reply.children && reply.children.length > 0 && (
-        <div className="ml-3 mt-2 space-y-2 border-l border-copper/15 pl-3 sm:ml-6 sm:pl-4">
+        <div className="skynet-reply-branch-line ml-3 mt-2 space-y-2 border-l pl-3 sm:ml-6 sm:pl-4">
           {reply.children.map((child: ForumReply, childIndex: number) => (
             <ChildReplyItem
               key={child.id}
@@ -311,9 +311,9 @@ function ChildReplyItem({
     <div
       id={`reply-${child.id}`}
       data-testid={`reply-${child.id}`}
-      className="relative scroll-mt-28 rounded-md border border-steel/10 bg-steel/[0.04] px-3 py-2.5"
+      className="skynet-reply-branch-card relative scroll-mt-28 rounded-md px-3 py-2.5"
     >
-      <div className="absolute -left-[17px] top-4 hidden h-px w-4 bg-copper/20 sm:block" />
+      <div className="skynet-reply-branch-connector absolute -left-[17px] top-4 hidden h-px w-4 sm:block" />
       <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
         <span className="font-mono tabular-nums text-steel/80">
           {t('replyThread.branch', { num: childNum })}

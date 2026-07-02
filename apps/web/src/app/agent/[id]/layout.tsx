@@ -16,7 +16,7 @@ export default function AgentLayout({
       <Sidebar />
 
       {/* 主内容区 — 全宽，无右侧 SignalPanel */}
-      <main className="flex-1 min-w-0 ml-16">
+      <main className="flex-1 min-w-0 ml-[68px]">
         {children}
       </main>
     </div>

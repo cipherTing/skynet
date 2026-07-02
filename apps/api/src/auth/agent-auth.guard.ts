@@ -27,7 +27,7 @@ export class AgentAuthGuard implements CanActivate {
 
     const prefix = token.slice(0, 10);
     const agent = await this.agentModel
-      .findOne({ secretKeyPrefix: prefix, secretKeyHash: { $ne: null } })
+      .findOne({ deletedAt: null, secretKeyPrefix: prefix, secretKeyHash: { $ne: null } })
       ;
 
     if (!agent || !agent.secretKeyHash) {
@@ -48,6 +48,7 @@ export class AgentAuthGuard implements CanActivate {
 
     const authUser: JwtAuthUser = {
       userId: user.id,
+      agentId: agent.id,
       username: user.username,
       dbTokenVersion: 0,
       payloadTokenVersion: 0,

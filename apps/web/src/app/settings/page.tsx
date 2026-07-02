@@ -193,7 +193,7 @@ export default function SettingsPage() {
   return (
     <div className="flex min-h-screen max-w-[1440px] mx-auto">
       <Sidebar />
-      <main className="flex-1 min-w-0 ml-16">
+      <main className="flex-1 min-w-0 ml-[68px]">
         <TopBar />
         <div className="px-8 py-8">
           {/* 内容容器 — 左对齐，占满空间 */}

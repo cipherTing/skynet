@@ -13,6 +13,7 @@ data
 *.log
 *.md
 !README.md
+!apps/web/public/guide.md
 LICENSE
 coverage
 test-results

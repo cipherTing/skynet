@@ -84,9 +84,9 @@ pnpm install
 pnpm dev
 ```
 
-停止 Web：在运行 `pnpm dev` 的终端按 `Ctrl+C`。
+停止本地开发环境：在运行 `pnpm dev` 的终端按 `Ctrl+C`，脚本会同步停止 Web 和 Docker 开发服务。
 
-停止 API/Mongo/Redis：
+如需单独停止 Docker 开发服务：
 
 ```bash
 pnpm dev:down

@@ -24,7 +24,7 @@ const tabItems: Array<{ icon: typeof Radio; labelKey: string; section: SidebarSe
 ];
 
 const navButtonClass = (isActive: boolean) =>
-  `relative flex w-full flex-col items-center justify-center gap-0.5 rounded-lg py-2 transition-all duration-200 ${
+  `relative flex w-full flex-col items-center justify-center gap-1 rounded-lg py-2.5 transition-all duration-200 ${
     isActive ? 'bg-copper/10 text-copper' : 'text-ink-muted hover:bg-copper/5 hover:text-copper'
   }`;
 
@@ -45,7 +45,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
 
   return (
     <>
-      <aside className="fixed left-0 top-0 z-40 flex h-screen w-[45px] flex-col items-center py-4">
+      <aside className="fixed left-0 top-0 z-40 flex h-screen w-[68px] flex-col items-center overflow-x-hidden overflow-y-auto py-4">
         <div className="absolute inset-0 border-r border-border-subtle bg-void-deep" />
 
         <div className="relative flex h-full w-full flex-col items-center px-0">
@@ -56,8 +56,8 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
               aria-label={t('sidebar.feed')}
               onClick={() => onSectionChange('feed')}
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border-subtle bg-surface-1/60">
-                <span className="font-display text-sm font-black tracking-deck-wide text-copper">S</span>
+              <div className="flex h-[46px] w-[46px] items-center justify-center rounded-lg border border-border-subtle bg-surface-1/60">
+                <span className="font-display text-base font-black tracking-deck-wide text-copper">S</span>
               </div>
             </button>
           ) : (
@@ -67,13 +67,13 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
               aria-label={t('sidebar.feed')}
               onClick={() => setHomeActiveSection('feed')}
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border-subtle bg-surface-1/60">
-                <span className="font-display text-sm font-black tracking-deck-wide text-copper">S</span>
+              <div className="flex h-[46px] w-[46px] items-center justify-center rounded-lg border border-border-subtle bg-surface-1/60">
+                <span className="font-display text-base font-black tracking-deck-wide text-copper">S</span>
               </div>
             </Link>
           )}
 
-          <div className="deck-divider mb-3 w-7" />
+          <div className="deck-divider mb-3 w-10" />
 
           <nav className="flex w-full flex-1 flex-col items-center gap-1" aria-label={t('sidebar.navigation')}>
             {tabItems.map((item) => {
@@ -89,8 +89,8 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
                       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                     />
                   )}
-                  <Icon className="h-5 w-5" />
-                  <span className="text-[10px] font-medium tracking-wide">{label}</span>
+                  <Icon className="h-6 w-6" />
+                  <span className="text-[11px] font-medium tracking-wide">{label}</span>
                 </>
               );
 
@@ -123,7 +123,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
             })}
           </nav>
 
-          <div className="deck-divider mb-3 w-7" />
+          <div className="deck-divider mb-3 w-10" />
 
           <div className="flex w-full flex-col items-center gap-2 pb-2">
             {isAuthenticated && agent ? (
@@ -134,10 +134,10 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
                   <Link
                     href="/auth"
                     aria-label={t('sidebar.login')}
-                    className="flex w-full flex-col items-center justify-center gap-0.5 rounded-lg py-2 text-ink-muted transition-all hover:bg-copper/5 hover:text-copper"
+                    className="flex w-full flex-col items-center justify-center gap-1 rounded-lg py-2.5 text-ink-muted transition-all hover:bg-copper/5 hover:text-copper"
                   >
-                    <LogIn className="h-5 w-5" />
-                    <span className="text-[10px] font-medium tracking-wide">{t('sidebar.login')}</span>
+                    <LogIn className="h-6 w-6" />
+                    <span className="text-[11px] font-medium tracking-wide">{t('sidebar.login')}</span>
                   </Link>
                 </span>
               </PortalTooltip>

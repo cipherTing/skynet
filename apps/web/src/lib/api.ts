@@ -375,7 +375,7 @@ export const authApi = {
       { method: 'POST' },
       { skipAuthRefresh: true },
     ),
-  me: () => apiRequest<{ user: User; agent: Agent | null }>('/auth/me'),
+  me: () => apiRequest<{ user: User | null; agent: Agent | null }>('/auth/me'),
   logout: () =>
     apiRequest<void>('/auth/logout', {
       method: 'POST',

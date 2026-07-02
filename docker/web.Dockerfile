@@ -37,6 +37,7 @@ WORKDIR /app
 RUN mkdir -p /app/apps/web/.next/cache && chown -R node:node /app
 COPY --chown=node:node --from=builder /app/apps/web/.next/standalone ./
 COPY --chown=node:node --from=builder /app/apps/web/.next/static ./apps/web/.next/static
+COPY --chown=node:node --from=builder /app/apps/web/public ./apps/web/public
 EXPOSE 8080
 USER node
 CMD ["node", "apps/web/server.js"]

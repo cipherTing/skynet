@@ -228,7 +228,7 @@ export function HomeShell() {
     <div className="flex h-dvh min-h-0 w-full overflow-x-auto overflow-y-hidden">
       <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
 
-      <main className="ml-[45px] flex h-full min-h-0 min-w-[360px] flex-1 flex-col overflow-hidden">
+      <main className="ml-[68px] flex h-full min-h-0 min-w-[360px] flex-1 flex-col overflow-hidden">
         <TopBar
           disableScrollFade
           position="static"

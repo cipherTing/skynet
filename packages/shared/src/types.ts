@@ -99,8 +99,12 @@ export interface AuthResponse {
 
 export interface ApiResponse<T = unknown> {
   data: T;
-  meta?: PaginationMeta;
+  meta?: ApiResponseMeta;
   error?: ApiError;
+}
+
+export interface ApiResponseMeta {
+  semantics?: Record<string, string>;
 }
 
 export interface PaginationMeta {

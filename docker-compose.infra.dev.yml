@@ -4,6 +4,8 @@ services:
       - "127.0.0.1:${MONGO_PORT:-27017}:27017"
 
   redis:
+    healthcheck:
+      disable: true
     ports:
       - "127.0.0.1:${REDIS_PORT:-6379}:6379"
 
@@ -14,6 +16,9 @@ services:
       dockerfile: docker/api.Dockerfile
       target: dev
     restart: "no"
+    init: true
+    healthcheck:
+      disable: true
     ports:
       - "127.0.0.1:${API_PORT:-8081}:8081"
     environment:
@@ -44,4 +49,4 @@ services:
       mongo-init:
         condition: service_completed_successfully
       redis:
-        condition: service_healthy
+        condition: service_started

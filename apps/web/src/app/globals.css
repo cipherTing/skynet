@@ -10,12 +10,19 @@
   :root[data-theme="dark"] {
     --bg-canvas: #080A0F;
     --bg-app: #0B0E14;
+    --bg-canvas-rgb: 8 10 15;
+    --bg-app-rgb: 11 14 20;
     --surface-1: #10141D;
     --surface-2: #151B26;
     --surface-3: #1B2330;
     --surface-hover: #202A3A;
     --surface-active: #263246;
     --surface-overlay: rgba(16, 20, 29, 0.92);
+    --surface-1-rgb: 16 20 29;
+    --surface-2-rgb: 21 27 38;
+    --surface-3-rgb: 27 35 48;
+    --surface-hover-rgb: 32 42 58;
+    --surface-active-rgb: 38 50 70;
 
     --border-subtle: rgba(148, 163, 184, 0.032);
     --border-default: rgba(148, 163, 184, 0.058);
@@ -26,6 +33,10 @@
     --text-secondary: #C3CBD8;
     --text-tertiary: #8D9AAF;
     --text-disabled: #4D586A;
+    --text-primary-rgb: 238 242 250;
+    --text-secondary-rgb: 195 203 216;
+    --text-tertiary-rgb: 141 154 175;
+    --text-disabled-rgb: 77 88 106;
 
     --accent-primary: #E86F35;
     --accent-primary-dim: #B95A2E;
@@ -37,6 +48,15 @@
     --accent-info-dim: #2786D1;
     --accent-danger: #FF5A6E;
     --accent-danger-dim: #D73750;
+    --accent-primary-rgb: 232 111 53;
+    --accent-primary-dim-rgb: 185 90 46;
+    --accent-primary-hover-rgb: 245 134 75;
+    --accent-success-rgb: 53 208 127;
+    --accent-success-dim-rgb: 32 167 102;
+    --accent-info-rgb: 90 184 255;
+    --accent-info-dim-rgb: 39 134 209;
+    --accent-danger-rgb: 255 90 110;
+    --accent-danger-dim-rgb: 215 55 80;
 
     --shadow-card: 0 14px 34px rgba(0, 0, 0, 0.17), 0 0 0 1px rgba(148, 163, 184, 0.01);
     --shadow-card-hover: 0 16px 42px rgba(0, 0, 0, 0.20), 0 0 0 1px rgba(232, 111, 53, 0.025);
@@ -53,26 +73,45 @@
     --void-mid: var(--surface-2);
     --void-shallow: var(--surface-3);
     --void-hover: var(--surface-hover);
+    --void-rgb: var(--bg-canvas-rgb);
+    --void-deep-rgb: var(--surface-1-rgb);
+    --void-mid-rgb: var(--surface-2-rgb);
+    --void-shallow-rgb: var(--surface-3-rgb);
+    --void-hover-rgb: var(--surface-hover-rgb);
 
     --copper: var(--accent-primary);
     --copper-dim: var(--accent-primary-dim);
     --copper-bright: var(--accent-primary-hover);
     --copper-muted: var(--accent-primary-muted);
+    --copper-rgb: var(--accent-primary-rgb);
+    --copper-dim-rgb: var(--accent-primary-dim-rgb);
+    --copper-bright-rgb: var(--accent-primary-hover-rgb);
 
     --moss: var(--accent-success);
     --moss-dim: var(--accent-success-dim);
     --moss-bright: #63E6A0;
+    --moss-rgb: var(--accent-success-rgb);
+    --moss-dim-rgb: var(--accent-success-dim-rgb);
+    --moss-bright-rgb: 99 230 160;
 
     --steel: var(--accent-info);
     --steel-dim: var(--accent-info-dim);
     --steel-bright: #86D3FF;
+    --steel-rgb: var(--accent-info-rgb);
+    --steel-dim-rgb: var(--accent-info-dim-rgb);
+    --steel-bright-rgb: 134 211 255;
 
     --ochre: var(--accent-danger);
     --ochre-dim: var(--accent-danger-dim);
+    --ochre-rgb: var(--accent-danger-rgb);
+    --ochre-dim-rgb: var(--accent-danger-dim-rgb);
 
     --ink-primary: var(--text-primary);
     --ink-secondary: var(--text-secondary);
     --ink-muted: var(--text-tertiary);
+    --ink-primary-rgb: var(--text-primary-rgb);
+    --ink-secondary-rgb: var(--text-secondary-rgb);
+    --ink-muted-rgb: var(--text-tertiary-rgb);
 
     --card-bg: var(--surface-1);
     --card-bg-hover: var(--surface-2);
@@ -120,12 +159,19 @@
   :root[data-theme="light"] {
     --bg-canvas: #F2F2F5;
     --bg-app: #F8F8FB;
+    --bg-canvas-rgb: 242 242 245;
+    --bg-app-rgb: 248 248 251;
     --surface-1: #FFFFFF;
     --surface-2: #F8F8FB;
     --surface-3: #E8E8F0;
     --surface-hover: #EEF0F5;
     --surface-active: #E3E6EF;
     --surface-overlay: rgba(255, 255, 255, 0.92);
+    --surface-1-rgb: 255 255 255;
+    --surface-2-rgb: 248 248 251;
+    --surface-3-rgb: 232 232 240;
+    --surface-hover-rgb: 238 240 245;
+    --surface-active-rgb: 227 230 239;
 
     --border-subtle: rgba(74, 74, 94, 0.10);
     --border-default: #DCDCE6;
@@ -136,6 +182,10 @@
     --text-secondary: #4A4A5E;
     --text-tertiary: #7A7A8E;
     --text-disabled: #A4A4B4;
+    --text-primary-rgb: 10 10 20;
+    --text-secondary-rgb: 74 74 94;
+    --text-tertiary-rgb: 122 122 142;
+    --text-disabled-rgb: 164 164 180;
 
     --accent-primary: #CC5C1A;
     --accent-primary-dim: #A64A14;
@@ -147,6 +197,15 @@
     --accent-info-dim: #075985;
     --accent-danger: #DC2626;
     --accent-danger-dim: #B91C1C;
+    --accent-primary-rgb: 204 92 26;
+    --accent-primary-dim-rgb: 166 74 20;
+    --accent-primary-hover-rgb: 232 112 46;
+    --accent-success-rgb: 21 128 61;
+    --accent-success-dim-rgb: 22 101 52;
+    --accent-info-rgb: 3 105 161;
+    --accent-info-dim-rgb: 7 89 133;
+    --accent-danger-rgb: 220 38 38;
+    --accent-danger-dim-rgb: 185 28 28;
 
     --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.10), 0 1px 2px rgba(0, 0, 0, 0.06);
     --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
@@ -163,26 +222,45 @@
     --void-mid: var(--surface-3);
     --void-shallow: #DCDCE6;
     --void-hover: #D0D0DC;
+    --void-rgb: var(--bg-canvas-rgb);
+    --void-deep-rgb: var(--surface-1-rgb);
+    --void-mid-rgb: var(--surface-3-rgb);
+    --void-shallow-rgb: 220 220 230;
+    --void-hover-rgb: 208 208 220;
 
     --copper: var(--accent-primary);
     --copper-dim: var(--accent-primary-dim);
     --copper-bright: var(--accent-primary-hover);
     --copper-muted: var(--accent-primary-muted);
+    --copper-rgb: var(--accent-primary-rgb);
+    --copper-dim-rgb: var(--accent-primary-dim-rgb);
+    --copper-bright-rgb: var(--accent-primary-hover-rgb);
 
     --moss: var(--accent-success);
     --moss-dim: var(--accent-success-dim);
     --moss-bright: #22C55E;
+    --moss-rgb: var(--accent-success-rgb);
+    --moss-dim-rgb: var(--accent-success-dim-rgb);
+    --moss-bright-rgb: 34 197 94;
 
     --steel: var(--accent-info);
     --steel-dim: var(--accent-info-dim);
     --steel-bright: #0EA5E9;
+    --steel-rgb: var(--accent-info-rgb);
+    --steel-dim-rgb: var(--accent-info-dim-rgb);
+    --steel-bright-rgb: 14 165 233;
 
     --ochre: var(--accent-danger);
     --ochre-dim: var(--accent-danger-dim);
+    --ochre-rgb: var(--accent-danger-rgb);
+    --ochre-dim-rgb: var(--accent-danger-dim-rgb);
 
     --ink-primary: var(--text-primary);
     --ink-secondary: var(--text-secondary);
     --ink-muted: var(--text-tertiary);
+    --ink-primary-rgb: var(--text-primary-rgb);
+    --ink-secondary-rgb: var(--text-secondary-rgb);
+    --ink-muted-rgb: var(--text-tertiary-rgb);
 
     --card-bg: var(--surface-1);
     --card-bg-hover: var(--surface-2);
@@ -309,6 +387,12 @@
     --welcome-cta-text: #080A0F;
     --welcome-cta-shadow: 0 18px 44px color-mix(in srgb, var(--copper) 24%, transparent), inset 0 1px 0 color-mix(in srgb, var(--highlight-strong) 45%, transparent);
     --welcome-stat-skeleton: linear-gradient(90deg, color-mix(in srgb, var(--welcome-stat-tone) 42%, transparent), color-mix(in srgb, var(--welcome-stat-tone) 14%, transparent), color-mix(in srgb, var(--welcome-stat-tone) 42%, transparent));
+    --logo-starfield-tile-bg: rgba(246, 249, 255, 0.92);
+    --logo-starfield-tile-border: rgba(255, 255, 255, 0.28);
+    --logo-starfield-tile-shadow: 0 18px 48px rgba(0, 0, 0, 0.30), 0 0 34px rgba(134, 211, 255, 0.12);
+    --logo-starfield-logo: #111827;
+    --logo-starfield-streak: color-mix(in srgb, var(--steel-bright) 42%, transparent);
+    --logo-starfield-streak-core: color-mix(in srgb, var(--copper-bright) 38%, transparent);
   }
 
   :root[data-theme="light"] .welcome-landing {
@@ -329,6 +413,12 @@
     --welcome-cta-text: #FFFFFF;
     --welcome-cta-shadow: 0 16px 36px rgba(166, 74, 20, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.12);
     --welcome-stat-skeleton: linear-gradient(90deg, color-mix(in srgb, var(--welcome-stat-tone) 58%, transparent), color-mix(in srgb, var(--welcome-stat-tone) 18%, transparent), color-mix(in srgb, var(--welcome-stat-tone) 58%, transparent));
+    --logo-starfield-tile-bg: rgba(255, 255, 255, 0.82);
+    --logo-starfield-tile-border: rgba(15, 23, 42, 0.10);
+    --logo-starfield-tile-shadow: 0 18px 48px rgba(15, 23, 42, 0.13), 0 0 32px rgba(3, 105, 161, 0.08);
+    --logo-starfield-logo: #0F172A;
+    --logo-starfield-streak: rgba(3, 105, 161, 0.26);
+    --logo-starfield-streak-core: rgba(204, 92, 26, 0.22);
   }
 
   .welcome-title {
@@ -345,6 +435,149 @@
 
   .welcome-landing__vignette {
     box-shadow: var(--welcome-vignette);
+  }
+
+  .logo-starfield {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+    pointer-events: none;
+    perspective: 820px;
+    perspective-origin: 50% 45%;
+  }
+
+  .logo-starfield::before {
+    content: '';
+    position: absolute;
+    inset: 14% 16%;
+    border-radius: 999px;
+    background: radial-gradient(circle, color-mix(in srgb, var(--steel-bright) 16%, transparent), transparent 66%);
+    filter: blur(38px);
+    opacity: 0.46;
+  }
+
+  .logo-starfield__item {
+    position: absolute;
+    left: 50%;
+    top: 45%;
+    width: var(--star-size);
+    height: var(--star-size);
+    opacity: 0;
+    transform: translate3d(-50%, -50%, -380px) scale(0.2);
+    animation: logo-starfield-flight var(--star-duration) cubic-bezier(0.16, 0.72, 0.22, 1) infinite;
+    animation-delay: var(--star-delay);
+    will-change: transform, opacity;
+  }
+
+  .logo-starfield__streaks {
+    position: absolute;
+    inset: 0;
+    opacity: 0.9;
+    mix-blend-mode: screen;
+  }
+
+  :root[data-theme="light"] .logo-starfield__streaks {
+    mix-blend-mode: multiply;
+    opacity: 0.72;
+  }
+
+  .logo-starfield__streak {
+    position: absolute;
+    left: 50%;
+    top: 45%;
+    width: var(--streak-length);
+    height: 3px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, transparent 0%, var(--logo-starfield-streak-core) 20%, var(--logo-starfield-streak) 52%, transparent 100%);
+    filter: blur(0.3px) drop-shadow(0 0 10px var(--logo-starfield-streak));
+    opacity: 0;
+    transform: rotate(var(--streak-angle)) translateX(0) scaleX(0.08);
+    transform-origin: left center;
+    animation: logo-starfield-streak var(--streak-duration) ease-out infinite;
+    animation-delay: var(--streak-delay);
+    will-change: transform, opacity;
+  }
+
+  .logo-starfield__tile {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    place-items: center;
+    border: 1px solid var(--logo-starfield-tile-border);
+    border-radius: 24%;
+    background: var(--logo-starfield-tile-bg);
+    box-shadow: var(--logo-starfield-tile-shadow);
+    transform: rotate(-8deg);
+    backdrop-filter: blur(10px);
+  }
+
+  .logo-starfield__logo {
+    display: block;
+    width: 68%;
+    height: 68%;
+    color: var(--logo-starfield-logo);
+    overflow: hidden;
+    border-radius: 18%;
+  }
+
+  @keyframes logo-starfield-flight {
+    0% {
+      opacity: 0;
+      transform: translate3d(-50%, -50%, -420px) scale(0.14) rotate(0deg);
+    }
+    10% {
+      opacity: 0.78;
+    }
+    72% {
+      opacity: 0.62;
+    }
+    100% {
+      opacity: 0;
+      transform: translate3d(calc(-50% + var(--star-x)), calc(-50% + var(--star-y)), 320px) scale(2.68) rotate(18deg);
+    }
+  }
+
+  @keyframes logo-starfield-streak {
+    0% {
+      opacity: 0;
+      transform: rotate(var(--streak-angle)) translateX(0) scaleX(0.08);
+    }
+    12% {
+      opacity: 0.72;
+    }
+    72% {
+      opacity: 0.36;
+    }
+    100% {
+      opacity: 0;
+      transform: rotate(var(--streak-angle)) translateX(58vw) scaleX(1);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .logo-starfield {
+      perspective: 620px;
+    }
+
+    .logo-starfield__item {
+      width: calc(var(--star-size) * 0.78);
+      height: calc(var(--star-size) * 0.78);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .logo-starfield__item {
+      animation: none;
+      opacity: 0.18;
+      transform: translate3d(calc(-50% + var(--star-static-x)), calc(-50% + var(--star-static-y)), 0) scale(0.82);
+    }
+
+    .logo-starfield__streak {
+      animation: none;
+      opacity: 0.14;
+      transform: rotate(var(--streak-angle)) translateX(10vw) scaleX(0.55);
+    }
   }
 
   .welcome-panel {
@@ -474,6 +707,139 @@
     background: linear-gradient(180deg, var(--copper-bright), var(--copper-dim));
     opacity: 0.60;
     box-shadow: 0 0 6px rgba(232, 111, 53, 0.16);
+  }
+
+  .skynet-latest-post-card {
+    border: 1px solid color-mix(in srgb, var(--copper) 16%, rgba(148, 163, 184, 0.13));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--surface-2) 96%, var(--copper) 4%), color-mix(in srgb, var(--surface-1) 96%, var(--steel) 4%));
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16), inset 0 1px 0 var(--highlight-subtle);
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  }
+
+  .skynet-latest-post-card:hover {
+    border-color: color-mix(in srgb, var(--copper) 32%, rgba(148, 163, 184, 0.16));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--surface-2) 93%, var(--copper) 7%), color-mix(in srgb, var(--surface-1) 95%, var(--steel) 5%));
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.20), 0 0 0 1px color-mix(in srgb, var(--copper) 5%, transparent);
+    transform: translateY(-2px);
+  }
+
+  .skynet-latest-post-card:focus-visible {
+    border-color: color-mix(in srgb, var(--copper) 36%, rgba(148, 163, 184, 0.18));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--surface-2) 93%, var(--copper) 7%), color-mix(in srgb, var(--surface-1) 95%, var(--steel) 5%));
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.20), 0 0 0 2px var(--focus-ring), 0 0 0 4px var(--focus-ring-offset);
+    transform: translateY(-2px);
+  }
+
+  .skynet-latest-post-card-skeleton {
+    border: 1px solid color-mix(in srgb, var(--copper) 12%, rgba(148, 163, 184, 0.10));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--surface-2) 92%, transparent), color-mix(in srgb, var(--surface-1) 88%, transparent));
+    box-shadow: inset 0 1px 0 var(--highlight-subtle);
+  }
+
+  :root[data-theme="light"] .skynet-latest-post-card {
+    border-color: color-mix(in srgb, var(--copper) 16%, rgba(15, 23, 42, 0.08));
+    background: color-mix(in srgb, var(--surface-1) 86%, var(--copper) 3%);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05), inset 0 1px 0 var(--highlight-inset);
+  }
+
+  :root[data-theme="light"] .skynet-latest-post-card:hover {
+    border-color: color-mix(in srgb, var(--copper) 34%, rgba(15, 23, 42, 0.10));
+    background: color-mix(in srgb, var(--surface-1) 82%, var(--copper) 8%);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  }
+
+  :root[data-theme="light"] .skynet-latest-post-card:focus-visible {
+    border-color: color-mix(in srgb, var(--copper) 34%, rgba(15, 23, 42, 0.10));
+    background: color-mix(in srgb, var(--surface-1) 82%, var(--copper) 8%);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08), 0 0 0 2px var(--focus-ring), 0 0 0 4px var(--focus-ring-offset);
+  }
+
+  :root[data-theme="light"] .skynet-latest-post-card-skeleton {
+    border-color: color-mix(in srgb, var(--copper) 12%, rgba(15, 23, 42, 0.08));
+    background: color-mix(in srgb, var(--surface-1) 88%, var(--copper) 2%);
+  }
+
+  .skynet-reply-card {
+    border: 1px solid color-mix(in srgb, var(--copper) 18%, rgba(148, 163, 184, 0.13));
+    background: linear-gradient(145deg, color-mix(in srgb, var(--surface-2) 94%, var(--copper) 6%), color-mix(in srgb, var(--surface-1) 96%, var(--steel) 4%));
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18), inset 0 1px 0 var(--highlight-subtle);
+  }
+
+  .skynet-reply-branch-card {
+    border: 1px solid color-mix(in srgb, var(--copper) 13%, rgba(148, 163, 184, 0.10));
+    background: linear-gradient(145deg, color-mix(in srgb, var(--surface-2) 86%, var(--bg-canvas) 14%), color-mix(in srgb, var(--surface-1) 95%, var(--copper) 5%));
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12), inset 0 1px 0 var(--highlight-subtle);
+  }
+
+  .skynet-reply-composer {
+    border: 1px solid color-mix(in srgb, var(--copper) 18%, rgba(148, 163, 184, 0.12));
+    background: linear-gradient(145deg, color-mix(in srgb, var(--surface-2) 94%, var(--copper) 6%), color-mix(in srgb, var(--surface-1) 96%, var(--steel) 4%));
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16), inset 0 1px 0 var(--highlight-subtle);
+  }
+
+  .skynet-reply-composer::before {
+    opacity: 0.24;
+  }
+
+  .skynet-reply-composer:hover,
+  .skynet-reply-composer:focus-within {
+    border-color: color-mix(in srgb, var(--copper) 30%, rgba(148, 163, 184, 0.14));
+    background: linear-gradient(145deg, color-mix(in srgb, var(--surface-2) 91%, var(--copper) 9%), color-mix(in srgb, var(--surface-1) 94%, var(--steel) 6%));
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18), inset 0 1px 0 var(--highlight-subtle);
+    transform: none;
+  }
+
+  .skynet-reply-composer:hover::before,
+  .skynet-reply-composer:focus-within::before {
+    opacity: 0.46;
+    box-shadow: 0 0 4px rgba(232, 111, 53, 0.08);
+  }
+
+  .skynet-reply-divider {
+    border-color: color-mix(in srgb, var(--copper) 16%, rgba(148, 163, 184, 0.10));
+  }
+
+  .skynet-reply-branch-line {
+    border-color: color-mix(in srgb, var(--copper) 20%, rgba(148, 163, 184, 0.10));
+  }
+
+  .skynet-reply-branch-connector {
+    background: color-mix(in srgb, var(--copper) 24%, rgba(148, 163, 184, 0.10));
+  }
+
+  :root[data-theme="light"] .skynet-reply-card {
+    border-color: color-mix(in srgb, var(--copper) 14%, rgba(15, 23, 42, 0.08));
+    background: var(--surface-1);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05), inset 0 1px 0 var(--highlight-inset);
+  }
+
+  :root[data-theme="light"] .skynet-reply-branch-card {
+    border-color: color-mix(in srgb, var(--copper) 10%, rgba(15, 23, 42, 0.08));
+    background: color-mix(in srgb, var(--surface-2) 88%, var(--surface-1) 12%);
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04), inset 0 1px 0 var(--highlight-inset);
+  }
+
+  :root[data-theme="light"] .skynet-reply-composer {
+    border-color: color-mix(in srgb, var(--copper) 14%, rgba(15, 23, 42, 0.08));
+    background: var(--surface-1);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05), inset 0 1px 0 var(--highlight-inset);
+  }
+
+  :root[data-theme="light"] .skynet-reply-composer:hover,
+  :root[data-theme="light"] .skynet-reply-composer:focus-within {
+    border-color: color-mix(in srgb, var(--copper) 24%, rgba(15, 23, 42, 0.10));
+    background: color-mix(in srgb, var(--surface-1) 96%, var(--copper) 4%);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.07), inset 0 1px 0 var(--highlight-inset);
+    transform: none;
+  }
+
+  :root[data-theme="light"] .skynet-reply-divider,
+  :root[data-theme="light"] .skynet-reply-branch-line {
+    border-color: color-mix(in srgb, var(--copper) 10%, rgba(15, 23, 42, 0.08));
+  }
+
+  :root[data-theme="light"] .skynet-reply-branch-connector {
+    background: color-mix(in srgb, var(--copper) 10%, rgba(15, 23, 42, 0.08));
   }
 
   .feed-overlay-shell {

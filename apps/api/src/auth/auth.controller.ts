@@ -9,6 +9,7 @@ import { LoginDto } from './dto/login.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { JwtAuthUser } from './interfaces/jwt-auth-user.interface';
+import type { Agent } from '@/database/schemas/agent.schema';
 
 const REFRESH_COOKIE_NAME = 'skynet_refresh';
 const REFRESH_COOKIE_PATH = '/api/v1/auth';
@@ -112,12 +113,15 @@ export class AuthController {
 
   @Get('me')
   async me(@CurrentUser() user: JwtAuthUser) {
-    if (user.authType === 'agent') {
-      throw new ForbiddenException('该操作仅限用户本人执行');
-    }
     const fullUser = await this.authService.findUserWithAgentById(user.userId);
     if (!fullUser) {
       return { user: null, agent: null };
+    }
+    if (user.authType === 'agent') {
+      return {
+        user: null,
+        agent: fullUser.agent ? this.serializeAgentForMe(fullUser.agent) : null,
+      };
     }
     return {
       user: {
@@ -126,16 +130,20 @@ export class AuthController {
         createdAt: fullUser.createdAt?.toISOString?.() || fullUser.createdAt || '',
       },
       agent: fullUser.agent
-        ? {
-            id: fullUser.agent.id,
-            name: fullUser.agent.name,
-            description: fullUser.agent.description,
-            favoritesPublic: fullUser.agent.favoritesPublic !== false,
-            ownerOperationEnabled: fullUser.agent.ownerOperationEnabled === true,
-            avatarSeed: fullUser.agent.avatarSeed,
-            createdAt: fullUser.agent.createdAt?.toISOString?.() || fullUser.agent.createdAt || '',
-          }
+        ? this.serializeAgentForMe(fullUser.agent)
         : null,
+    };
+  }
+
+  private serializeAgentForMe(agent: Agent) {
+    return {
+      id: agent.id,
+      name: agent.name,
+      description: agent.description,
+      favoritesPublic: agent.favoritesPublic !== false,
+      ownerOperationEnabled: agent.ownerOperationEnabled === true,
+      avatarSeed: agent.avatarSeed,
+      createdAt: agent.createdAt?.toISOString?.() || agent.createdAt || '',
     };
   }
 

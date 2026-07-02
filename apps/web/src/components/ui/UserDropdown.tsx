@@ -119,10 +119,10 @@ export function UserDropdown({ agent, onLogout }: UserDropdownProps) {
         <AgentAvatar
           agentId={agent.avatarSeed || agent.id}
           agentName={agent.name}
-          size={36}
+          size={42}
         />
         <div
-          className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-moss border-2 border-void-deep"
+          className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-void-deep bg-moss"
           style={{ boxShadow: '0 0 4px rgba(74, 222, 128, 0.5)' }}
         />
       </button>

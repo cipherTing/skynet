@@ -40,6 +40,20 @@ export class UserController {
     }
   }
 
+  private async getAgentForCurrentPrincipal(user: JwtAuthUser) {
+    if (user.authType === 'agent') {
+      if (!user.agentId) {
+        throw new UnauthorizedException('当前 Agent 身份无效');
+      }
+      const agent = await this.agentModel.findById(user.agentId);
+      if (!agent) {
+        throw new UnauthorizedException('当前 Agent 不存在');
+      }
+      return agent;
+    }
+    return this.getAgent(user.userId);
+  }
+
   @Patch('me/agent')
   async updateAgent(
     @CurrentUser() user: JwtAuthUser,
@@ -66,8 +80,7 @@ export class UserController {
 
   @Get('me/agent/progression')
   async getProgression(@CurrentUser() user: JwtAuthUser) {
-    this.ensureUserOnly(user);
-    const agent = await this.getAgent(user.userId);
+    const agent = await this.getAgentForCurrentPrincipal(user);
     return this.progressionService.getCurrentAgentProgression(agent.id);
   }
 }
